@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Przejazd – alert kolejowy</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--ok:#1f7a3d;--warn:#b7791f;--bad:#c53030;--bg:#111;--fg:#fff}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+#map{position:absolute;inset:0}
+#banner{position:absolute;left:0;right:0;top:0;z-index:1000;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 14px;
+  background:var(--ok);text-align:center;transition:background .3s}
+#banner.warn{background:var(--warn)}
+#banner.bad{background:var(--bad);animation:p .6s infinite alternate}
+@keyframes p{to{filter:brightness(1.5)}}
+#big{font-size:1.5rem;font-weight:800}
+#sub{font-size:1rem;opacity:.95;margin-top:2px}
+#bar{position:absolute;left:0;right:0;bottom:0;z-index:1000;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px);
+  background:#000c;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;padding:10px 14px;border:0;border-radius:8px;background:#2b6cb0;color:#fff;font-weight:600}
+button.sec{background:#444}
+#cfg{display:none;width:100%}
+#cfg input{width:100%;padding:8px;border-radius:6px;border:1px solid #666;background:#222;color:#fff;margin:4px 0}
+#cfg small{color:#bbb;display:block}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="banner"><div id="big">Przejazd – alert kolejowy</div><div id="sub">Naciśnij „Start”, aby rozpocząć</div></div>
+<div id="bar">
+  <button id="start">Start</button>
+  <button id="demo" class="sec">Demo</button>
+  <button id="gear" class="sec">Ustawienia</button>
+  <label style="font-size:.9rem"><input type="checkbox" id="voice" checked> Głos</label>
+  <div id="cfg">
+    <small>Klucz CARTO do mapy (darmowy, bez konta: carto.com/basemaps/apikey); puste = standardowa mapa OpenStreetMap (działa tylko z adresu HTTPS):</small>
+    <input id="tkey" placeholder="klucz CARTO">
+    <small>Klucz Google Maps (Maps JavaScript API) – tło mapy; puste = OpenStreetMap:</small>
+    <input id="gmkey" placeholder="AIza...">
+    <small>Klucz API geOps Realtime (darmowy klucz testowy: developer.geops.io):</small>
+    <input id="gkey" placeholder="np. 5cc87b12d7c5370001c1d655...">
+    <small>— lub własny adres JSON z pozycjami pociągów (opcjonalnie):</small>
+    <input id="feed" placeholder="https://twoj-serwer/pociagi.json">
+    <small>Wymagane: lat i lon (też lng/latitude/longitude). Opcjonalne: id, speed (km/h), heading (°) — jeśli ich brak, aplikacja policzy je z kolejnych odczytów. Adres musi zwracać CORS (Access-Control-Allow-Origin), inaczej przeglądarka go zablokuje.</small>
+    <button id="save">Zapisz</button>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
+function dist(a,b,c,d){const R=6371000,dl=rad(c-a),dn=rad(d-b);
+  const x=Math.sin(dl/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function bear(a,b,c,d){const y=Math.sin(rad(d-b))*Math.cos(rad(c));
+  const x=Math.cos(rad(a))*Math.sin(rad(c))-Math.sin(rad(a))*Math.cos(rad(c))*Math.cos(rad(d-b));return (deg(Math.atan2(y,x))+360)%360}
+function angDiff(a,b){const d=Math.abs(a-b)%360;return d>180?360-d:d}
+
+const map=L.map('map',{zoomControl:false}).setView([52.1,19.4],6);
+let osm=null;
+function makeBase(){
+  let k='';try{k=localStorage.getItem('tkey')||''}catch(e){}
+  return k?L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key='+encodeURIComponent(k),{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'})
+          :L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
+}
+osm=makeBase().addTo(map);
+try{document.getElementById('tkey').value=localStorage.getItem('tkey')||''}catch(e){}
+const me=L.circleMarker([0,0],{radius:9,color:'#fff',fillColor:'#2b6cb0',fillOpacity:1,weight:3});
+const xLayer=L.layerGroup().addTo(map), tLayer=L.layerGroup().addTo(map);
+
+let crossings=[], trains=[], last=null, lastFetch=null, feedUrl='', demo=false, watchId=null, spoken={}, audio=null, feedAt=0, trackPrev={};
+try{feedUrl=localStorage.getItem('feed')||'';$('feed').value=feedUrl}catch(e){}
+
+$('gear').onclick=()=>{const c=$('cfg');c.style.display=c.style.display==='block'?'none':'block'};
+$('save').onclick=()=>{
+  feedUrl=$('feed').value.trim();gKey=$('gkey').value.trim();
+  gmKey=$('gmkey').value.trim();
+  try{localStorage.setItem('feed',feedUrl);localStorage.setItem('gkey',gKey);localStorage.setItem('gmkey',gmKey);localStorage.setItem('tkey',$('tkey').value.trim())}catch(e){}
+  if(map.hasLayer(osm))map.removeLayer(osm);
+  osm=makeBase();
+  useGoogle();
+  if(ws){const w=ws;ws=null;w.onclose=null;w.close();gTraj={};gBox=null}
+  gConnect();$('cfg').style.display='none'};
+
+function setBanner(level,big,sub){const b=$('banner');b.className=level==='ok'?'':level;$('big').textContent=big;$('sub').textContent=sub}
+
+function beep(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();
+  const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;g.gain.value=.3;o.connect(g);g.connect(audio.destination);
+  o.start();o.stop(audio.currentTime+.4)}catch(e){}}
+function say(key,text,vib){const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
+  beep();if(navigator.vibrate)navigator.vibrate(vib||[300,100,300]);
+  if($('voice').checked&&window.speechSynthesis){const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';speechSynthesis.speak(u)}}
+
+async function loadCrossings(lat,lon){
+  lastFetch={lat,lon};
+  const q=`[out:json][timeout:20];node(around:4000,${lat},${lon})["railway"="level_crossing"];out;`;
+  try{
+    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
+    const j=await r.json();
+    crossings=j.elements.map(e=>({id:e.id,lat:e.lat,lon:e.lon}));
+    xLayer.clearLayers();
+    crossings.forEach(c=>L.circleMarker([c.lat,c.lon],{radius:6,color:'#c53030',fillColor:'#fff',fillOpacity:.9}).addTo(xLayer));
+  }catch(e){lastFetch=null;}
+}
+async function loadTrains(){
+  if(demo||!feedUrl||gKey)return;
+  try{
+    const r=await fetch(feedUrl);const j=await r.json();
+    const arr=Array.isArray(j)?j:(j.trains||j.data||j.items||[]);
+    trains=arr.map(norm).filter(Boolean);feedAt=Date.now();
+  }catch(e){trains=[]}
+}
+// Normalizuje różne nazwy pól; brakujący kierunek/prędkość liczy z kolejnych odczytów
+function norm(t){
+  const lat=+(t.lat??t.latitude??t.y), lon=+(t.lon??t.lng??t.longitude??t.x);
+  if(isNaN(lat)||isNaN(lon))return null;
+  const id=String(t.id??t.number??t.trainNumber??t.name??(lat+','+lon));
+  let h=t.heading??t.bearing??t.course; h=(h==null||h==='')?null:+h;
+  let s=t.speed??t.velocity??t.v; s=(s==null||s==='')?null:+s;
+  const p=trackPrev[id], now=Date.now();
+  if(p){
+    const d=dist(p.lat,p.lon,lat,lon), dt=(now-p.t)/1000;
+    if(d>20){ if(h==null)h=bear(p.lat,p.lon,lat,lon); if(s==null&&dt>0)s=d/dt*3.6; }
+    else{ if(h==null)h=p.heading; if(s==null&&dt>10)s=0; else if(s==null)s=p.speed; }
+  }
+  trackPrev[id]={lat,lon,t:(p&&dist(p.lat,p.lon,lat,lon)<=20)?p.t:now,heading:h,speed:s};
+  return {id,lat,lon,heading:h,speed:s};
+}
+setInterval(loadTrains,5000);
+
+function evaluate(p){
+  me.setLatLng([p.lat,p.lon]);
+  if(!me._map){me.addTo(map);map.setView([p.lat,p.lon],16)}else map.panTo([p.lat,p.lon],{animate:true});
+  if(!demo&&(!lastFetch||dist(lastFetch.lat,lastFetch.lon,p.lat,p.lon)>1500))loadCrossings(p.lat,p.lon);
+  if(!demo&&ws&&ws.readyState===1&&(!gBox||dist(gBox.lat,gBox.lon,p.lat,p.lon)>3000))gSend(p.lat,p.lon);
+
+  // trains on map
+  tLayer.clearLayers();
+  trains.forEach(t=>L.circleMarker([t.lat,t.lon],{radius:8,color:'#000',fillColor:'#f6e05e',fillOpacity:1}).bindTooltip((t.id||'pociąg')+(t.rt===true?' · live':t.rt===false?' · wg rozkładu':'')).addTo(tLayer));
+
+  const warnDist=Math.max(400,p.speed*20); // m
+  let ahead=[];
+  crossings.forEach(c=>{
+    const d=dist(p.lat,p.lon,c.lat,c.lon);
+    const moving=p.speed>1.5&&p.heading!=null;
+    const isAhead=moving?angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading)<45:d<150;
+    if(isAhead&&d<Math.max(warnDist,1200))ahead.push({c,d});
+  });
+  ahead.sort((a,b)=>a.d-b.d);
+  if(!ahead.length){setBanner('ok','Droga wolna','Brak przejazdów kolejowych na trasie');return}
+
+  const near=ahead[0], n=Math.round(near.d/10)*10;
+  // train threat for each upcoming crossing
+  let threat=null, maybe=null, nearestTd=Infinity;
+  for(const a of ahead){
+    for(const t of trains){
+      const td=dist(t.lat,t.lon,a.c.lat,a.c.lon);
+      if(a===near&&td<nearestTd)nearestTd=td;
+      if(td>5000)continue;
+      if(t.heading!=null&&t.speed!=null){
+        const sp=t.speed/3.6;
+        if(sp<1.5)continue; // stoi
+        if(angDiff(bear(t.lat,t.lon,a.c.lat,a.c.lon),t.heading)>35)continue; // oddala się / inna linia
+        const eta=td/sp;
+        if(eta<240&&(!threat||eta<threat.eta))threat={eta,a,t,td};
+      }else if(td<1500&&(!maybe||td<maybe.td))maybe={a,t,td}; // kierunek nieznany
+    }
+  }
+  const feedNote=(!feedUrl&&!demo)?' · brak danych o pociągach':((feedAt&&!demo&&Date.now()-feedAt>30000)?' · dane o pociągach nieaktualne':'');
+  if(threat){
+    const m=Math.round(threat.a.d/10)*10, s=Math.round(threat.eta), td=Math.round(threat.td/10)*10;
+    setBanner('bad','⚠ NADJEŻDŻA POCIĄG',`Przejazd za ${m} m · pociąg ${td} m od przejazdu (ok. ${s} s)${threat.t.rt===false?' · wg rozkładu':''}`);
+    say('t'+threat.a.c.id,`Uwaga! Nadjeżdża pociąg. Przejazd kolejowy za ${m} metrów.`,[500,150,500,150,500]);
+  }else if(maybe){
+    const m=Math.round(maybe.a.d/10)*10, td=Math.round(maybe.td/10)*10;
+    setBanner(maybe.td<800?'bad':'warn','⚠ POCIĄG W POBLIŻU',`Przejazd za ${m} m · pociąg ok. ${td} m od przejazdu (kierunek nieznany)`);
+    say('m'+maybe.a.c.id,`Uwaga! Pociąg w pobliżu przejazdu kolejowego, za ${m} metrów.`,[400,150,400]);
+  }else if(near.d<warnDist){
+    setBanner('warn','Przejazd kolejowy',`za ${n} m`+(nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu')+feedNote);
+    say('x'+near.c.id,`Przejazd kolejowy za ${n} metrów.`,[200]);
+  }else setBanner('ok','Przejazd w oddali',`za ${n} m`);
+}
+
+function onPos(g){
+  const c=g.coords, t=g.timestamp;
+  let heading=(c.heading!=null&&!isNaN(c.heading))?c.heading:null, speed=c.speed||0;
+  if(last&&heading==null){const d=dist(last.lat,last.lon,c.latitude,c.longitude);
+    if(d>5){heading=bear(last.lat,last.lon,c.latitude,c.longitude);if(!c.speed)speed=d/Math.max(1,(t-last.t)/1000)}}
+  last={lat:c.latitude,lon:c.longitude,t};
+  evaluate({lat:c.latitude,lon:c.longitude,speed,heading});
+}
+
+$('start').onclick=async()=>{
+  if(demo)stopDemo();
+  if(!navigator.geolocation){setBanner('warn','Brak GPS','Przeglądarka nie obsługuje geolokalizacji');return}
+  beep();try{if(navigator.wakeLock)await navigator.wakeLock.request('screen')}catch(e){}
+  if(watchId!=null)navigator.geolocation.clearWatch(watchId);
+  setBanner('ok','Szukam sygnału GPS…','Pobieram przejazdy z OpenStreetMap');
+  watchId=navigator.geolocation.watchPosition(onPos,
+    e=>setBanner('warn','Błąd GPS',e.message+' (wymagane HTTPS i zgoda na lokalizację)'),
+    {enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+};
+
+// ---- geOps Realtime API (WebSocket) ----
+let gKey='', ws=null, gTraj={}, gBox=null, pingT=null;
+try{gKey=localStorage.getItem('gkey')||'';$('gkey').value=gKey}catch(e){}
+const MX=20037508.34;
+const toM=(lat,lon)=>[lon*MX/180, Math.log(Math.tan((90+lat)*Math.PI/360))/Math.PI*MX];
+const fromM=(x,y)=>[(2*Math.atan(Math.exp(y/MX*Math.PI))-Math.PI/2)*180/Math.PI, x/MX*180];
+function gSend(lat,lon){
+  if(!ws||ws.readyState!==1)return;
+  const [x,y]=toM(lat,lon), r=8000/Math.cos(rad(lat)); // ok. 8 km (jednostki Mercatora)
+  ws.send(`BBOX ${Math.round(x-r)} ${Math.round(y-r)} ${Math.round(x+r)} ${Math.round(y+r)} 13 mots=rail`);
+  gBox={lat,lon};
+}
+function gConnect(){
+  if(!gKey||ws)return;
+  ws=new WebSocket('wss://api.geops.io/tracker-ws/v1/?key='+encodeURIComponent(gKey));
+  ws.onopen=()=>{pingT=setInterval(()=>{if(ws&&ws.readyState===1)ws.send('PING')},25000);if(last)gSend(last.lat,last.lon)};
+  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}gHandle(m)};
+  ws.onclose=()=>{ws=null;clearInterval(pingT);gBox=null;if(gKey)setTimeout(gConnect,3000)};
+}
+function gHandle(m){
+  if(!m)return;
+  if(m.source==='buffer'){(m.content||[]).forEach(gHandle);return}
+  if(m.source==='deleted_vehicles'){delete gTraj[m.content];return}
+  if(m.source==='trajectory'&&m.content&&m.content.geometry){
+    const p=m.content.properties, c=m.content.geometry.coordinates.map(q=>fromM(q[0],q[1]));
+    const L=[0];for(let i=1;i<c.length;i++)L.push(L[i-1]+dist(c[i-1][0],c[i-1][1],c[i][0],c[i][1]));
+    gTraj[p.train_id]={c,L,ti:p.time_intervals,name:(p.line&&p.line.name)||p.train_id,rt:!!p.has_realtime_journey};
+  }
+}
+// pozycja z time_intervals: [timestamp, ułamek długości odcinka, obrót]
+function gPos(tr,now){
+  const ti=tr.ti, T=tr.L[tr.L.length-1];
+  if(!ti||ti.length<2||!T||now>ti[ti.length-1][0])return null;
+  let f=ti[0][1], vf=0;
+  if(now>ti[0][0]){
+    let i=0;while(i<ti.length-2&&ti[i+1][0]<=now)i++;
+    const a=ti[i], b=ti[i+1], dt=b[0]-a[0];
+    f=dt>0?a[1]+(b[1]-a[1])*(now-a[0])/dt:b[1];
+    vf=dt>0?(b[1]-a[1])/(dt/1000):0; // ułamek/s (ujemny = jazda w tył geometrii)
+  }
+  const d=f*T;let j=1;while(j<tr.L.length-1&&tr.L[j]<d)j++;
+  const s=tr.L[j]-tr.L[j-1], k=s?(d-tr.L[j-1])/s:0, A=tr.c[j-1], B=tr.c[j];
+  let h=bear(A[0],A[1],B[0],B[1]); if(vf<0)h=(h+180)%360;
+  return {lat:A[0]+(B[0]-A[0])*k, lon:A[1]+(B[1]-A[1])*k, heading:h, speed:Math.abs(vf)*T*3.6};
+}
+setInterval(()=>{
+  if(!gKey||demo)return;
+  const now=Date.now();
+  if(ws&&ws.readyState===1)feedAt=now;
+  trains=[];
+  for(const id in gTraj){const tr=gTraj[id], p=gPos(tr,now);
+    if(p)trains.push({id:tr.name,rt:tr.rt,...p});
+    else if(now>tr.ti[tr.ti.length-1][0]+60000)delete gTraj[id];}
+},1000);
+gConnect();
+
+// ---- Tło Google Maps (oficjalne Maps JavaScript API + Leaflet GoogleMutant) ----
+let gmKey='', gmLayer=null;
+try{gmKey=localStorage.getItem('gmkey')||'';$('gmkey').value=gmKey}catch(e){}
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+function backToOsm(msg){
+  if(gmLayer){map.removeLayer(gmLayer);gmLayer=null}
+  if(!map.hasLayer(osm))osm.addTo(map);
+  if(msg)setBanner('warn','Google Maps niedostępne',msg);
+}
+window.gm_authFailure=()=>backToOsm('Klucz odrzucony – sprawdź włączone API, rozliczenia i ograniczenia. Użyto OpenStreetMap.');
+async function useGoogle(){
+  backToOsm();
+  if(!gmKey)return;
+  try{
+    if(!(window.google&&google.maps&&google.maps.Map))
+      await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(gmKey));
+    if(!(L.gridLayer&&L.gridLayer.googleMutant))
+      await loadScript('https://cdn.jsdelivr.net/npm/leaflet.gridlayer.googlemutant@0.13.5/dist/Leaflet.GoogleMutant.js');
+    gmLayer=L.gridLayer.googleMutant({type:'roadmap',maxZoom:20}).addTo(map);
+    map.removeLayer(osm);
+  }catch(e){backToOsm('Nie udało się załadować. Użyto OpenStreetMap.')}
+}
+if(gmKey)useGoogle();
+
+// ---- DEMO: wirtualny kierowca jedzie na północ, pociąg nadjeżdża ze wschodu ----
+let demoTimer=null;
+function stopDemo(){demo=false;clearInterval(demoTimer);crossings=[];trains=[];xLayer.clearLayers();tLayer.clearLayers();lastFetch=null}
+$('demo').onclick=()=>{
+  stopDemo();demo=true;
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  beep();
+  const c0={lat:51.1079,lon:17.0385}; // środek Wrocławia (tylko do demonstracji)
+  const X={id:1,lat:c0.lat+0.0075,lon:c0.lon};
+  crossings=[X];xLayer.clearLayers();L.circleMarker([X.lat,X.lon],{radius:6,color:'#c53030',fillColor:'#fff',fillOpacity:.9}).addTo(xLayer);
+  let car={lat:c0.lat,lon:c0.lon}, tr={id:'DEMO',lat:X.lat,lon:X.lon+0.045,speed:100,heading:270};
+  trains=[tr];spoken={};
+  demoTimer=setInterval(()=>{
+    car.lat+=11/111000; // ~40 km/h
+    tr.lon-=(100/3.6)/(111000*Math.cos(rad(X.lat)));
+    evaluate({lat:car.lat,lon:car.lon,speed:11,heading:0});
+    if(car.lat>X.lat+0.0015)stopDemo();
+  },1000);
+};
+</script>
+</body>
+</html>
