@@ -118,7 +118,7 @@ body.night #brwFav{background:#2d3139;color:#e8eaed}
 #srchFavs div{display:flex;align-items:center;gap:8px}#srchFavs div span{flex:1}#srchFavs div button{background:transparent;color:inherit;opacity:.6;font-size:1rem;padding:6px 10px}
 #nextStrip{position:fixed;left:12px;right:70px;top:calc(env(safe-area-inset-top,0px) + 152px);z-index:880;display:none;gap:6px;flex-wrap:wrap;pointer-events:none}
 #nextStrip span{background:#202124d9;color:#fff;border-radius:14px;padding:5px 10px;font-weight:700;font-size:.85rem;box-shadow:0 3px 10px #0004}
-body.preview #nextStrip{display:none!important}
+#nextStrip span.w{background:#b3261eee}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -554,7 +554,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 85</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 86</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -612,6 +612,11 @@ try{document.getElementById('tkey').value=localStorage.getItem('tkey')||''}catch
 const me=L.circleMarker([0,0],{radius:9,color:'#fff',fillColor:'#2b6cb0',fillOpacity:1,weight:3});
 const xLayer=L.layerGroup().addTo(map), tLayer=L.layerGroup().addTo(map);
 
+const xAll=new Map();let xErr=0,xViewAt=null,xViewNext=0;
+function xParse(e){const t=e.tags||{};
+  return {id:e.id,lat:e.lat,lon:e.lon,tr:+t.tracks||1,br:t['crossing:barrier'],li:t['crossing:light'],bell:t['crossing:bell'],nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}}   // nb = przejazd bez zapór
+function xAdd(list){for(const c of list){if(c.lat==null||c.lon==null||isNaN(c.lat))continue;xAll.set(c.id,c)}
+  if(xAll.size>4000){let n=xAll.size-3500;for(const k of xAll.keys()){xAll.delete(k);if(--n<=0)break}}}
 let crossings=[], trains=[], last=null, lastFetch=null, feedUrl='', demo=false, watchId=null, spoken={}, audio=null, feedAt=0, trackPrev={};
 try{feedUrl=localStorage.getItem('feed')||'';$('feed').value=feedUrl}catch(e){}
 
@@ -704,11 +709,9 @@ async function loadCrossings(lat,lon){
   const q=`[out:json][timeout:20];node(around:4000,${lat},${lon})["railway"="level_crossing"];out;`;
   try{
     const j=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q);
-    crossings=j.elements.map(e=>{const t=e.tags||{};
-      return {id:e.id,lat:e.lat,lon:e.lon,tr:+t.tracks||1,br:t['crossing:barrier'],li:t['crossing:light'],bell:t['crossing:bell'],nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}});   // nb = przejazd bez zapór
+    crossings=j.elements.map(xParse);xAdd(crossings);xErr=0;
     xLayer.clearLayers();
-    
-  }catch(e){lastFetch=null;}
+  }catch(e){lastFetch=null;xErr=Date.now();}
 }
 async function loadTrains(){
   if(demo||!feedUrl||gKey||gtfs)return;
@@ -1645,7 +1648,7 @@ async function loadRouteCrossings(R,when){
     const q='[out:json][timeout:25];node(around:25,'+pts.join(',')+')["railway"="level_crossing"];out;';
     const j=await cachedOverpass('rx|'+pts[0]+'|'+pts[pts.length-1]+'|'+Math.round(R.len/100),q);
     if(route!==R)return;
-    const xs=(j.elements||[]).map(e=>{const t=e.tags||{};return {id:e.id,nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}});
+    const xs=(j.elements||[]).map(xParse);xAdd(xs);
     R.xs=xs;
     const nb=xs.filter(x=>x.nb).length,hk=hourKey(when||new Date());
     const often=xs.filter(x=>((cstat[x.id]||{})[hk]||0)>=2).length;
@@ -2425,7 +2428,8 @@ const EV_TYPES={
  works:{n:'Roboty drogowe',ic:'🚧',ttl:720,col:'#e68a00',k:'W',w:'kierowcy zgłosili roboty drogowe'},
  jam:{n:'Korek',ic:'🚗',ttl:45,col:'#e8710a',k:'J',w:'kierowcy zgłosili korek'},
  obstacle:{n:'Przeszkoda na drodze',ic:'⚠️',ttl:60,col:'#7c3aed',k:'O',w:'kierowcy zgłosili przeszkodę na drodze'},
- hazard:{n:'Ślisko lub mgła',ic:'❄️',ttl:120,col:'#0e7490',k:'O',w:'kierowcy zgłosili trudne warunki na drodze'}
+ hazard:{n:'Ślisko lub mgła',ic:'❄️',ttl:120,col:'#0e7490',k:'O',w:'kierowcy zgłosili trudne warunki na drodze'},
+ xfail:{n:'Awaria przejazdu',ic:'🚦',ttl:180,col:'#b71c1c',k:'O',w:'kierowcy zgłosili awarię przejazdu kolejowego',hid:true}
 };
 let evDb=LSget('evDb','');const evUid=LSget('evUid','')||(()=>{const u=Math.random().toString(36).slice(2,10);LSput('evUid',u);return u})();
 let evMine=LSget('evMine',[]),evRemote=[],evHide=LSget('evHide',{}),evAlerted={},evLastRep={},evPollAt=0,evChk=0;
@@ -2449,17 +2453,18 @@ function evToast(t1,t2,btns,ms){
 // panel zgłaszania
 {
   const g=$('repGrid');
-  for(const k in EV_TYPES){const b=document.createElement('button');b.type='button';b.innerHTML='<span>'+EV_TYPES[k].ic+'</span>'+EV_TYPES[k].n;b.onclick=()=>reportEvent(k);g.appendChild(b)}
+  for(const k in EV_TYPES){if(EV_TYPES[k].hid)continue;const b=document.createElement('button');b.type='button';b.innerHTML='<span>'+EV_TYPES[k].ic+'</span>'+EV_TYPES[k].n;b.onclick=()=>reportEvent(k);g.appendChild(b)}
 }
 $('repfab').onclick=()=>{$('repSub').textContent=last?'Zgłoszenie dotyczy Twojej obecnej pozycji'+(evDb?' i trafi do innych kierowców.':' (zapisze się tylko na tym telefonie – baza w ustawieniach).'):'Brak pozycji GPS – poczekaj na sygnał.';$('repSheet').style.display='block'};
 $('repCancel').onclick=()=>{$('repSheet').style.display='none'};
-async function reportEvent(ty){
+async function reportEvent(ty,pos){
   $('repSheet').style.display='none';
-  if(!last){evToast('Brak pozycji GPS','Spróbuj za chwilę.');return}
+  const P0=pos||last;
+  if(!P0){evToast('Brak pozycji GPS','Spróbuj za chwilę.');return}
   const T=EV_TYPES[ty],now=Date.now();
   if(evLastRep[ty]&&now-evLastRep[ty]<60000){evToast('Zgłoszono przed chwilą','Poczekaj minutę przed kolejnym takim zgłoszeniem.');return}
   evLastRep[ty]=now;
-  const e={id:now.toString(36)+Math.random().toString(36).slice(2,6),ty,lat:+last.lat.toFixed(5),lon:+last.lon.toFixed(5),t:now,u:evUid};
+  const e={id:now.toString(36)+Math.random().toString(36).slice(2,6),ty,lat:+P0.lat.toFixed(5),lon:+P0.lon.toFixed(5),t:now,u:evUid};
   evMine.unshift(e);evMine=evMine.slice(0,30);LSput('evMine',evMine);
   let ok=false;
   if(evDb){try{const r=await fetch(evBase()+'/ev/'+evCell(e.lat,e.lon)+'/'+e.id+'.json',{method:'PUT',body:JSON.stringify(e)});ok=r.ok}catch(x){}}
@@ -2598,6 +2603,10 @@ function showBoard(c){
   const hh=t=>new Date(t*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   const kind=c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
   let h='<h3>🚆 Przejazd kolejowy</h3><div class="xs">'+kind+tracks+' · najbliższe pociągi (wg rozkładu i opóźnień na żywo)</div>';
+  {const X=LSget('xwait',{})[c.id],hk=hourKey(),cs=(LSget('cstat',{})[c.id]||{})[hk]||0,own=[];
+   if(X&&X.n>0)own.push('Zwykle czekasz tu ok. '+(X.s/X.n>=90?Math.round(X.s/X.n/60)+' min':Math.round(X.s/X.n)+' s')+' ('+X.n+' '+(X.n===1?'raz':'razy')+')');
+   if(cs>=1)own.push('o tej porze rogatki bywały zamknięte ('+cs+'×)');
+   if(own.length)h+='<div class="xs" style="opacity:.9">📊 '+own.join(' · ')+'</div>'}
   if(L===null)h+='<div class="xs">Rozkład jazdy nie jest jeszcze wczytany – poczekaj chwilę lub wczytaj go w ustawieniach.</div>';
   else if(!L.length)h+='<div class="xs">W ciągu 3 godzin nie ma kursów przez ten przejazd.</div>';
   else L.forEach(x=>{
@@ -2605,14 +2614,61 @@ function showBoard(c){
     const nm=x.name.split(' → ');
     h+='<div class="xr"><span class="xt">'+hh(x.t)+'</span><span class="xn">'+nm[0]+(nm[1]?'<small>→ '+nm[1]+'</small>':'')+'</span><span class="xe">'+when+(x.late>=2?'<div class="late">+'+x.late+' min</div>':'')+'</span></div>';
   });
+  B.innerHTML=h+'<button type="button" id="xFail">⚠ Zgłoś awarię przejazdu</button><button type="button" id="xBoardX">Zamknij</button>';B.style.display='block';
+  $('xBoardX').onclick=()=>{B.style.display='none'};
+  $('xFail').onclick=()=>showFail(c);
+}
+function showFail(c){
+  const B=$('xBoard'),ll=c.lat.toFixed(5)+', '+c.lon.toFixed(5);
+  B.innerHTML='<h3>⚠ Awaria przejazdu</h3><div class="xs">Gdy rogatki nie działają, świecą się błędne sygnały albo ktoś utknął na torach – <b>zadzwoń pod 112</b> i podaj numer z tabliczki przy przejeździe (jest na słupku lub skrzynce) oraz współrzędne:</div><div class="xr"><span class="xn"><b>'+ll+'</b></span></div>'
+   +'<a id="xTel" href="tel:112" style="display:block;text-align:center;margin-top:10px;padding:14px;border-radius:14px;background:#d32f2f;color:#fff;font-weight:800;text-decoration:none;font-size:1.05rem">📞 Zadzwoń 112</a>'
+   +'<button type="button" id="xShr">Udostępnij współrzędne</button><button type="button" id="xRep">Powiadom kierowców w aplikacji</button><button type="button" id="xBoardX">Zamknij</button>';
+  $('xBoardX').onclick=()=>{B.style.display='none'};
+  $('xShr').onclick=async()=>{
+    const txt='Awaria przejazdu kolejowego. Współrzędne: '+ll+'. Mapa: https://www.google.com/maps?q='+ll.replace(', ',',');
+    try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
+    try{await navigator.clipboard.writeText(txt);$('xShr').textContent='Skopiowano do schowka ✓'}catch(e){prompt('Skopiuj:',txt)}
+  };
+  $('xRep').onclick=()=>{B.style.display='none';reportEvent('xfail',{lat:c.lat,lon:c.lon})};
+}
+function showTrainBoard(t){
+  const B=$('xBoard'),nowS=Date.now()/1000,nm=String(t.id).split(' → ');
+  const sp=t.speed!=null?Math.round(t.speed):null;
+  const lateTxt=t.late!=null?(t.late>=1?'opóźnienie '+t.late+' min':t.late<=-1?'przed czasem':'punktualnie'):'wg rozkładu (brak danych o opóźnieniach)';
+  const rows=[];
+  if(t.tr&&t.tr.sh&&t.sd!=null)for(const c of xAll.values()){
+    if(Math.abs(c.lat-t.lat)>.3||Math.abs(c.lon-t.lon)>.45)continue;
+    const r=gtfsApproach(t,nowS,c);if(r&&r.eta>-10&&r.along<40000)rows.push({c,r});
+  }
+  rows.sort((a,b)=>a.r.eta-b.r.eta);
+  const dMe=last?fmtKm(dist(last.lat,last.lon,t.lat,t.lon)):'';
+  let h='<h3>🚆 '+nm[0]+'</h3><div class="xs">'+(nm[1]?'→ '+nm[1]+' · ':'')+(sp!=null?(sp>3?sp+' km/h':'stoi')+' · ':'')+lateTxt+(dMe?' · '+dMe+' od Ciebie':'')+'</div>';
+  if(rows.length){
+    h+='<div class="xs" style="margin-top:6px"><b>Najbliższe przejazdy na jego trasie</b></div>';
+    rows.slice(0,5).forEach((x,i)=>{
+      const m=Math.max(0,Math.round(x.r.eta/60)),when=m<1?'za chwilę':m<60?'za '+m+' min':'za '+Math.floor(m/60)+' h '+(m%60)+' min';
+      const me=last?fmtKm(dist(last.lat,last.lon,x.c.lat,x.c.lon))+' od Ciebie':'';
+      h+='<div class="xr" data-i="'+i+'" style="cursor:pointer"><span class="xt" style="min-width:76px;font-size:.95rem">'+when+'</span><span class="xn">Przejazd'+(x.c.nb?' bez zapór':'')+'<small>'+fmtKm(x.r.along)+' przed pociągiem'+(me?' · '+me:'')+'</small></span></div>';
+    });
+  }else h+='<div class="xs">Brak wczytanych przejazdów na jego trasie w pobliżu.</div>';
   B.innerHTML=h+'<button type="button" id="xBoardX">Zamknij</button>';B.style.display='block';
+  B.querySelectorAll('.xr[data-i]').forEach(el=>el.onclick=()=>showBoard(rows[+el.dataset.i].c));
   $('xBoardX').onclick=()=>{B.style.display='none'};
 }
 window.mapTap=(x,y)=>{
   if(!(vec&&vf))return;
-  let best=null,bd=34;
-  for(const c of crossings){const q=proj(c.lat,c.lon);if(!q)continue;const d=Math.hypot(q.x-x,q.y-y);if(d<bd){bd=d;best=c}}
-  if(best)showBoard(best);else $('xBoard').style.display='none';
+  const cam=vf.cam;let bc=null,bcd=1e9,bt=null,btd=32;
+  for(const c of xAll.values()){
+    if(Math.abs(c.lat-cam.lat)>.14||Math.abs(c.lon-cam.lon)>.22)continue;
+    const q=proj(c.lat,c.lon);if(!q)continue;const u=xU(q.k);
+    const d=Math.min(Math.hypot(q.x-x,q.y-y)-8,Math.hypot(q.x-x,q.y-u*1.75-y)-u);   // odległość od krawędzi znaku albo od kropki
+    if(d<bcd){bcd=d;bc=c}
+  }
+  for(const t of trains){const q=proj(t.lat,t.lon);if(!q)continue;const d=Math.hypot(q.x-x,q.y-y);if(d<btd){btd=d;bt=t}}
+  const xHit=bc&&bcd<12;
+  if(bt&&(!xHit||btd-18<bcd))showTrainBoard(bt);
+  else if(xHit)showBoard(bc);
+  else $('xBoard').style.display='none';
 };
 // ================= Ulubione miejsca =================
 let favs=LSget('favs',[]);
@@ -2669,17 +2725,19 @@ function drawCams(){
 }
 // ================= Pasek „co dalej na trasie” =================
 setInterval(()=>{
-  const el=$('nextStrip');
-  const wc=($('wxMap').checked&&wxNow&&!window.preview)?'<span>'+wxIcon(wxNow.code,wxNow.kd)+' '+wxNow.t+'°C</span>':'';
-  if(!route||window.preview||!last||route.off>120||!route.pts||route.pts.length<3){el.innerHTML=wc;el.style.display=wc?'flex':'none';return}
-  const fm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m',it=[];
-  const aheadX=(typeof aheadList!=='undefined'?aheadList:[]).slice(0,2);
-  aheadX.forEach(a=>it.push([a.d,'🚆 '+fm(a.d)]));
-  const near=(arr,max,off)=>{let b=null;for(const o of arr){const m=projRoute(route,o.lat,o.lon,0,route.pts.length-2);const d=m.along-route.along;if(m.off<off&&d>20&&d<max&&(!b||d<b))b=d}return b};
-  if($('camShow').checked){const d=near(cams,8000,25);if(d!=null)it.push([d,'📷 '+fm(d)])}
-  const df=near(poi.filter(x=>x.kind==='fuel'),30000,200);if(df!=null)it.push([df,'⛽ '+fm(df)]);
-  it.sort((a,b)=>a[0]-b[0]);
-  el.innerHTML=wc+it.slice(0,4).map(x=>'<span>'+x[1]+'</span>').join('');el.style.display=(it.length||wc)?'flex':'none';
+  const el=$('nextStrip'),pv=window.preview&&!window.browse,chips=[];
+  if($('wxMap').checked&&wxNow&&!pv)chips.push('<span>'+wxIcon(wxNow.code,wxNow.kd)+' '+wxNow.t+'°C</span>');
+  {const cp=(vf&&vf.cam)||last;
+   if(xErr&&Date.now()-xErr<150000&&cp&&![...xAll.values()].some(c=>dist(cp.lat,cp.lon,c.lat,c.lon)<5000))chips.push('<span class="w">⚠ brak danych o przejazdach – ponawiam</span>')}
+  if(route&&!window.preview&&last&&route.off<=120&&route.pts&&route.pts.length>=3){
+    const fm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m',it=[];
+    (typeof aheadList!=='undefined'?aheadList:[]).slice(0,2).forEach(a=>it.push([a.d,'🚆 '+fm(a.d)]));
+    const near=(arr,max,off)=>{let b=null;for(const o of arr){const m=projRoute(route,o.lat,o.lon,0,route.pts.length-2);const d=m.along-route.along;if(m.off<off&&d>20&&d<max&&(!b||d<b))b=d}return b};
+    if($('camShow').checked){const d=near(cams,8000,25);if(d!=null)it.push([d,'📷 '+fm(d)])}
+    const df=near(poi.filter(x=>x.kind==='fuel'),30000,200);if(df!=null)it.push([df,'⛽ '+fm(df)]);
+    it.sort((a,b)=>a[0]-b[0]);it.slice(0,4).forEach(x=>chips.push('<span>'+x[1]+'</span>'));
+  }
+  el.innerHTML=chips.join('');el.style.display=chips.length?'flex':'none';
 },3000);
 // ================= Pobieranie mapy okolicy (offline) =================
 $('dlarea').onclick=async()=>{
@@ -2752,6 +2810,17 @@ function drawWx(){
     for(const p of wxP){p.y+=p.v;p.x+=Math.sin((p.y+p.s*50)/28)*.7;if(p.y>H){p.y=-6;p.x=Math.random()*W}mx.beginPath();mx.arc(p.x,p.y,1.4+p.s*1.6,0,6.2832);mx.fill()}}
   mx.restore();
 }
+
+// przejazdy wokół oglądanego miejsca (przesunięta mapa, oddalenie, przeglądanie) – tylko do rysowania
+setInterval(async()=>{
+  if(Date.now()<xViewNext)return;
+  const cp=(vec&&typeof vecCam==='function'&&vecCam(performance.now()))||last;if(!cp)return;
+  const ref=lastFetch&&dist(lastFetch.lat,lastFetch.lon,cp.lat,cp.lon)<2200?lastFetch:xViewAt;
+  if(ref&&dist(ref.lat,ref.lon,cp.lat,cp.lon)<2200)return;
+  xViewAt={lat:cp.lat,lon:cp.lon};
+  try{const j=await cachedOverpass('x|'+Math.round(cp.lat*20)+'|'+Math.round(cp.lon*13),`[out:json][timeout:20];node(around:4000,${cp.lat},${cp.lon})["railway"="level_crossing"];out;`);xAdd((j.elements||[]).map(xParse));xErr=0}
+  catch(e){xViewAt=null;xErr=Date.now();xViewNext=Date.now()+12000}
+},2000);
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
@@ -3478,7 +3547,7 @@ function paintVec(cam){
       const wo=['sc','pr','mw'];
       for(const k of wo)if(Q[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:pal.csSc;c.lineWidth=(rw(k,s)+3)/s;c.stroke(Q[k])}
       for(const k of wo)if(Q[k]){c.strokeStyle=pal[k];c.lineWidth=rw(k,s)/s;c.stroke(Q[k])}
-      if(Q.rail){c.strokeStyle=pal.rail;c.lineWidth=3/s;c.stroke(Q.rail)}
+      if(Q.rail){c.strokeStyle=night?'#b8c4e0':'#4a5260';c.lineWidth=4/s;c.stroke(Q.rail)}
     }
     if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.park)}
     if(P.water){c.fillStyle=pal.water;c.fill(P.water);c.strokeStyle=pal.waterEdge;c.lineWidth=1.2/s;c.stroke(P.water)}
@@ -3502,8 +3571,8 @@ function paintVec(cam){
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
     if(P.rail){
-      c.strokeStyle=pal.rail;c.lineWidth=4.5/s;c.stroke(P.rail);
-      c.strokeStyle=pal.railDash;c.lineWidth=2.2/s;c.setLineDash([9/s,9/s]);c.stroke(P.rail);c.setLineDash([]);
+      c.strokeStyle=night?'#b8c4e0':'#4a5260';c.lineWidth=6/s;c.stroke(P.rail);   // tory: ciemna kreska z jasnymi „podkładami”
+      c.strokeStyle=night?'#1a2030':'#f4f4f2';c.lineWidth=3.2/s;c.setLineDash([8/s,8/s]);c.lineCap='butt';c.stroke(P.rail);c.setLineDash([]);c.lineCap='round';
     }
     if(D.flow){for(const f of D.flow){c.save();c.translate(f.x0,f.y0);c.scale(1,-1);c.globalAlpha=.92;c.drawImage(f.img,0,0,f.w,f.w);c.restore()}}
     c.restore();
@@ -3735,6 +3804,32 @@ function drawBuildings3D(){
     mx.fillStyle=wc.roof;mx.fill();mx.strokeStyle=wc.line;mx.lineWidth=1;mx.stroke();
   }
 }
+
+const xU=k=>Math.max(15,Math.min(30,17*k));
+// znak przejazdu kolejowego: kropka w miejscu przejazdu + trójkąt ostrzegawczy z krzyżem św. Andrzeja
+function drawXMark(o,rank){
+  const {x,y,k}=o.p,c=o.c,u=xU(k),near=o.d<500;
+  mx.save();mx.translate(x,y);mx.lineJoin='round';mx.lineCap='round';
+  if(near){const ph=(performance.now()%1500)/1500;mx.beginPath();mx.arc(0,0,u*(.6+ph*1.5),0,6.2832);mx.strokeStyle='rgba(229,62,62,'+(.6*(1-ph)).toFixed(2)+')';mx.lineWidth=3;mx.stroke()}
+  mx.beginPath();mx.arc(0,0,Math.max(3.5,u*.22),0,6.2832);mx.fillStyle='#d32f2f';mx.fill();mx.lineWidth=2;mx.strokeStyle='#fff';mx.stroke();   // dokładne miejsce
+  mx.beginPath();mx.moveTo(0,-u*.2);mx.lineTo(0,-u*.55);mx.lineWidth=2;mx.strokeStyle='#d32f2f';mx.stroke();
+  mx.translate(0,-u*1.75);
+  mx.beginPath();mx.moveTo(0,-u*1.12);mx.lineTo(u*1.08,u*.78);mx.lineTo(-u*1.08,u*.78);mx.closePath();
+  mx.shadowColor='rgba(0,0,0,.35)';mx.shadowBlur=u*.4;mx.fillStyle=c.nb?'#fff3a8':'#fff';mx.fill();mx.shadowBlur=0;
+  mx.lineWidth=Math.max(3,u*.3);mx.strokeStyle='#d32f2f';mx.stroke();
+  const a=u*.4,cy=u*.16;mx.strokeStyle='#111';mx.lineWidth=Math.max(2.4,u*.22);
+  mx.beginPath();mx.moveTo(-a,cy-a*.9);mx.lineTo(a,cy+a*.9);mx.moveTo(a,cy-a*.9);mx.lineTo(-a,cy+a*.9);mx.stroke();
+  mx.strokeStyle='#fff';mx.lineWidth=Math.max(1,u*.07);
+  mx.beginPath();mx.moveTo(-a,cy-a*.9);mx.lineTo(a,cy+a*.9);mx.moveTo(a,cy-a*.9);mx.lineTo(-a,cy+a*.9);mx.stroke();
+  if(rank&&rank.has(c.id)){
+    const m=o.d,txt=(m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m'),y0=u*.78+u*.22;
+    mx.font='800 '+Math.round(Math.max(12,Math.min(16,u*.8)))+'px Inter,system-ui,sans-serif';mx.textAlign='center';mx.textBaseline='top';mx.lineWidth=4;
+    const lab=(t,yy,col)=>{mx.strokeStyle='rgba(255,255,255,.96)';mx.strokeText(t,0,yy);mx.fillStyle=col;mx.fillText(t,0,yy)};
+    lab('Przejazd · '+txt,y0,'#8f1d1d');
+    if(c.nb)lab('bez zapór!',y0+Math.max(14,u*.85),'#c62828');
+  }
+  mx.restore();
+}
 function drawMarkers(){
   const W=window.innerWidth,H=window.innerHeight;
   mx.clearRect(0,0,W,H);
@@ -3752,18 +3847,21 @@ function drawMarkers(){
       mx.beginPath();mx.moveTo(0,-8);mx.lineTo(5.5,4);mx.lineTo(0,1.5);mx.lineTo(-5.5,4);mx.closePath();mx.fillStyle='#fff';mx.fill();mx.restore();
     }
   }
-  const list=[];
-  crossings.forEach(c=>{const p=P(c.lat,c.lon);if(p)list.push({p,t:0})});
+  const list=[],camP=(vf&&vf.cam)||last,carP=(vf&&vf.car)||last;
+  if(camP)for(const c of xAll.values()){
+    if(Math.abs(c.lat-camP.lat)>.14||Math.abs(c.lon-camP.lon)>.22)continue;
+    const p=P(c.lat,c.lon);if(p)list.push({p,t:0,c,d:carP?dist(carP.lat,carP.lon,c.lat,c.lon):1e9})}
   trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt,near:t.id===nearTrainId,name:t.id})});
   if(endPt){const p=P(endPt.lat,endPt.lon);if(p)list.push({p,t:2})}
   list.sort((a,b)=>a.p.y-b.p.y); // dalsze najpierw
+  const xRank=new Set(list.filter(o=>o.t===0&&o.d<1800).sort((a,b)=>a.d-b.d).slice(0,3).map(o=>o.c.id));   // etykiety z odległością tylko dla trzech najbliższych
   for(const o of list){
     const {x,y,k}=o.p;if(x<-40||x>W+40||y<-40||y>H+40)continue;
     if(o.t===2){pin(x,y,k);continue}
-    const r=Math.max(7,Math.min(28,(o.t?11:10)*k));
+    if(o.t===0){drawXMark(o,xRank);continue}
+    const r=Math.max(7,Math.min(28,11*k));
     mx.beginPath();mx.arc(x,y,r,0,6.2832);
-    if(o.t){mx.fillStyle=o.rt===false?'#fff':'#f6e05e';mx.fill();mx.lineWidth=Math.max(2,r*.28);mx.strokeStyle='#000';mx.stroke()}
-    else{mx.fillStyle='#fff';mx.fill();mx.lineWidth=Math.max(3,r*.42);mx.strokeStyle='#e53e3e';mx.stroke()}
+    mx.fillStyle=o.rt===false?'#fff':'#f6e05e';mx.fill();mx.lineWidth=Math.max(2,r*.28);mx.strokeStyle='#000';mx.stroke()
     if(o.near){
       mx.beginPath();mx.arc(x,y,r+6,0,6.2832);mx.lineWidth=3;mx.strokeStyle='#1a73e8';mx.stroke();
       const nm=String(o.name||'pociąg').split(' → ')[0].slice(0,26);
@@ -4138,14 +4236,14 @@ setInterval(()=>{
 
 // ---- DEMO: wirtualny kierowca jedzie na północ, pociąg nadjeżdża ze wschodu ----
 let demoTimer=null;
-function stopDemo(){demo=false;clearInterval(demoTimer);crossings=[];trains=[];xLayer.clearLayers();tLayer.clearLayers();lastFetch=null}
+function stopDemo(){demo=false;clearInterval(demoTimer);crossings=[];xAll.clear();trains=[];xLayer.clearLayers();tLayer.clearLayers();lastFetch=null}
 ({}).onclick=()=>{
   stopDemo();demo=true;
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   beep();
   const c0={lat:51.1079,lon:17.0385}; // środek Wrocławia (tylko do demonstracji)
   const X={id:1,lat:c0.lat+0.0075,lon:c0.lon};
-  crossings=[X];xLayer.clearLayers();
+  crossings=[X];xAll.clear();xAll.set(X.id,X);xLayer.clearLayers();
   let car={lat:c0.lat,lon:c0.lon}, tr={id:'DEMO',lat:X.lat,lon:X.lon+0.045,speed:100,heading:270};
   trains=[tr];spoken={};
   demoTimer=setInterval(()=>{
