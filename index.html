@@ -79,6 +79,9 @@ body.night #bar{background:#202124;color:#e8eaed}
 #bar.bad #bmain{color:#d93025}
 #bsub{font-size:.9rem;color:#5f6368;margin-top:1px}
 body.night #bsub{color:#9aa0a6}
+#histbox{position:absolute;left:12px;right:12px;top:70px;bottom:90px;z-index:1300;background:#fff;color:#202124;border-radius:20px;padding:14px;overflow:auto;box-shadow:0 14px 40px rgba(0,0,0,.45);font-size:.92rem}
+#histbox h3{margin:0 0 8px}#histbox .it{padding:8px 0;border-top:1px solid #e3e5e8}#histbox small{opacity:.7}
+#rxinfo{font-size:.82rem;margin:4px 0;opacity:.95}
 #menu{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);z-index:1100;display:none;max-height:60vh;overflow:auto;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;background:#fff;color:#202124;border-radius:16px;padding:12px;box-shadow:0 6px 20px #0008}
 #menu.open{display:flex}
 #cfg input{background:#fff;color:#202124;border:1px solid #bbb}
@@ -222,6 +225,7 @@ body.night #zoomb{background:#2b3140}
  <div id="strip"><div id="info">Pociągi w pobliżu: –</div><div id="then"></div></div>
  <div id="compass"><svg viewBox="0 0 44 44"><polygon points="22,6 28,22 16,22" fill="#d93025"/><polygon points="22,38 28,22 16,22" fill="#9aa0a6"/></svg></div>
 </div>
+<div id="histbox" style="display:none"></div>
 <div id="menu">
   <button id="start">Start</button>
   <button id="demo" class="sec">Demo</button>
@@ -233,6 +237,15 @@ body.night #zoomb{background:#2b3140}
   <select id="vsel" class="sec" style="max-width:100%"></select>
   <select id="vbose" class="sec"><option value="full">Komunikaty: szczegółowe</option><option value="short">Komunikaty: krótkie</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="sigsnd" checked> Znaki STOP / ustąp</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="vcTrain" checked> Głos: pociągi</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="vcNav" checked> Głos: skręty i pasy</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="vcRoad" checked> Głos: znaki, korki, limity</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="eco"> Tryb oszczędny baterii</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
+  <button id="share" class="sec">Udostępnij przyjazd</button>
+  <button id="hist" class="sec">Historia przejazdów</button>
+  <button id="report" class="sec">Zgłoś błąd mapy</button>
+  <button id="logdl" class="sec">Pobierz log jazdy</button>
   <div id="cfg">
     <small>Serwer tras OSRM (puste = publiczny serwer demo router.project-osrm.org):</small>
     <input id="osrm" placeholder="https://router.project-osrm.org">
@@ -273,11 +286,16 @@ body.night #zoomb{background:#2b3140}
   <div id="rt">
     <div class="fld"><span>A</span><input id="from" placeholder="Start: Twoja aktualna lokalizacja (GPS)" autocomplete="off" disabled><button id="fromGps" class="sec" aria-label="GPS" style="display:none">⌖</button></div>
     <div class="fld v"><span>+</span><input id="via" placeholder="Przystanek po drodze (opcjonalnie)" autocomplete="off"></div>
+    <div class="fld v" id="via2w" style="display:none"><span>+</span><input id="via2" placeholder="Drugi przystanek" autocomplete="off"></div>
+    <div class="fld v" id="via3w" style="display:none"><span>+</span><input id="via3" placeholder="Trzeci przystanek" autocomplete="off"></div>
+    <button id="addvia" class="sec" style="margin-bottom:8px">+ Dodaj przystanek</button>
     <div class="fld b"><span>B</span><input id="to" placeholder="Cel: wpisz ulicę lub adres" autocomplete="off"></div>
     <div id="sug"></div>
     <div id="chips"></div><div id="savebar"></div>
+    <div class="fld"><span>⏱</span><input id="dep" type="datetime-local" title="Wyjazd o (puste = teraz)"></div>
+    <small>Wyjazd o wybranej godzinie (puste = teraz): prognoza korków i najlepsza pora wyjazdu.</small>
     <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label></div>
-    <div id="rinfo"></div><div id="wxinfo"></div>
+    <div id="rinfo"></div><div id="rxinfo"></div><div id="wxinfo"></div>
     <button id="dlmap" class="sec" style="display:none;margin-top:6px">Pobierz mapę trasy (offline)</button><small id="dlst"></small>
   </div>
   <div class="row"><button id="go">Jedź</button><button id="sim" class="sec">Symulacja trasy</button><button id="skip" class="sec">Demo</button></div>
@@ -339,7 +357,7 @@ function navSay(st){
   const m=st.mod||'',L=m.includes('left'),R=m.includes('right'),side=L?'w lewo':R?'w prawo':'',slight=m.includes('slight')?'lekko ':m.includes('sharp')?'ostro ':'';
   switch(st.type){
    case 'depart':return 'Proszę ruszać prosto';
-   case 'arrive':return viaPt?'Dojechaliśmy do przystanku':'Dojechaliśmy do celu';
+   case 'arrive':return viaList.length?'Dojechaliśmy do przystanku':'Dojechaliśmy do celu';
    case 'roundabout':case 'rotary':return 'Na rondzie proszę zjechać '+(st.exit||1)+'. zjazdem';
    case 'roundabout turn':return 'Na rondzie proszę skręcić '+side;
    case 'exit roundabout':case 'exit rotary':return 'Proszę zjechać z ronda';
@@ -381,7 +399,10 @@ try{speechSynthesis.onvoiceschanged=fillVoices}catch(e){}
 fillVoices();
 $('vsel').onchange=e=>{voiceName=e.target.value;try{localStorage.setItem('vname',voiceName)}catch(_){}speak('Dzień dobry. Tak będę do Pana mówił.')};
 $('vbose').value=vbose;$('vbose').onchange=e=>{vbose=e.target.value;try{localStorage.setItem('vbose',vbose)}catch(_){}};
+var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch(e){return {}}})();
 function say(key,text,vib,short){const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
+  const cat=/^[tmx]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
+  if(vcOff[cat])return;
   beep();if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
   speak(vbose==='short'&&short?short:text)}
 
@@ -428,6 +449,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
+  logSample(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -477,7 +499,7 @@ function evaluate(p){
       if(td>5000)continue;
       if(t.heading!=null&&t.speed!=null){
         const sp=t.speed/3.6;
-        if(sp<1.5)continue; // stoi
+        if(sp<1.5){if(route&&td<150&&a.d>120&&a.d<1500)detour(p,a.c);continue} // stoi
         if(angDiff(bear(t.lat,t.lon,a.c.lat,a.c.lon),t.heading)>35)continue; // oddala się / inna linia
         const eta=td/sp;
         if(eta<240&&(!threat||eta<threat.eta))threat={eta,a,t,td};
@@ -488,6 +510,8 @@ function evaluate(p){
   if(threat){
     const m=Math.round(threat.a.d/10)*10, s=Math.round(threat.eta), td=Math.round(threat.td/10)*10;
     const bar=s<=25?' · rogatki są zamknięte':s<=50?' · rogatki zaraz się zamkną':'';
+    if(s<=50&&threat.a.d<400)recCross(threat.a.c.id);
+    window._thr={id:threat.a.c.id,eta:s,d:m};
     setBanner('bad','Nadjeżdża pociąg',`Przejazd za ${m} m · pociąg za ok. ${s} s${bar}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}`);
     say('t'+threat.a.c.id,`Proszę uważać, nadjeżdża pociąg. Przejazd kolejowy za ${m} metrów. Proszę zwolnić.`,[300,120,300],'Nadjeżdża pociąg, proszę zwolnić');
   }else if(maybe){
@@ -975,7 +999,7 @@ $('dlmap').onclick=async()=>{
   }catch(e){st('Nie udało się pobrać: '+e.message)}
   $('dlmap').disabled=false;
 };
-function clearRoute(){nav=null;rerouting=false;route=null;viaPt=null;poi=[];wxTxt='';routeSeg=null;endPt=null;rCase.setLatLngs([]);rLine.setLatLngs([])}
+function clearRoute(){nav=null;rerouting=false;route=null;viaPt=null;viaList=[];poi=[];wxTxt='';routeSeg=null;endPt=null;rCase.setLatLngs([]);rLine.setLatLngs([])}
 function routeCross(c){
   let r=route.memo.get(c.id);
   if(!r){r=projRoute(route,c.lat,c.lon,0,route.pts.length-2);route.memo.set(c.id,r)}
@@ -983,7 +1007,7 @@ function routeCross(c){
 }
 function routeUpdate(p){
   if(!route||demo||route.pts.length<2||!(route.len>0))return;
-  if(viaPt&&dist(p.lat,p.lon,viaPt.lat,viaPt.lon)<60)viaPt=null;   // przystanek osiągnięty – dalsze przeliczenia już bez niego
+  if(viaList.length&&dist(p.lat,p.lon,viaList[0].lat,viaList[0].lon)<60){viaList.shift();viaPt=viaList[0]||null}   // przystanek osiągnięty – dalsze przeliczenia już bez niego
   const n=route.pts.length-2;
   let r=projRoute(route,p.lat,p.lon,Math.max(0,route.idx-3),Math.min(n,route.idx+400));
   if(r.off>120)r=projRoute(route,p.lat,p.lon,0,n);
@@ -1013,7 +1037,7 @@ function routeUpdate(p){
   const rem=Math.max(0,route.len-r.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
   const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   $('bsub').textContent=mins+' min · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
-  if(rem<40){setBanner('ok','Dojechaliśmy','Jesteśmy u celu');clearRoute();return}
+  if(rem<40){const cmp=finishTrip();setBanner('ok','Dojechaliśmy','Jesteśmy u celu'+cmp);clearRoute();return}
   // zjechanie z trasy (zły skręt): po ~3 s poza trasą liczymy nową, najszybszą od bieżącej pozycji
   route.offN=(r.off>45&&(p.speed||0)>2)?route.offN+1:0;
   if((route.offN>=3||(route.offN>=2&&r.off>150))&&endPt&&!rerouting&&Date.now()-route.lastRr>8000){
@@ -1057,9 +1081,10 @@ function ttRoute(r){
   return {geometry:{coordinates:coords},duration:sm.travelTimeInSeconds,distance:sm.lengthInMeters,steps,jam,inc,delay:sm.trafficDelayInSeconds||0,traffic:true};
 }
 async function fetchTT(a,b,hdg){
-  let u='https://api.tomtom.com/routing/1/calculateRoute/'+a.lat+','+a.lon+':'+(viaPt?viaPt.lat+','+viaPt.lon+':':'')+b.lat+','+b.lon+'/json?key='+encodeURIComponent(ttKey)+
+  let u='https://api.tomtom.com/routing/1/calculateRoute/'+a.lat+','+a.lon+':'+viaList.map(q=>q.lat+','+q.lon+':').join('')+b.lat+','+b.lon+'/json?key='+encodeURIComponent(ttKey)+
     '&traffic=true&travelMode=car&routeType=fastest&maxAlternatives=2&instructionsType=coded&language=pl-PL&sectionType=traffic&computeTravelTimeFor=all&routeRepresentation=polyline';
   if(hdg!=null)u+='&vehicleHeading='+Math.round((hdg+360)%360);
+  if(depTime)u+='&departAt='+encodeURIComponent(depTime.toISOString().replace(/\.\d+Z$/,'+00:00'));
   if(opts.mw)u+='&avoid=motorways';if(opts.toll)u+='&avoid=tollRoads';
   const r=await fetch(u);if(!r.ok)throw new Error('TomTom HTTP '+r.status);
   const j=await r.json(),all=(j.routes||[]).map(ttRoute).filter(x=>x.geometry.coordinates.length>1&&x.duration>0);
@@ -1092,7 +1117,7 @@ async function fetchRoute(a,b,hdg){
 var ttErr='',ttSt='',flSt='';
 async function fetchRouteOsrm(a,b,hdg){
   const base=($('osrm').value.trim()||'https://router.project-osrm.org').replace(/\/$/,'');
-  const pts=[a].concat(viaPt?[viaPt]:[],[b]);
+  const pts=[a].concat(viaList,[b]);
   const ex=[opts.mw&&'motorway',opts.toll&&'toll'].filter(Boolean).join(',');
   const url=base+'/route/v1/driving/'+pts.map(q=>q.lon+','+q.lat).join(';')+'?overview=full&geometries=geojson&alternatives=false&steps=true'+(ex?'&exclude='+ex:'');
   let j=null;
@@ -1117,8 +1142,8 @@ function gpsNow(){return new Promise((ok,no)=>{
     ()=>no(new Error('brak sygnału GPS – włącz lokalizację w przeglądarce')),{enableHighAccuracy:true,timeout:10000,maximumAge:60000})})}
 
 // --- podpowiedzi adresów (Photon, dane OpenStreetMap) ---
-const F={from:{el:$('from'),pt:null},via:{el:$('via'),pt:null},to:{el:$('to'),pt:null}};
-var places={home:null,work:null,recent:[]},viaPt=null,opts={mw:false,toll:false};
+const F={from:{el:$('from'),pt:null},via:{el:$('via'),pt:null},via2:{el:$('via2'),pt:null},via3:{el:$('via3'),pt:null},to:{el:$('to'),pt:null}};
+var places={home:null,work:null,recent:[]},viaPt=null,viaList=[],depTime=null,opts={mw:false,toll:false};
 try{places=Object.assign(places,JSON.parse(localStorage.getItem('places')||'{}'));opts=Object.assign(opts,JSON.parse(localStorage.getItem('opts')||'{}'))}catch(e){}
 const savePlaces=()=>{try{localStorage.setItem('places',JSON.stringify(places))}catch(e){}};
 $('avMw').checked=!!opts.mw;$('avToll').checked=!!opts.toll;
@@ -1158,7 +1183,7 @@ function showSug(list,k){
   });
   if(!list.length){const d=document.createElement('div');d.textContent='Brak wyników';box.appendChild(d)}
 }
-['from','via','to'].forEach(k=>F[k].el.addEventListener('input',()=>{
+['from','via','via2','via3','to'].forEach(k=>F[k].el.addEventListener('input',()=>{
   F[k].pt=null;if(k==='to')renderChips();clearTimeout(sugTimer);
   const q=F[k].el.value.trim();
   if(q.length<3){$('sug').innerHTML='';return}
@@ -1178,16 +1203,20 @@ async function planRoute(){
     if(!F.to.pt)throw new Error('wybierz cel z podpowiedzi');
     if(F.from.el.value.trim()&&!F.from.pt)throw new Error('start jest ustawiany z GPS');
     info('Ustalanie pozycji…');
-    if(F.via.el.value.trim()&&!F.via.pt)throw new Error('wybierz przystanek z podpowiedzi albo wyczyść pole');
+    for(const k of ['via','via2','via3'])if(F[k].el.value.trim()&&!F[k].pt)throw new Error('wybierz przystanek z podpowiedzi albo wyczyść pole');
     const a=F.from.pt||await gpsNow(), b=F.to.pt;
-    viaPt=F.via.pt?{lat:F.via.pt.lat,lon:F.via.pt.lon}:null;
+    {const rest=['via','via2','via3'].filter(k=>F[k].pt).map(k=>({lat:F[k].pt.lat,lon:F[k].pt.lon})),ord=[];let cur=a;   // kolejność: zawsze najbliższy kolejny przystanek
+     while(rest.length){let bi=0;rest.forEach((q,i)=>{if(dist(cur.lat,cur.lon,q.lat,q.lon)<dist(cur.lat,cur.lon,rest[bi].lat,rest[bi].lon))bi=i});cur=rest.splice(bi,1)[0];ord.push(cur)}
+     viaList=ord;viaPt=ord[0]||null}
+    depTime=null;{const dv=$('dep').value;if(dv){const d=new Date(dv);if(d.getTime()>Date.now()+300000)depTime=d}}
     info('Wyznaczanie najszybszej trasy…');
-    const r=await fetchRoute(a,b);
+    let r;try{r=await fetchRoute(a,b)}finally{const dt=depTime;depTime=null;planRoute.dt=dt}
     if(!(r.distance>30)||!r.geometry||r.geometry.coordinates.length<2)throw new Error('start i cel są w tym samym miejscu – wybierz inny start (pole A) lub cel');
     endPt=b;setRoute(r.geometry.coordinates,r.duration,r.steps,r.jam,r.delay,r.inc);
     places.recent=[{label:F.to.el.value,lat:b.lat,lon:b.lon}].concat(places.recent.filter(x=>x.label!==F.to.el.value)).slice(0,6);savePlaces();
     loadWeather(route);loadPoi(route);renderChips();$('dlmap').style.display='block';
-    info('Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
+    startTrip(a,b,r);loadRouteCrossings(route,planRoute.dt);
+    info((planRoute.dt?'Prognoza na '+planRoute.dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · ':'')+'Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+typicalTxt(a,b,r.duration)+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
     return true;
   }catch(e){info('Błąd: '+e.message);return false}
 }
@@ -1231,6 +1260,144 @@ $('closeNav').onclick=()=>{
   $('pick').style.display='flex';
 };
 
+
+// ================= Rozszerzenia: objazd, statystyki, historia, udostępnianie, oszczędzanie baterii, log jazdy =================
+const LSget=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}};
+const LSput=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const hourKey=d=>{d=d||new Date();return String(d.getDay()*24+d.getHours())};
+// --- dodawanie przystanków ---
+{let shown=0;$('addvia').onclick=()=>{
+  if(shown===0){$('via2w').style.display='flex';shown=1}
+  else if(shown===1){$('via3w').style.display='flex';shown=2;$('addvia').style.display='none'}
+}}
+// --- kategorie głosu ---
+[['vcTrain','Train'],['vcNav','Nav'],['vcRoad','Road']].forEach(([id,c])=>{$(id).checked=!vcOff[c];$(id).onchange=()=>{vcOff[c]=!$(id).checked;LSput('vcOff',vcOff)}});
+// --- statystyki zamknięć przejazdów (tylko na tym urządzeniu) ---
+const cstat=LSget('cstat',{}),recAt={};
+function recCross(id){
+  const now=Date.now();if(recAt[id]&&now-recAt[id]<600000)return;recAt[id]=now;
+  const hk=hourKey(),o=cstat[id]||(cstat[id]={});o[hk]=(o[hk]||0)+1;LSput('cstat',cstat);
+}
+async function loadRouteCrossings(R,when){
+  const box=$('rxinfo');box.textContent='';
+  try{
+    const step=Math.max(700,R.len/110),pts=[];let lastD=-1e9;
+    for(let i=0;i<R.pts.length;i++)if(R.cum[i]-lastD>=step||i===R.pts.length-1){pts.push(R.pts[i][0].toFixed(5),R.pts[i][1].toFixed(5));lastD=R.cum[i]}
+    const q='[out:json][timeout:25];node(around:25,'+pts.join(',')+')["railway"="level_crossing"];out;';
+    const j=await cachedOverpass('rx|'+pts[0]+'|'+pts[pts.length-1]+'|'+Math.round(R.len/100),q);
+    if(route!==R)return;
+    const xs=(j.elements||[]).map(e=>{const t=e.tags||{};return {id:e.id,nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}});
+    R.xs=xs;
+    const nb=xs.filter(x=>x.nb).length,hk=hourKey(when||new Date());
+    const often=xs.filter(x=>((cstat[x.id]||{})[hk]||0)>=2).length;
+    let t='Przejazdy kolejowe na trasie: '+xs.length+(nb?' (bez zapór: '+nb+')':'');
+    if(often)t+=' · '+often+' z nich bywa zamkniętych o tej porze';
+    if(often&&!when){   // najlepsza pora wyjazdu w ciągu najbliższych 6 godzin
+      let best=0,bc=often;
+      for(let h=1;h<=6;h++){const d=new Date(Date.now()+h*3600000),k=hourKey(d),c=xs.filter(x=>((cstat[x.id]||{})[k]||0)>=2).length;if(c<bc){bc=c;best=h}}
+      if(best)t+=' · mniej zamknięć będzie ok. '+new Date(Date.now()+best*3600000).getHours()+':00';
+    }
+    box.textContent=t;
+  }catch(e){}
+}
+// --- objazd zamkniętego przejazdu (pociąg stoi na przejeździe) ---
+const detourAt={};
+function passesNear(coords,c,m){
+  const kx=111195*Math.cos(rad(c.lat));
+  for(let i=0;i<coords.length-1;i++){
+    const ax=(coords[i][0]-c.lon)*kx,ay=(coords[i][1]-c.lat)*111195,bx=(coords[i+1][0]-c.lon)*kx,by=(coords[i+1][1]-c.lat)*111195;
+    const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;
+    if(Math.hypot(ax+t*dx,ay+t*dy)<m)return true;
+  }
+  return false;
+}
+async function detour(p,c){
+  if(!route||!endPt||rerouting||demo)return;
+  if(detourAt[c.id]&&Date.now()-detourAt[c.id]<300000)return;
+  detourAt[c.id]=Date.now();rerouting=true;const old=route;
+  say('detour','Pociąg stoi na przejeździe przed nami. Proszę chwilę poczekać, szukam objazdu.',[100,60,100],'Szukam objazdu');
+  try{
+    const x=await fetchRoute(p,endPt,(p.speed||0)>2?lastH:null);
+    const ok=(x.alts||[x]).filter(r=>!passesNear(r.geometry.coordinates,c,35)).sort((a,b)=>a.duration-b.duration)[0];
+    if(route!==old)return;
+    if(ok){setRoute(ok.geometry.coordinates,ok.duration,ok.steps,ok.jam,ok.delay,ok.inc);route.lastRr=Date.now();say('detoured','Wyznaczyłem objazd. Proszę jechać nową trasą.',[60]);spoken.detoured=0}
+    else say('nodetour','Nie znalazłem objazdu. Proszę uważać przy przejeździe.',[60]);
+  }catch(e){}finally{rerouting=false;if(route)navUpdate()}
+}
+// --- typowy czas przejazdu i historia ---
+let trip=null;const tkeyOf=(a,b)=>a.lat.toFixed(2)+','+a.lon.toFixed(2)+'>'+b.lat.toFixed(2)+','+b.lon.toFixed(2);
+function typicalTxt(a,b,dur){
+  const t=LSget('typ',{})[tkeyOf(a,b)];if(!t||t.n<1)return '';
+  const diff=Math.round((dur-t.avg)/60);
+  return ' · zwykle '+Math.round(t.avg/60)+' min'+(Math.abs(diff)>=2?(diff<0?' (dziś szybciej)':' (dziś wolniej)'):'');
+}
+function startTrip(a,b,r){trip={t0:Date.now(),a:{lat:a.lat,lon:a.lon},b:{lat:b.lat,lon:b.lon},to:F.to.el.value||'cel',km:r.distance/1000,est:r.duration}}
+function finishTrip(){
+  if(!trip||sim||demo){trip=null;return ''}
+  const dur=(Date.now()-trip.t0)/1000;let out='';
+  if(dur>180){
+    const h=LSget('hist',[]);h.unshift({t:trip.t0,to:trip.to,km:+trip.km.toFixed(1),min:Math.round(dur/60),est:Math.round(trip.est/60)});LSput('hist',h.slice(0,40));
+    const ty=LSget('typ',{}),k=tkeyOf(trip.a,trip.b),o=ty[k];
+    if(o&&o.n>=1){const d=Math.round((o.avg-dur)/60);if(Math.abs(d)>=2)out=' · '+Math.abs(d)+' min '+(d>0?'szybciej':'wolniej')+' niż zwykle'}
+    ty[k]=o?{n:o.n+1,avg:(o.avg*o.n+dur)/(o.n+1)}:{n:1,avg:dur};LSput('typ',ty);
+  }
+  trip=null;return out;
+}
+$('hist').onclick=()=>{
+  const h=LSget('hist',[]),b=$('histbox');
+  b.innerHTML='<h3>Historia przejazdów</h3>';
+  if(!h.length)b.innerHTML+='<p>Brak zapisanych przejazdów. Pojawią się po dojechaniu do celu.</p>';
+  h.forEach(x=>{const d=document.createElement('div');d.className='it';
+    d.innerHTML='<b></b><br><small></small>';d.firstChild.textContent=x.to;
+    d.querySelector('small').textContent=new Date(x.t).toLocaleString('pl-PL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · '+x.km+' km · '+x.min+' min (plan '+x.est+' min)';
+    b.appendChild(d)});
+  const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>b.style.display='none';b.appendChild(c);
+  b.style.display='block';$('menu').classList.remove('open');
+};
+// --- udostępnianie przyjazdu ---
+$('share').onclick=async()=>{
+  $('menu').classList.remove('open');
+  if(!route||!endPt){alert('Najpierw wyznacz trasę.');return}
+  const rem=Math.max(0,route.len-route.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
+  const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+  const txt='Jadę do: '+(F.to.el.value||'celu')+'. Przyjazd ok. '+eta+' (za '+mins+' min). Cel: https://www.google.com/maps/dir/?api=1&destination='+endPt.lat+','+endPt.lon;
+  try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(txt);alert('Skopiowano do schowka:\n'+txt)}catch(e){prompt('Skopiuj wiadomość:',txt)}
+};
+// --- zgłaszanie błędów mapy ---
+$('report').onclick=()=>{
+  $('menu').classList.remove('open');
+  if(!last){alert('Brak pozycji GPS.');return}
+  let nearest=null,nd=1e9;crossings.forEach(c=>{const d=dist(last.lat,last.lon,c.lat,c.lon);if(d<nd){nd=d;nearest=c}});
+  const rp=LSget('reports',[]);rp.unshift({t:Date.now(),lat:last.lat,lon:last.lon,crossing:nearest&&nd<300?nearest.id:null});LSput('reports',rp.slice(0,50));
+  window.open('https://www.openstreetmap.org/note/new?lat='+last.lat.toFixed(6)+'&lon='+last.lon.toFixed(6)+'#map=19/'+last.lat.toFixed(6)+'/'+last.lon.toFixed(6),'_blank');
+};
+// --- tryb oszczędny baterii ---
+{
+  let manual=LSget('eco',false),bat=null;
+  const upd=()=>{ecoOn=manual||(bat&&!bat.charging&&bat.level<.2);$('eco').checked=manual;document.body.classList.toggle('eco',!!ecoOn)};
+  $('eco').onchange=()=>{manual=$('eco').checked;LSput('eco',manual);upd()};
+  try{if(navigator.getBattery)navigator.getBattery().then(b=>{bat=b;b.addEventListener('levelchange',upd);b.addEventListener('chargingchange',upd);upd()})}catch(e){}
+  upd();
+}
+// --- log jazdy do kalibracji ostrzeżeń (tylko na tym urządzeniu; pobierasz go sam) ---
+let drivelog=[],logLast=0,logOn=LSget('logon',false);
+$('logon').checked=logOn;
+$('logon').onchange=()=>{logOn=$('logon').checked;LSput('logon',logOn)};
+async function logSample(p){
+  if(!logOn||demo||sim)return;const now=Date.now();if(now-logLast<2000)return;logLast=now;
+  drivelog.push({t:now,lat:+p.lat.toFixed(6),lon:+p.lon.toFixed(6),v:p.speed!=null?+(p.speed*3.6).toFixed(1):null,h:p.heading!=null?Math.round(p.heading):null,
+    thr:window._thr||null,ban:$('bmain').textContent,tr:trains.length});window._thr=null;
+  if(drivelog.length>20000)drivelog.shift();
+  if(drivelog.length%20===0)try{await idbSet('drivelog',drivelog)}catch(e){}
+}
+$('logdl').onclick=async()=>{
+  $('menu').classList.remove('open');
+  let d=drivelog;if(!d.length){try{d=(await idbGet('drivelog'))||[]}catch(e){}}
+  if(!d.length){alert('Log jest pusty. Włącz „Zapisuj log jazdy” i przejedź trasę.');return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));
+  a.download='log-jazdy-'+new Date().toISOString().slice(0,16).replace(':','')+'.json';document.body.appendChild(a);a.click();a.remove();
+};
 
 // ---- Polecenia głosowe (Chrome/Android; wymaga zgody na mikrofon) ----
 (function(){
@@ -2061,7 +2228,7 @@ function updCarSnap(){
 const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
 let wallKey='',wallCol=null;
 function drawBuildings3D(){
-  if(!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
+  if(ecoOn||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
   const D=vecData,pal=PAL[night?'night':'day'],S=$('rot').clientWidth,s=vf.s;
   const W=window.innerWidth,H=window.innerHeight;
   const ox=(vf.cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(vf.cam.lat-D.lat)*111195;
@@ -2135,7 +2302,9 @@ function drawMarkers(){
     }
   }
 }
+var ecoOn=false,fcnt=0;
 function frame(){
+  if(ecoOn&&(fcnt++&1)){requestAnimationFrame(frame);return}
   scaleCur+=(scaleTgt-scaleCur)*.08;
   const d=((tgtRot-curRot)%360+540)%360-180;
   curRot=Math.abs(d)<.05?tgtRot:curRot+d*.15;
