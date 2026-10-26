@@ -159,6 +159,7 @@ body.night #xBoard{background:#202228;color:#e8eaed}
 #xBoard .xe{font-size:.82rem;font-weight:700;opacity:.85;text-align:right;min-width:62px}
 #xBoard .late{color:#d93025;font-weight:700}body.night #xBoard .late{color:#ff8a80}
 #xBoard button{width:100%;margin-top:10px;padding:13px;border-radius:14px;background:#8882;color:inherit;font-weight:700;font-size:1rem}
+#xBoard .xact{display:flex;gap:8px}#xBoard .xact button{flex:1;padding:11px 6px;font-size:.92rem}
 #brwGo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 208px);z-index:950;padding:13px 22px;border-radius:26px;background:#188038;color:#fff;font-weight:700;font-size:1rem;box-shadow:0 8px 24px #0006;display:none;animation:cardIn .3s ease}
 #brwFav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 152px);z-index:950;padding:10px 18px;border-radius:22px;background:#fff;color:#202124;font-weight:700;box-shadow:0 6px 18px #0005;display:none}
 body.night #brwFav{background:#2d3139;color:#e8eaed}
@@ -397,7 +398,7 @@ body.night #tcard{background:#202228;color:#e6e9ee}
 body.night #sig{background:rgba(32,34,40,.95);color:#e6e9ee}
 #from:disabled{opacity:.75;cursor:not-allowed;background:transparent}
 #ttstat{font-size:.75rem;opacity:.6;margin-top:12px;min-height:1.2em}
-#view{touch-action:none;cursor:grab}
+#view{touch-action:none;cursor:grab;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 #recenter{display:none;position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 154px);z-index:900;width:50px;height:50px;padding:0;border-radius:16px;background:#fff;color:#1a73e8;box-shadow:0 6px 20px rgba(0,0,0,.28);align-items:center;justify-content:center}
 #recenter svg{width:28px;height:28px}
 #lanes{display:none;justify-content:center;margin:8px auto 0;width:max-content;max-width:calc(100% - 24px);gap:3px;padding:6px 8px;background:#1f2a37;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
@@ -586,6 +587,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
   <label style="font-size:.9rem"><input type="checkbox" id="camShow" checked> Pokazuj fotoradary na mapie i ostrzegaj</label>
   <button id="hist" class="sec">Historia przejazdów</button>
   <button id="xstat" class="sec">Statystyki przejazdów kolejowych</button>
+  <button id="xwatch" class="sec">Obserwowane i ukryte przejazdy</button>
   <label style="font-size:.9rem"><input type="checkbox" id="alarmOn" checked> Alarm pełnoekranowy przy pociągu</label>
   <button id="report" class="sec">Zgłoś błąd mapy</button>
   <button id="logdl" class="sec">Pobierz log jazdy</button>
@@ -644,7 +646,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 103</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 104</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -706,7 +708,7 @@ const xLayer=L.layerGroup().addTo(map), tLayer=L.layerGroup().addTo(map);
 const xAll=new Map();let xErr=0,xViewAt=null,xViewNext=0;
 function xParse(e){const t=e.tags||{};
   return {id:e.id,lat:e.lat,lon:e.lon,tr:+t.tracks||1,br:t['crossing:barrier'],li:t['crossing:light'],bell:t['crossing:bell'],nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled',inf:t.railway!=='level_crossing'}}   // nb = przejazd bez zapór
-function xAdd(list){for(const c of list){if(c.lat==null||c.lon==null||isNaN(c.lat))continue;xAll.set(c.id,c)}
+function xAdd(list){for(const c of list){if(c.lat==null||c.lon==null||isNaN(c.lat)||xHid(c))continue;xAll.set(c.id,c)}
   if(xAll.size>4000){let n=xAll.size-3500;for(const k of xAll.keys()){xAll.delete(k);if(--n<=0)break}}}
 // przejazdy wykryte z geometrii mapy (tor przecina drogę bez mostu i tunelu) – uzupełniają dane z Overpass
 function xDerSync(){
@@ -718,7 +720,7 @@ function xDerSync(){
 function xDerAdd(list){
   if(!list||!list.length)return;
   for(const p of list){
-    const id='d'+Math.round(p.lat*1e5)+'_'+Math.round(p.lon*1e5);if(xAll.has(id))continue;
+    const id='d'+Math.round(p.lat*1e5)+'_'+Math.round(p.lon*1e5);if(xAll.has(id)||xHid(p))continue;
     let dup=false;for(const c of xAll.values()){if(Math.abs(c.lat-p.lat)<.0004&&Math.abs(c.lon-p.lon)<.0007&&dist(c.lat,c.lon,p.lat,p.lon)<35){dup=true;break}}
     if(dup)continue;
     xAll.set(id,{id,lat:p.lat,lon:p.lon,tr:p.n||1,nb:false,der:true});
@@ -821,8 +823,8 @@ async function loadCrossings(lat,lon){
     let j;
     try{j=await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q)}
     catch(e){j=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q0)}   // zapas: tylko oznaczone przejazdy
-    const seen=new Set();crossings=j.elements.filter(e=>e.lat!=null&&!seen.has(e.id)&&seen.add(e.id)).map(xParse);xAdd(crossings);xErr=0;
-    xDerSync();
+    const seen=new Set();crossings=j.elements.filter(e=>e.lat!=null&&!seen.has(e.id)&&seen.add(e.id)).map(xParse).filter(c=>!xHid(c));xAdd(crossings);xErr=0;
+    xDerSync();xUserSync();
     xLayer.clearLayers();
   }catch(e){lastFetch=null;xErr=Date.now();}
 }
@@ -1121,12 +1123,13 @@ $('compass').onclick=()=>{rotOff=0;tgtRot=freeCam?0:-lastH;updRecenter()};   // 
 const tiltLbl=()=>{$('tilt').textContent=tiltDeg>=60?'2D':tiltDeg?'3D+':'3D'};
 $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot()};
 {
-  const vw=$('view'),ptrs=new Map();let pan=null,g0=null;
+  const vw=$('view'),ptrs=new Map();let pan=null,g0=null,lpT=null;
   const pair=()=>{const a=[...ptrs.values()];return {d:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y)||1,ang:Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)*180/Math.PI}};
   vw.addEventListener('pointerdown',e=>{
     ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});try{vw.setPointerCapture(e.pointerId)}catch(_){}
-    if(ptrs.size===1)pan={x0:e.clientX,y0:e.clientY,moved:false};
-    else if(ptrs.size===2){pan=null;g0=pair()}
+    if(ptrs.size===1){pan={x0:e.clientX,y0:e.clientY,moved:false};clearTimeout(lpT);const hx=e.clientX,hy=e.clientY;
+      lpT=setTimeout(()=>{if(pan&&!pan.moved&&ptrs.size===1&&window.mapHold){pan.held=true;window.mapHold(hx,hy)}},650)}   // przytrzymanie = wybór miejsca
+    else if(ptrs.size===2){clearTimeout(lpT);pan=null;g0=pair()}
   });
   vw.addEventListener('pointermove',e=>{
     const p=ptrs.get(e.pointerId);if(!p)return;
@@ -1135,13 +1138,14 @@ $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot
       const g=pair();let da=g.ang-g0.ang;da=((da+540)%360)-180;
       setZoom(zoomMul*g.d/g0.d);rotOff+=da;tgtRot+=da;curRot+=da;g0=g;updRecenter();return;
     }
-    if(!pan)return;
-    if(!pan.moved){if(Math.hypot(e.clientX-pan.x0,e.clientY-pan.y0)<8)return;pan.moved=true;enterFree()}
+    if(!pan||pan.held)return;
+    if(!pan.moved){if(Math.hypot(e.clientX-pan.x0,e.clientY-pan.y0)<8)return;pan.moved=true;clearTimeout(lpT);enterFree()}
     const R=rad(curRot),dyv=dy/Math.max(.35,Math.cos(rad(tiltDeg))),cx=dx*Math.cos(R)+dyv*Math.sin(R),cy=-dx*Math.sin(R)+dyv*Math.cos(R);   // przesunięcie palca w układzie mapy
     if(vec){panE-=cx/scaleCur;panN+=cy/scaleCur}else map.panBy([-cx,-cy],{animate:false});
   });
-  ['pointerup','pointercancel'].forEach(t=>vw.addEventListener(t,e=>{const tap=t==='pointerup'&&pan&&!pan.moved&&ptrs.size===1;ptrs.delete(e.pointerId);g0=null;pan=null;if(ptrs.size===2)g0=pair();if(tap&&window.mapTap)window.mapTap(e.clientX,e.clientY)}));
+  ['pointerup','pointercancel'].forEach(t=>vw.addEventListener(t,e=>{clearTimeout(lpT);const tap=t==='pointerup'&&pan&&!pan.moved&&!pan.held&&ptrs.size===1;ptrs.delete(e.pointerId);g0=null;pan=null;if(ptrs.size===2)g0=pair();if(tap&&window.mapTap)window.mapTap(e.clientX,e.clientY)}));
   vw.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoomMul*Math.exp(-e.deltaY*.0015))},{passive:false});
+  vw.addEventListener('contextmenu',e=>e.preventDefault());   // przytrzymanie wybiera miejsce – bez menu systemowego
 }
 function follow(p){
   {const ci=$('carIcon'),v=p.speed||0,pv=follow.pv||0;follow.pv=v;
@@ -1202,6 +1206,7 @@ function setRoute(coords,dur,steps,jam,delay,inc){
   route=makeRoute(coords,dur);route.inc=inc||[];route.jam0=(jam&&jam.length>=route.pts.length-1)?jam:null;route.jam=route.jam0;route.fsAt=0;route.fsTo=0;route.delay=delay||0;routeSeg=route.pts;routeSegI=0;navSaid={};
   let o=0;route.steps=(steps||[]).map(x=>{const y={...x,off:o};o+=x.dist;return y});
   rCase.setLatLngs(route.pts);rLine.setLatLngs(route.pts);
+  try{saveResume()}catch(e){}   // trasa do wznowienia po odświeżeniu strony
 }
 
 // ---- Wskazówki dojazdu (kroki z OSRM) ----
@@ -1452,7 +1457,7 @@ $('dlmap').onclick=async()=>{
   }catch(e){st('Nie udało się pobrać: '+e.message)}
   $('dlmap').disabled=false;
 };
-function clearRoute(){planRoute.alts=null;planRoute.choice=null;nav=null;rerouting=false;route=null;viaPt=null;viaList=[];poi=[];wxTxt='';routeSeg=null;endPt=null;rCase.setLatLngs([]);rLine.setLatLngs([])}
+function clearRoute(){dropResume();planRoute.alts=null;planRoute.choice=null;nav=null;rerouting=false;route=null;viaPt=null;viaList=[];poi=[];wxTxt='';routeSeg=null;endPt=null;rCase.setLatLngs([]);rLine.setLatLngs([])}
 function routeCross(c){
   let r=route.memo.get(c.id);
   if(!r){r=projRoute(route,c.lat,c.lon,0,route.pts.length-2);route.memo.set(c.id,r)}
@@ -1688,6 +1693,7 @@ async function planRoute(){
 window.preview=false;
 function exitPreview(){window.preview=false;window.browse=false;document.body.classList.remove('preview');clearInterval(window.pvT);clearInterval(window.brwT);const b=$('brwBack');if(b)b.style.display='none';const q=$('brwFav');if(q)q.style.display='none';const q2=$('brwGo');if(q2)q2.style.display='none'}
 function enterPreview(r){
+  dropResume();   // sam podgląd z wybranego startu to nie jazda
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   stopSim();window.preview=true;document.body.classList.add('preview');
   const a=route.pts[0],b=routeAt(route,Math.min(route.len*.5,400)),h=bear(a[0],a[1],b[0],b[1]);
@@ -1723,10 +1729,10 @@ function stopSim(){clearInterval(sim);sim=null}
     evaluate({lat:a[0],lon:a[1],speed:V,heading:bear(a[0],a[1],b[0],b[1])});
   },1000);
 };
-function pin(x,y,k){
+function pin(x,y,k,col){
   const r=Math.max(10,Math.min(30,14*k));
   mx.beginPath();mx.moveTo(x,y);mx.bezierCurveTo(x-r*1.2,y-r*1.1,x-r,y-r*2.6,x,y-r*2.6);
-  mx.bezierCurveTo(x+r,y-r*2.6,x+r*1.2,y-r*1.1,x,y);mx.fillStyle='#d93025';mx.fill();mx.lineWidth=2;mx.strokeStyle='#fff';mx.stroke();
+  mx.bezierCurveTo(x+r,y-r*2.6,x+r*1.2,y-r*1.1,x,y);mx.fillStyle=col||'#d93025';mx.fill();mx.lineWidth=2;mx.strokeStyle='#fff';mx.stroke();
   mx.beginPath();mx.arc(x,y-r*1.65,r*.42,0,6.2832);mx.fillStyle='#fff';mx.fill();
 }
 
@@ -1770,7 +1776,7 @@ async function loadRouteCrossings(R,when){
     const q='[out:json][timeout:25];node(around:25,'+pts.join(',')+')["railway"="level_crossing"];out;';
     const j=await cachedOverpass('rx|'+pts[0]+'|'+pts[pts.length-1]+'|'+Math.round(R.len/100),q);
     if(route!==R)return;
-    const xs=(j.elements||[]).map(xParse);xAdd(xs);
+    const xs=(j.elements||[]).map(xParse).filter(c=>!xHid(c));xAdd(xs);xUserOnRoute(R,xs);
     R.xs=xs;
     const nb=xs.filter(x=>x.nb).length,hk=hourKey(when||new Date());
     const often=xs.filter(x=>((cstat[x.id]||{})[hk]||0)>=2).length;
@@ -1782,6 +1788,8 @@ async function loadRouteCrossings(R,when){
       if(best)t+=' · mniej zamknięć będzie ok. '+new Date(Date.now()+best*3600000).getHours()+':00';
     }
     box.textContent=t;
+    const fc=()=>routeForecast(R,xs,when).then(q=>{if(q&&route===R)box.textContent=t+' · '+q}).catch(()=>{});
+    fc();if(!gtfs)setTimeout(fc,9000);   // rozkład jazdy może jeszcze się wczytywać
   }catch(e){}
 }
 // --- objazd zamkniętego przejazdu (pociąg stoi na przejeździe) ---
@@ -2018,15 +2026,20 @@ $('fpsOn').onchange=()=>{if(!$('fpsOn').checked)$('fps').style.display='none';fp
 $('expSet').onclick=()=>{
   $('menu').classList.remove('open');
   const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!/^(ofm|tile)/.test(k))o[k]=localStorage.getItem(k)}}catch(e){}
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'przejazd',v:36,data:o})],{type:'application/json'}));
+  const a=document.createElement('a');let ix={};try{ix={tracks:tracks,vis:[...vis]}}catch(e){}   // przejechane trasy i odwiedzone ulice (IndexedDB)
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'przejazd',v:37,data:o,idb:ix})],{type:'application/json'}));
   a.download='przejazd-ustawienia.json';document.body.appendChild(a);a.click();a.remove();
 };
 $('impSet').onclick=()=>{$('menu').classList.remove('open');$('impFile').click()};
 $('impFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const j=JSON.parse(await f.text());if(j.app!=='przejazd'||!j.data)throw new Error('to nie jest kopia ustawień');
-    if(!confirm('Wczytać kopię ustawień ('+Object.keys(j.data).length+' wpisów: miejsca, historia, statystyki)? Zastąpi bieżące dane o tych samych nazwach.'))return;
-    for(const k in j.data)localStorage.setItem(k,j.data[k]);alert('Przywrócono ustawienia. Aplikacja się odświeży.');location.reload()}
+    if(!confirm('Wczytać kopię ustawień ('+Object.keys(j.data).length+' wpisów: miejsca, historia, statystyki'+(j.idb&&((j.idb.tracks||[]).length||(j.idb.vis||[]).length)?', przejechane trasy':'')+')? Zastąpi bieżące dane o tych samych nazwach.'))return;
+    for(const k in j.data)localStorage.setItem(k,j.data[k]);
+    if(j.idb){   // trasy i ulice z kopii dołączamy do tych, które już są
+      if(Array.isArray(j.idb.tracks)&&j.idb.tracks.length){const cur=(await idbGet('tracks').catch(()=>null))||[],ids=new Set(cur.map(t=>t&&t.t0));await idbSet('tracks',cur.concat(j.idb.tracks.filter(t=>t&&t.pts&&!ids.has(t.t0))))}
+      if(Array.isArray(j.idb.vis)&&j.idb.vis.length){const cv=(await idbGet('vis').catch(()=>null))||[];await idbSet('vis',[...new Set(cv.concat(j.idb.vis))])}
+    }alert('Przywrócono ustawienia. Aplikacja się odświeży.');location.reload()}
   catch(err){alert('Nie udało się wczytać: '+err.message)}
 };
 // aktualizacja pogody w trakcie jazdy (gołoledź, mgła)
@@ -2390,7 +2403,7 @@ setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-al
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['hudBtn','eco','logon','fpsOn','logdl','logan','logFile','report']);
-  mv('data',['hist','xstat','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow','expSet','impSet','impFile','about']);
+  mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow','expSet','impSet','impFile','about']);
   G('adv').appendChild($('cfg'));
   // tytuły nad przełącznikami bez własnego opisu
   const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
@@ -2723,7 +2736,7 @@ function xDepartures(c){
 function showBoard(c){
   const B=$('xBoard'),L=xDepartures(c);
   const hh=t=>new Date(t*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  const kind=c.der?'wykryty na mapie (tor przecina drogę), rodzaj nieznany':c.inf&&!c.br&&!c.li&&!c.nb?'rodzaj nieznany (brak opisu w OpenStreetMap)':c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
+  const kind=c.user?'dodany przez Ciebie':c.der?'wykryty na mapie (tor przecina drogę), rodzaj nieznany':c.inf&&!c.br&&!c.li&&!c.nb?'rodzaj nieznany (brak opisu w OpenStreetMap)':c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
   let h='<h3>🚆 Przejazd kolejowy</h3><div class="xs">'+kind+tracks+' · najbliższe pociągi (wg rozkładu i opóźnień na żywo)</div>';
   {const X=LSget('xwait',{})[c.id],hk=hourKey(),cs=(LSget('cstat',{})[c.id]||{})[hk]||0,own=[];
    if(X&&X.n>0)own.push('Zwykle czekasz tu ok. '+(X.s/X.n>=90?Math.round(X.s/X.n/60)+' min':Math.round(X.s/X.n)+' s')+' ('+X.n+' '+(X.n===1?'raz':'razy')+')');
@@ -2743,10 +2756,11 @@ function showBoard(c){
     const nm=x.name.split(' → ');
     h+='<div class="xr"><span class="xt">'+hh(x.t)+'</span><span class="xn">'+nm[0]+(nm[1]?'<small>→ '+nm[1]+'</small>':'')+'</span><span class="xe">'+when+(x.late>=2?'<div class="late">+'+x.late+' min</div>':'')+'</span></div>';
   });
-  B.innerHTML=h+'<button type="button" id="xFail">⚠ Zgłoś awarię przejazdu</button><button type="button" id="xBoardX">Zamknij</button>';B.style.display='block';
+  B.innerHTML=h+'<button type="button" id="xFail">⚠ Zgłoś awarię przejazdu</button><div class="xact"><button type="button" id="xWatch"></button><button type="button" id="xHide"></button></div><button type="button" id="xBoardX">Zamknij</button>';B.style.display='block';
   B.dataset.c=String(c.id);
   $('xBoardX').onclick=()=>{B.style.display='none';B.dataset.c=''};
   $('xFail').onclick=()=>showFail(c);
+  xBoardExtras(c);
 }
 function showFail(c){
   const B=$('xBoard');B.dataset.c='';const ll=c.lat.toFixed(5)+', '+c.lon.toFixed(5);
@@ -2785,8 +2799,7 @@ function showTrainBoard(t){
   B.querySelectorAll('.xr[data-i]').forEach(el=>el.onclick=()=>showBoard(rows[+el.dataset.i].c));
   $('xBoardX').onclick=()=>{B.style.display='none'};
 }
-window.mapTap=(x,y)=>{
-  if(!(vec&&vf))return;
+function mapHitTest(x,y){   // który przejazd / pociąg jest pod palcem
   const cam=vf.cam;let bc=null,bcd=1e9,bt=null,btd=40;
   for(const c of xAll.values()){
     if(Math.abs(c.lat-cam.lat)>.14||Math.abs(c.lon-cam.lon)>.22)continue;
@@ -2796,7 +2809,11 @@ window.mapTap=(x,y)=>{
     if(d<bcd){bcd=d;bc=c}
   }
   for(const t of trains){const q=proj(t.lat,t.lon);if(!q)continue;const d=Math.hypot(q.x-x,q.y-y);if(d<btd){btd=d;bt=t}}
-  const xHit=bc&&bcd<28;
+  return {bc,bcd,bt,btd,xHit:!!(bc&&bcd<28)};
+}
+window.mapTap=(x,y)=>{
+  if(!(vec&&vf))return;pinPt=null;
+  const {bc,bcd,bt,btd,xHit}=mapHitTest(x,y);
   if(bt&&(!xHit||btd-18<bcd))showTrainBoard(bt);
   else if(xHit)showBoard(bc);
   else if(altTap(x,y)){}
@@ -3224,7 +3241,12 @@ try{
   async function cmd(txt){
     const t=txt.toLowerCase().trim();show('„'+t+'”');
     let m;
-    if((m=t.match(/^(?:jedź|jedz|prowadź|nawiguj)\s+do\s+(.+)/))){
+    if((m=t.match(/^(?:jedź|jedz|prowadź|nawiguj|zawieź|zawiez)\s+(?:mnie\s+)?(?:do\s+)?(domu|dom|pracy|praca)$/))){
+      const home=/^dom/.test(m[1]),pl=home?places.home:places.work,nm=home?'domu':'pracy';
+      if(!pl){reply('Nie zapisałem adresu '+nm+'. Zapisz go w planerze trasy.');return}
+      reply('Prowadzę do '+nm);pickDest({label:pl.label,lat:pl.lat,lon:pl.lon});F.from.el.value='';F.from.pt=null;
+      try{if(await planRoute())reply('Trasa do '+nm+' gotowa')}catch(e){reply('Nie udało się wyznaczyć trasy')}
+    }else if((m=t.match(/^(?:jedź|jedz|prowadź|nawiguj)\s+do\s+(.+)/))){
       reply('Szukam: '+m[1]);
       try{const l=await geocode(m[1]);if(!l.length){reply('Nie znalazłem takiego miejsca');return}
         F.to.el.value=l[0].label;F.to.pt={lat:l[0].lat,lon:l[0].lon,label:l[0].label};
@@ -3238,6 +3260,9 @@ try{
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(robot)/.test(t)){reportEvent('works');reply('Zgłaszam roboty drogowe')
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(przeszkod)/.test(t)){reportEvent('obstacle');reply('Zgłaszam przeszkodę na drodze')
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(ślisk|slisk|mgł|mgl|gołoled)/.test(t)){reportEvent('hazard');reply('Zgłaszam trudne warunki na drodze')
+    }else if(/ile.*przejazd/.test(t)){
+      const n=route&&route.xs?route.xs.filter(c=>{const rc=routeCross(c);return rc&&rc.off<35&&rc.along>route.along-15}).length:null;
+      reply(n==null?'Nie ma wyznaczonej trasy':n===0?'Na trasie nie zostały już przejazdy kolejowe':'Na trasie '+(n===1?'został 1 przejazd kolejowy':'zostało '+n+' '+((n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'przejazdy kolejowe':'przejazdów kolejowych')))
     }else if(/(ile do celu|jak daleko|kiedy dojad|ile jeszcze)/.test(t)){reply(etaText()||'Nie ma wyznaczonej trasy')
     }else if(/(następny przejazd|nastepny przejazd|najbliższy przejazd|najblizszy przejazd|przejazd kolejowy)/.test(t)){
       const c=nearestX(3000);reply(c?'Najbliższy przejazd kolejowy za '+(c.d>=1000?(c.d/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(c.d/10)*10+' metrów')+(c.nb?', bez zapór':''):'Nie widzę przejazdów kolejowych w pobliżu')
@@ -3250,6 +3275,14 @@ try{
     else if(/(włącz głos|odcisz|mów)/.test(t)){voiceMuted=false;reply('Głos włączony')}
     else if(/(tryb nocny|włącz noc|noc)/.test(t)){if(!night)$('night').click();reply('Tryb nocny')}
     else if(/(tryb dzienny|dzień|dzien)/.test(t)){if(night)$('night').click();reply('Tryb dzienny')}
+    else if(/(kiedy|następny|nastepny|najbliższy|najblizszy).*(pociąg|pociag)/.test(t)){
+      const a0=route&&aheadList&&aheadList[0],c=a0?Object.assign({},a0.c,{d:a0.d}):nearestX(5000);   // z trasą: najbliższy przejazd przed nami
+      if(!c){reply('Nie widzę przejazdów kolejowych w pobliżu');return}
+      const L=xDepartures(c),dd=c.d>=1000?(c.d/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(c.d/10)*10+' metrów';
+      if(L===null){reply('Rozkład jazdy jeszcze się wczytuje');return}
+      const f=L.find(x=>x.t>Date.now()/1000-30);
+      reply(f?'Przy najbliższym przejeździe, '+dd+' stąd, najbliższy pociąg będzie za '+Math.max(0,Math.round((f.t-Date.now()/1000)/60))+' minut':'Przy najbliższym przejeździe, '+dd+' stąd, przez trzy godziny nie ma pociągów')
+    }
     else if(/(pociąg|pociag)/.test(t)){
       const c=$('tcard');reply(nearTrainId&&c?($('tname').textContent+', '+$('tdist').textContent):'Brak pociągów w pobliżu');
     }else if(/(zakończ|koniec|anuluj|stop trasa)/.test(t)){$('closeNav').click();reply('Zakończono trasę')}
@@ -4278,11 +4311,13 @@ function drawMarkers(){
     const p=P(c.lat,c.lon);if(p)list.push({p,t:0,c,d:dc})}
   trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt,near:t.id===nearTrainId,name:t.id,hd:t.heading})});
   if(endPt){const p=P(endPt.lat,endPt.lon);if(p)list.push({p,t:2})}
+  if(pinPt){const p=P(pinPt.lat,pinPt.lon);if(p)list.push({p,t:3})}
   list.sort((a,b)=>a.p.y-b.p.y); // dalsze najpierw
   const xRank=new Set(list.filter(o=>o.t===0&&o.d<1800).sort((a,b)=>a.d-b.d).slice(0,3).map(o=>o.c.id));   // etykiety z odległością tylko dla trzech najbliższych
   for(const o of list){
     const {x,y,k}=o.p;if(x<-40||x>W+40||y<-40||y>H+40)continue;
     if(o.t===2){pin(x,y,k);continue}
+    if(o.t===3){pin(x,y,k,'#7c4dff');continue}
     if(o.t===0){drawXMark(o,xRank);continue}
     const r=Math.max(7,Math.min(28,11*k));
     if(trainSkin!=='classic'&&o.hd!=null&&!isNaN(o.hd))drawTrainSkin(x,y,r,o);
@@ -5132,6 +5167,244 @@ function stopDemo(){demo=false;clearInterval(demoTimer);crossings=[];xAll.clear(
     if(car.lat>X.lat+0.0015)stopDemo();
   },1000);
 };
+
+// ================= Wersja 104: miejsce z mapy, korekty przejazdów, obserwowane przejazdy, wznowienie trasy, prognoza =================
+var pinPt=null,xHidL=LSget('xhid',[]),xUsrL=LSget('xuser',[]),xWatchL=LSget('xwatch',[]);
+if(!Array.isArray(xHidL))xHidL=[];if(!Array.isArray(xUsrL))xUsrL=[];if(!Array.isArray(xWatchL))xWatchL=[];
+const celLink=/^#cel=/.test(location.hash);   // aplikacja otwarta z linku „wyślij cel”
+
+
+// --- korekty przejazdów: ukryte (błędne/nieczynne) i dodane ręcznie ---
+function xSame(a,b){return Math.abs(a.lat-b.lat)<.0004&&Math.abs(a.lon-b.lon)<.0007&&dist(a.lat,a.lon,b.lat,b.lon)<35}
+function xHid(c){
+  if(!xHidL||!xHidL.length||c.user)return false;
+  for(const h of xHidL)if(xSame(h,c))return true;
+  return false;
+}
+function xUserSync(){   // przejazdy dodane przez użytkownika trafiają do mapy i do ostrzeżeń (jak te z OpenStreetMap)
+  if(!xUsrL)return;
+  for(const u of xUsrL){
+    if(!xAll.has(u.id))xAll.set(u.id,u);
+    const near=!last||dist(last.lat,last.lon,u.lat,u.lon)<6000,i=crossings.indexOf(u);
+    if(near&&i<0)crossings.push(u);else if(!near&&i>=0)crossings.splice(i,1);
+  }
+}
+function xUserOnRoute(R,xs){
+  if(!xUsrL||!xUsrL.length||!R||!R.pts||R.pts.length<2)return;
+  for(const u of xUsrL){const rc=projRoute(R,u.lat,u.lon,0,R.pts.length-2);if(rc.off<35&&!xs.includes(u))xs.push(u)}
+}
+function xHide(c){
+  if(c.user){xUsrL=xUsrL.filter(u=>u.id!==c.id);LSput('xuser',xUsrL)}
+  else{xHidL.push({lat:+c.lat.toFixed(6),lon:+c.lon.toFixed(6)});if(xHidL.length>400)xHidL.shift();LSput('xhid',xHidL)}
+  const gone=q=>q===c||q.id===c.id||(!q.user&&xHid(q));   // ten sam przejazd bywa w kilku kopiach (z różnych zapytań)
+  for(const [id,q] of [...xAll])if(gone(q))xAll.delete(id);
+  for(let i=crossings.length-1;i>=0;i--)if(gone(crossings[i]))crossings.splice(i,1);
+  if(route&&route.xs)for(let i=route.xs.length-1;i>=0;i--)if(gone(route.xs[i]))route.xs.splice(i,1);
+}
+const nearestXAt=(lat,lon,m)=>{let b=null,bd=m;for(const c of xAll.values()){if(Math.abs(c.lat-lat)>.001||Math.abs(c.lon-lon)>.002)continue;const d=dist(lat,lon,c.lat,c.lon);if(d<bd){bd=d;b=c}}return b};
+
+// --- obserwowane przejazdy ---
+const xWatched=c=>xWatchL.some(q=>xSame(q,c));
+function xBoardExtras(c){
+  const w=$('xWatch'),h=$('xHide');if(!w||!h)return;
+  w.textContent=xWatched(c)?'★ Obserwowany':'☆ Obserwuj';
+  w.onclick=()=>{
+    if(xWatched(c)){xWatchL=xWatchL.filter(q=>!xSame(q,c));LSput('xwatch',xWatchL);w.textContent='☆ Obserwuj';return}
+    let nm='';try{nm=prompt('Nazwa przejazdu (np. „przy domu”) – możesz zostawić puste:','')||''}catch(e){}
+    xWatchL.unshift({lat:+c.lat.toFixed(6),lon:+c.lon.toFixed(6),nm:nm.trim().slice(0,30)});xWatchL=xWatchL.slice(0,20);LSput('xwatch',xWatchL);
+    w.textContent='★ Obserwowany';evToast('★ Przejazd obserwowany','Zobaczysz go w Ustawienia → Historia i dane → Obserwowane przejazdy.',null,5000);
+  };
+  h.textContent=c.user?'🗑 Usuń ten przejazd':'🚫 To nie przejazd – ukryj';
+  h.onclick=()=>{
+    if(!confirm(c.user?'Usunąć przejazd dodany przez Ciebie?':'Ukryć ten przejazd? Zniknie z mapy i ostrzeżeń (przywrócisz go w Ustawienia → Historia i dane → Obserwowane przejazdy).'))return;
+    xHide(c);$('xBoard').style.display='none';
+  };
+}
+const xPseudo=w=>({id:'w'+Math.round(w.lat*1e5)+'_'+Math.round(w.lon*1e5),lat:w.lat,lon:w.lon,maxOff:70});
+const xFind=w=>{for(const c of xAll.values())if(xSame(c,w))return c;return null};
+function nextTrainTxt(c){
+  const L=xDepartures(c);if(L===null)return 'rozkład jazdy się wczytuje…';
+  const now=Date.now()/1000,f=L.find(x=>x.t>now-60);
+  if(!f)return 'brak pociągów w ciągu 3 godzin';
+  const m=Math.max(0,Math.round((f.t-now)/60));
+  return 'najbliższy pociąg '+(m<1?'teraz':'za '+(m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'))+' ('+String(f.name).split(' → ')[0]+')';
+}
+function showWatchList(){
+  closeSettings();$('menu').classList.remove('open');$('xBoard').style.display='none';
+  const b=$('histbox');b.innerHTML='';
+  const h=document.createElement('h3');h.textContent='Obserwowane i ukryte przejazdy';b.appendChild(h);
+  if(!xWatchL.length){const p=document.createElement('p');p.textContent='Nie obserwujesz jeszcze żadnego przejazdu. Dotknij przejazdu na mapie i wybierz „☆ Obserwuj” – tu zobaczysz, kiedy przejedzie przez niego najbliższy pociąg.';b.appendChild(p)}
+  xWatchL.forEach((w,i)=>{
+    const c=xFind(w)||xPseudo(w),d=document.createElement('div');d.className='it';
+    const t=document.createElement('b'),s=document.createElement('small');
+    t.textContent='★ '+(w.nm||'Przejazd kolejowy');
+    s.textContent=(last?fmtKm(dist(last.lat,last.lon,w.lat,w.lon))+' od Ciebie · ':'')+nextTrainTxt(c);
+    const go=document.createElement('a'),del=document.createElement('a');
+    go.textContent='pokaż';del.textContent='usuń';
+    for(const a of [go,del])a.style.cssText='cursor:pointer;margin-right:14px;color:#1a73e8;font-weight:700';
+    go.onclick=()=>{
+      b.style.display='none';
+      if(route&&!window.preview){showBoard(c);return}   // w trakcie jazdy nie opuszczamy nawigacji – pokazujemy tylko tablicę
+      const nm=w.nm||'Przejazd kolejowy';enterBrowse({title:nm,sub:'',label:nm,lat:w.lat,lon:w.lon});setTimeout(()=>showBoard(xFind(w)||c),900);
+    };
+    del.onclick=()=>{xWatchL.splice(i,1);LSput('xwatch',xWatchL);showWatchList()};
+    d.appendChild(t);d.appendChild(document.createElement('br'));d.appendChild(s);d.appendChild(document.createElement('br'));d.appendChild(go);d.appendChild(del);b.appendChild(d);
+  });
+  const hn=xHidL.length,un=xUsrL.length;
+  if(hn||un){
+    const q=document.createElement('p');q.style.marginTop='14px';q.textContent='Ukryte przejazdy: '+hn+' · dodane przez Ciebie: '+un;b.appendChild(q);
+    if(hn){const r=document.createElement('button');r.textContent='Przywróć ukryte przejazdy';r.onclick=()=>{xHidL=[];LSput('xhid',[]);lastFetch=null;showWatchList();evToast('Przywrócono ukryte przejazdy','Pojawią się po chwili (część dopiero po odświeżeniu strony).',null,5000)};b.appendChild(r)}
+    if(un){const r=document.createElement('button');r.textContent='Usuń dodane przeze mnie przejazdy';r.onclick=()=>{for(const u of xUsrL){xAll.delete(u.id);const j=crossings.indexOf(u);if(j>=0)crossings.splice(j,1)}xUsrL=[];LSput('xuser',[]);showWatchList()};b.appendChild(r)}
+  }
+  const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>{b.style.display='none'};b.appendChild(c);b.style.display='block';
+}
+$('xwatch').onclick=showWatchList;
+
+// --- wybór miejsca na mapie (przytrzymaj palec) ---
+function unprojPt(x,y){   // odwrotność proj(): z punktu na ekranie do szerokości/długości (metoda Newtona)
+  if(vec&&!vf)return null;
+  const c0=vf&&vf.cam;if(!c0)return null;
+  let la=c0.lat,lo=c0.lon;
+  for(let i=0;i<12;i++){
+    const q=proj(la,lo);if(!q)return null;
+    const ex=x-q.x,ey=y-q.y;if(Math.hypot(ex,ey)<.3)break;
+    const dla=2e-5,dlo=2e-5/Math.max(.2,Math.cos(rad(la)));
+    const a=proj(la+dla,lo),b=proj(la,lo+dlo);if(!a||!b)return null;
+    const j11=(b.x-q.x)/dlo,j12=(a.x-q.x)/dla,j21=(b.y-q.y)/dlo,j22=(a.y-q.y)/dla,det=j11*j22-j12*j21;
+    if(Math.abs(det)<1e-3)return null;
+    lo+=(ex*j22-ey*j12)/det;la+=(j11*ey-j21*ex)/det;
+  }
+  const q=proj(la,lo);if(!q||Math.hypot(x-q.x,y-q.y)>3)return null;
+  return {lat:la,lon:lo};
+}
+async function revGeo(lat,lon){
+  const r=await fetch('https://photon.komoot.io/reverse?lon='+lon.toFixed(6)+'&lat='+lat.toFixed(6));if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json(),f=(j.features||[])[0];if(!f)return '';
+  const p=f.properties||{},street=p.street||'',city=p.city||p.town||p.village||p.county||'';
+  let t=p.name||street;
+  if(p.name&&street&&p.name!==street)t=street+(p.housenumber?' '+p.housenumber:'')+' – '+p.name;else if(p.housenumber&&t)t+=' '+p.housenumber;
+  return t?t+(city?', '+city:''):city;
+}
+window.mapHold=(x,y)=>{
+  if(!(vec&&vf))return;
+  const hit=mapHitTest(x,y);   // przytrzymany przejazd lub pociąg = jak zwykłe dotknięcie
+  if(hit.bt&&(!hit.xHit||hit.btd-18<hit.bcd)){showTrainBoard(hit.bt);return}
+  if(hit.xHit){showBoard(hit.bc);return}
+  const ll=unprojPt(x,y);if(!ll)return;
+  try{if(navigator.vibrate)navigator.vibrate(30)}catch(e){}
+  pinPt={lat:+ll.lat.toFixed(6),lon:+ll.lon.toFixed(6),label:'',t:Date.now()};showPinSheet();
+  const my=pinPt;
+  revGeo(my.lat,my.lon).then(t=>{if(pinPt!==my)return;my.label=t;const a=$('pinAddr');if(a)a.textContent=t||'Brak adresu w tym miejscu'})
+    .catch(()=>{if(pinPt!==my)return;const a=$('pinAddr');if(a)a.textContent='Adres niedostępny (brak internetu?)'});
+  setTimeout(()=>{if(pinPt===my)hidePin()},30000);
+};
+function hidePin(){pinPt=null;const B=$('xBoard');if(B&&!B.dataset.c)B.style.display='none'}
+async function shareDest(p){
+  const lab=p.label||'Wskazany punkt',url=location.href.split('#')[0]+'#cel='+p.lat.toFixed(5)+','+p.lon.toFixed(5)+','+encodeURIComponent(lab);
+  try{if(navigator.share){await navigator.share({title:'Cel w aplikacji Przejazd',text:'Jedź do: '+lab,url});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(url);evToast('📋 Skopiowano link','Wklej go znajomemu – po otwarciu aplikacja zaproponuje trasę.',null,5000)}
+  catch(e){try{prompt('Skopiuj link:',url)}catch(_){}}
+}
+function showPinSheet(){
+  const B=$('xBoard'),p=pinPt;if(!p)return;B.dataset.c='';
+  B.innerHTML='<h3>📍 Wybrane miejsce</h3><div class="xs" id="pinAddr">ustalam adres…</div><div class="xs">'+p.lat.toFixed(5)+', '+p.lon.toFixed(5)+'</div>'
+   +'<button type="button" id="pinGo" style="background:#1a73e8;color:#fff">🧭 Prowadź tutaj</button>'
+   +'<button type="button" id="pinX">🚆 Dodaj tu przejazd kolejowy</button>'
+   +'<div class="xact"><button type="button" id="pinSh">📤 Wyślij cel</button><button type="button" id="pinFav">⭐ Zapisz</button></div>'
+   +'<button type="button" id="pinOff">Zamknij</button>';
+  B.style.display='block';
+  const lab=()=>(pinPt&&pinPt.label)||('Punkt '+p.lat.toFixed(4)+', '+p.lon.toFixed(4));
+  $('pinOff').onclick=hidePin;
+  $('pinGo').onclick=()=>{
+    const q=pinPt;if(!q)return;const l=lab();hidePin();
+    if(window.preview||window.browse||!route){window.browseIt={title:l,sub:'',label:l,lat:q.lat,lon:q.lon};$('brwGo').onclick();return}
+    if(!confirm('Zmienić cel trasy na to miejsce?'))return;   // trasa już trwa – zmiana celu wymaga potwierdzenia
+    pickDest({label:l,lat:q.lat,lon:q.lon});F.from.el.value='';F.from.pt=null;planRoute();
+  };
+  $('pinX').onclick=()=>{
+    const q=pinPt;if(!q)return;
+    const near=nearestXAt(q.lat,q.lon,45);
+    if(near){hidePin();showBoard(near);evToast('Ten przejazd już jest na mapie','Pokazuję jego tablicę.',null,4000);return}
+    const u={id:'u'+Math.round(q.lat*1e5)+'_'+Math.round(q.lon*1e5),lat:q.lat,lon:q.lon,tr:1,nb:false,inf:true,user:true,maxOff:70};
+    xUsrL.push(u);xUsrL=xUsrL.slice(-200);LSput('xuser',xUsrL);xAll.set(u.id,u);xUserSync();
+    pinPt=null;showBoard(u);evToast('🚆 Dodano przejazd','Będzie na mapie i w ostrzeżeniach. Usuniesz go na jego tablicy.',null,5000);
+  };
+  $('pinSh').onclick=()=>{const q=pinPt;if(q)shareDest({lat:q.lat,lon:q.lon,label:lab()})};
+  $('pinFav').onclick=()=>{
+    const q=pinPt;if(!q)return;const l=lab();
+    if(!favs.some(f=>Math.abs(f.lat-q.lat)<1e-4&&Math.abs(f.lon-q.lon)<1e-4)){favs.unshift({title:l,sub:'',label:l,lat:q.lat,lon:q.lon});favs=favs.slice(0,20);LSput('favs',favs)}
+    $('pinFav').textContent='⭐ Zapisano';
+  };
+}
+
+// --- link z celem od znajomego: #cel=szerokość,długość,nazwa ---
+(function(){
+  const m=location.hash.match(/^#cel=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(.*))?$/);if(!m)return;
+  const lat=+m[1],lon=+m[2];if(!(Math.abs(lat)<=90&&Math.abs(lon)<=180))return;
+  let lab='';try{lab=decodeURIComponent(m[3]||'')}catch(e){}
+  lab=lab.slice(0,80)||'Wskazany punkt';
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  setTimeout(()=>evToast('📍 Cel od znajomego',lab,[
+    ['Prowadź',()=>{pickDest({label:lab,lat,lon});F.from.el.value='';F.from.pt=null;startGps(true);showPlanner();planRoute()}],
+    ['Zapisz',()=>{if(!favs.some(f=>Math.abs(f.lat-lat)<1e-4&&Math.abs(f.lon-lon)<1e-4)){favs.unshift({title:lab,sub:'',label:lab,lat,lon});favs=favs.slice(0,20);LSput('favs',favs)}}],
+    ['Nie',()=>{}]],30000),4500);
+})();
+
+// --- wznowienie trasy po odświeżeniu strony ---
+function saveResume(){
+  if(!route||!endPt||demo||sim||window.preview||window.browse)return;
+  LSput('resume',{t:Date.now(),to:{lat:endPt.lat,lon:endPt.lon,label:(F.to&&F.to.el&&F.to.el.value)||'cel'},via:(viaList||[]).slice(0,3).map(v=>({lat:v.lat,lon:v.lon}))});
+}
+function dropResume(){try{localStorage.removeItem('resume')}catch(e){}}
+async function resumeTrip(R){
+  pickDest({label:R.to.label,lat:R.to.lat,lon:R.to.lon});F.from.el.value='';F.from.pt=null;
+  ['via','via2','via3'].forEach((k,i)=>{const v=(R.via||[])[i];F[k].el.value=v?'Przystanek '+(i+1):'';F[k].pt=v?{lat:v.lat,lon:v.lon,label:'Przystanek '+(i+1)}:null});
+  try{await $('go').onclick()}finally{['via','via2','via3'].forEach(k=>{F[k].el.value='';F[k].pt=null})}   // przystanki zostają w trasie (viaList), pola zostają puste
+}
+(function(){
+  const R=LSget('resume',null);if(!R)return;
+  if(!R.to||!(R.to.lat>-90&&R.to.lat<90)||Date.now()-R.t>4*3600000){dropResume();return}
+  if(celLink)return;
+  let tries=0;
+  const iv=setInterval(()=>{
+    tries++;
+    if(route||window.browse||tries>40){clearInterval(iv);return}
+    if(tries<8)return;   // najpierw znika ekran ładowania
+    clearInterval(iv);
+    evToast('🧭 Wznowić trasę?','Do: '+String(R.to.label||'celu').slice(0,60),[['Wznów',()=>{resumeTrip(R)}],['Nie',dropResume]],25000);
+  },1000);
+})();
+
+// --- prognoza pociągów na trasie (wg rozkładu i opóźnień) ---
+async function routeForecast(R,xs,when){
+  if(!gtfs||!xs||!xs.length||route!==R)return '';
+  const now=Date.now()/1000,dep=when?when.getTime()/1000:now;
+  if(dep>now+2*3600)return '';
+  const rows=[];
+  for(const x of xs){const rc=projRoute(R,x.lat,x.lon,0,R.pts.length-2);if(rc.off<35&&rc.along>30)rows.push({x,al:rc.along})}
+  rows.sort((a,b)=>a.al-b.al);
+  const dl=[];
+  for(const r of rows.slice(0,14)){
+    await new Promise(ok=>setTimeout(ok,0));if(route!==R)return '';   // po jednym przejeździe, żeby nie blokować mapy
+    const L=xDepartures(r.x);if(L===null)return '';
+    dl.push({al:r.al,L});
+  }
+  if(!dl.length)return '';
+  const eta=(r,sh)=>dep+sh+R.dur*(r.al/Math.max(1,R.len));
+  const hit=sh=>{const out=[];for(const r of dl){const d=r.L.find(q=>Math.abs(q.t-eta(r,sh))<75);if(d)out.push({r,d})}return out};
+  const h0=hit(0);
+  if(!h0.length)return 'prognoza wg rozkładu: brak pociągów w Twoim czasie przejazdu (orientacyjnie)';
+  const f=h0[0],tm=new Date(f.d.t*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+  let t='🚆 możliwy pociąg przy '+h0.length+' '+(h0.length===1?'przejeździe':'przejazdach')+' (pierwszy za '+fmtKm(f.r.al)+', ok. '+tm+')';
+  if(!when)for(const sh of [180,300,480,600,900,1200,1800])if(!hit(sh).length){t+=' · wyjazd za ok. '+Math.round(sh/60)+' min omija je wg rozkładu';break}
+  return t;
+}
+
+// --- jednorazowa wskazówka o przytrzymaniu mapy ---
+setTimeout(()=>{
+  if(LSget('hint104',0)||route||celLink||$('evToast').style.display==='block')return;
+  LSput('hint104',1);evToast('💡 Wskazówka','Przytrzymaj palec na mapie, aby wybrać cel, dodać przejazd albo wysłać miejsce znajomemu.',null,9000);
+},30000);
 </script>
 </body>
 </html>
