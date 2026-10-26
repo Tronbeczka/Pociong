@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Przejazd – alert kolejowy</title>
+<meta name="theme-color" content="#0f7a3e">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
@@ -102,6 +103,68 @@ body.night #bsub{color:#9aa0a6}
 #sug div:first-child{border-top:0}
 #sug small{display:block;opacity:.7}
 #rinfo{font-size:.9rem;min-height:1.3em;margin-top:6px;text-align:center}
+
+/* ===== Wygląd v2 ===== */
+html,body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+#banner{border-radius:0 0 24px 24px;box-shadow:0 10px 30px rgba(0,0,0,.30);overflow:hidden;background:linear-gradient(135deg,#1b9c55,#0e773c)}
+#banner.warn{background:linear-gradient(135deg,#f29a2e,#d9720c)}
+#banner.bad{background:linear-gradient(135deg,#e8402f,#b3170f)}
+#top{box-shadow:none}
+#bl{width:108px;background:rgba(0,0,0,.18)}
+#bicon{width:46px;height:46px}
+#dist{font-size:1.3rem;font-weight:800;letter-spacing:-.01em}
+#big{font-size:1.35rem;font-weight:800;letter-spacing:-.015em;line-height:1.15}
+#sub{font-size:.9rem;opacity:.93}
+#strip,body.night #strip{background:transparent;color:inherit;padding:10px 12px 0;min-height:0;pointer-events:none}
+#info{background:rgba(255,255,255,.94);color:#323a44;padding:6px 13px;border-radius:999px;font-size:.76rem;font-weight:600;box-shadow:0 3px 12px rgba(0,0,0,.18);max-width:calc(100% - 66px);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+body.night #info{background:rgba(32,34,40,.92);color:#e6e9ee}
+#compass{top:calc(100% + 8px);right:12px;width:46px;height:46px;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+#bar{left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);border-radius:26px;padding:9px 10px;box-shadow:0 10px 30px rgba(0,0,0,.30)}
+#bar button{width:48px;height:48px;padding:0;border-radius:50%;background:#eef1f4;color:#26303a;font-size:1.25rem;display:flex;align-items:center;justify-content:center}
+body.night #bar button{background:#30343b;color:#e6e9ee}
+#bmain{font-size:1.25rem;font-weight:800;letter-spacing:-.01em}
+#bsub{font-size:.85rem;font-weight:500}
+#speed{left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);width:74px;height:74px;border:0;border-radius:22px;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+#spd{font-size:1.75rem;font-weight:800;letter-spacing:-.02em}
+#speed small{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+#speed.over{background:#fdecea;border:0}
+#lim{left:19px;bottom:calc(env(safe-area-inset-bottom,0px) + 176px);width:60px;height:60px;border-width:6px}
+#tilt{right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);width:50px;height:50px;border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+#attr{bottom:calc(env(safe-area-inset-bottom,0px) + 78px);font-size:9px;opacity:.75;box-shadow:none}
+#menu{left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);border-radius:24px;padding:14px;box-shadow:0 14px 40px rgba(0,0,0,.4);gap:8px}
+#menu>button,#menu #gload,#menu #save{padding:10px 16px;border-radius:999px;background:#eef1f4;color:#26303a;font-weight:700;font-size:.9rem}
+#menu #start{background:#16a34a;color:#fff}
+body.night #menu{background:#202228;color:#e6e9ee}
+body.night #menu>button,body.night #menu #gload,body.night #menu #save{background:#30343b;color:#e6e9ee}
+body.night #menu #start{background:#16a34a;color:#fff}
+#cfg input{border-radius:10px;border:1px solid #d5dae0;padding:9px 10px;font:inherit;font-size:.9rem}
+body.night #cfg input{background:#2a2d33;color:#e6e9ee;border-color:#3b4048}
+#cfg small{margin-top:8px;line-height:1.3}
+#pick{background:radial-gradient(1100px 650px at 50% -8%,#1f3b63 0%,#0c1424 62%)}
+#pick .box{padding:8px 0 24px}
+.logo svg{width:60px;height:60px;filter:drop-shadow(0 8px 18px rgba(22,163,74,.45))}
+#pick h1{font-size:2rem;font-weight:800;letter-spacing:-.025em;margin:10px 0 4px}
+#pick p{opacity:.72;font-size:.95rem}
+.lbl{margin:20px 0 -6px;font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;opacity:.6}
+.pc{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;transition:transform .15s,border-color .15s,background .15s}
+.pc:active{transform:scale(.97)}
+.pc.on{border-color:#4ade80;background:rgba(74,222,128,.12);box-shadow:0 0 0 2px #4ade80,0 10px 26px rgba(74,222,128,.22)}
+.fld{background:#fff;color:#1f2933;border-radius:16px;padding:3px 12px;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+.fld input{color:#1f2933;font-size:1rem}
+.fld input::placeholder{color:#8a93a0}
+.fld button{background:#eef1f4;color:#26303a;border-radius:10px}
+#sug{background:#fff;color:#1f2933;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.28);margin-top:-2px}
+#sug div{border-top:1px solid #eceff2}
+#rinfo{color:#fca5a5;font-weight:600}
+#pick .row{margin-top:6px;flex-wrap:wrap}
+#go{background:linear-gradient(135deg,#22c55e,#15803d);border-radius:16px;padding:16px 44px;font-size:1.15rem;font-weight:800;box-shadow:0 10px 24px rgba(34,197,94,.38)}
+#pick .row .sec{background:rgba(255,255,255,.12);border-radius:16px;padding:16px 18px;font-weight:700}
+#pick{align-items:flex-start}
+#pick .box{margin:auto;padding-top:calc(env(safe-area-inset-top,0px) + 18px)}
+#pickcars{flex-wrap:nowrap;gap:8px;margin:22px 0 18px}
+.pc{width:calc(25% - 6px);min-width:0;max-width:130px;padding:10px 4px}
+.pc div{font-size:.78rem}
+#ttstat{font-size:.75rem;opacity:.6;margin-top:12px;min-height:1.2em}
 </style>
 </head>
 <body>
@@ -132,7 +195,7 @@ body.night #bsub{color:#9aa0a6}
     <input id="tkey" placeholder="klucz CARTO">
     <small>Klucz Google Maps (Maps JavaScript API) – tło mapy; puste = OpenStreetMap:</small>
     <input id="gmkey" placeholder="AIza...">
-    <small>Rozkład jazdy (GTFS, dane PKP PLK przez mkuran.pl). Importuje się sam po naciśnięciu Start (raz dziennie). Adres zip lub plik z dysku, jeśli pobieranie jest blokowane:</small>
+    <small>Rozkład jazdy (GTFS, dane PKP PLK przez mkuran.pl) pobiera się sam przy otwarciu aplikacji (z Twojego GitHuba, odświeżany codziennie). Adres awaryjny lub plik z dysku:</small>
     <input id="gurl" value="https://mkuran.pl/gtfs/polish_trains.zip">
     <input id="gfile" type="file" accept=".zip">
     <button id="gload" class="sec">Załaduj rozkład</button> <small id="gstat"></small>
@@ -151,7 +214,9 @@ body.night #bsub{color:#9aa0a6}
 </div>
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
 <div id="pick"><div class="box">
-  <h1>Wybierz samochód</h1><p>Zobaczysz go na mapie podczas jazdy</p>
+  <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
+  <h1>Przejazd</h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
     <div class="fld"><span>A</span><input id="from" placeholder="Start: moja lokalizacja (GPS)" autocomplete="off"><button id="fromGps" class="sec" aria-label="Użyj GPS">⌖</button></div>
@@ -160,7 +225,8 @@ body.night #bsub{color:#9aa0a6}
     <div id="rinfo"></div>
   </div>
   <div class="row"><button id="go">Jedź</button><button id="sim" class="sec">Symulacja trasy</button><button id="skip" class="sec">Demo</button></div>
-  <p style="font-size:.7rem;opacity:.55;margin-top:10px">Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
+  <div id="ttstat"></div>
+  <p style="font-size:.7rem;opacity:.55;margin-top:6px">Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
 </div></div>
 <div id="lim"><span id="limv"></span></div>
 <div id="speed"><span id="spd">0</span><small>km/h</small></div>
@@ -704,8 +770,8 @@ function updInfo(p){
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
 const VC={sv:{w:3.5},rs:{w:7},tr:{w:9},sc:{w:11},pr:{w:13},mw:{w:15}};
 const PAL={
- day:{bg:'#f2efe9',water:'#aad3df',park:'#cde8b9',casing:'#cfcbc4',sv:'#fff',rs:'#fff',tr:'#fff',sc:'#fff',pr:'#fff',mw:'#fff',rail:'#b9b5ad',railDash:'#fff',lbl:'#4d4d4d',halo:'#ffffffe0',route:'#4285f4',routeEdge:'#f5a623'},
- night:{bg:'#1c2230',water:'#1d3b52',park:'#20332b',casing:'#10141c',sv:'#38415a',rs:'#3d475f',tr:'#465170',sc:'#4f5b7c',pr:'#5a6688',mw:'#66739a',rail:'#7a859c',railDash:'#1c2230',lbl:'#c3cbdc',halo:'#1c2230e6',route:'#4f8df5',routeEdge:'#c98a2b'}};
+ day:{bg:'#f3f1ec',water:'#a9d3e8',park:'#cfe8bd',bld:'#e6e2da',bldEdge:'#d8d3c9',casing:'#d4d0c8',csMw:'#e0a94a',csPr:'#e3c27a',sv:'#fff',rs:'#fff',tr:'#fff',sc:'#fffdf5',pr:'#fdeab4',mw:'#fbd27e',rail:'#b9b5ad',railDash:'#fff',lbl:'#4d4d4d',halo:'#ffffffe0',route:'#4285f4',routeEdge:'#f5a623'},
+ night:{bg:'#1c2230',water:'#1d3b52',park:'#20332b',bld:'#262e40',bldEdge:'#2d364a',csMw:'#7a6128',csPr:'#6a5b32',casing:'#10141c',sv:'#38415a',rs:'#3d475f',tr:'#465170',sc:'#4f5b7c',pr:'#5a6688',mw:'#66739a',rail:'#7a859c',railDash:'#1c2230',lbl:'#c3cbdc',halo:'#1c2230e6',route:'#4f8df5',routeEdge:'#c98a2b'}};
 // VEC-PURE-START
 function parseMax(v){
   v=String(v).trim().toLowerCase();let m;
@@ -725,6 +791,7 @@ function buildVec(j,lat,lon){
     else if(t.natural==='water'){cls='water';fill=true}
     else if(t.waterway)cls='wline';
     else if(t.leisure){cls='park';fill=true}
+    else if(t.building){cls='bld';fill=true}
     else continue;
     const path=P[cls]||(P[cls]=new Path2D());
     let px=null,py=null,first=true;const pts=[];
@@ -767,7 +834,7 @@ function ovQuery(lat,lon,R,full){
   const dg=R/111195,dn=R/(111195*Math.cos(rad(lat)));
   const bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
   const hw='motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link'+(full?'|living_street|service':'');
-  return '[out:json][timeout:25];(way["highway"~"^('+hw+')$"]'+bb+';way["railway"~"^(rail|light_rail|tram|narrow_gauge)$"]'+bb+';way["natural"="water"]'+bb+';way["waterway"~"^(river|canal)$"]'+bb+';way["leisure"~"^(park|garden)$"]'+bb+';);out geom qt;';
+  return '[out:json][timeout:25];(way["highway"~"^('+hw+')$"]'+bb+';way["railway"~"^(rail|light_rail|tram|narrow_gauge)$"]'+bb+';way["natural"="water"]'+bb+';way["waterway"~"^(river|canal)$"]'+bb+';way["leisure"~"^(park|garden)$"]'+bb+(full?';way["building"]'+bb:'')+';);out geom qt;';
 }
 // zapytanie idzie równolegle do trzech serwerów, wygrywa najszybszy
 function fetchOverpass(q){
@@ -822,9 +889,10 @@ function drawVec(){
     c.lineCap='round';c.lineJoin='round';
     if(P.park){c.fillStyle=pal.park;c.fill(P.park)}
     if(P.water){c.fillStyle=pal.water;c.fill(P.water)}
+    if(P.bld){c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
     if(P.wline){c.strokeStyle=pal.water;c.lineWidth=8/s;c.stroke(P.wline)}
     const order=['sv','rs','tr','sc','pr','mw'];
-    for(const k of order)if(P[k]){c.strokeStyle=pal.casing;c.lineWidth=(VC[k].w+2.5)/s;c.stroke(P[k])}
+    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:pal.casing;c.lineWidth=(VC[k].w+2.5)/s;c.stroke(P[k])}
     for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].w/s;c.stroke(P[k])}
     if(P.rail){
       c.strokeStyle=pal.rail;c.lineWidth=4/s;c.stroke(P.rail);
@@ -832,7 +900,7 @@ function drawVec(){
     }
     c.restore();
     if(D.LB&&s>=.3){
-      c.font='600 12px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=3.5;c.lineJoin='round';
+      c.font='600 12px Inter,system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=3.5;c.lineJoin='round';
       const used=new Set(),rr=rad(curRot);let n=0;
       for(const l of D.LB){
         const sx=S/2+s*(l.x-ox),sy=S/2-s*(l.y-oy);
@@ -848,7 +916,7 @@ function drawVec(){
   }
   if(routeSeg&&routeSeg.length>1){
     c.lineCap='round';c.lineJoin='round';
-    for(const [w,col] of [[20,pal.routeEdge],[11,pal.route]]){
+    for(const [w,col] of [[30,'rgba(0,0,0,.10)'],[21,pal.routeEdge],[12,pal.route]]){
       c.beginPath();
       routeSeg.forEach((q,i)=>{const [x,y]=toXY(q[0],q[1]);if(i)c.lineTo(x,y);else c.moveTo(x,y)});
       c.lineWidth=w;c.strokeStyle=col;c.stroke();
@@ -923,7 +991,7 @@ let carKind='sedan';try{carKind=localStorage.getItem('car')||'sedan'}catch(e){}
 function showCar(){
   if(!CARS[carKind])carKind='sedan';
   $('carIcon').innerHTML=CARS[carKind].svg;
-  document.querySelectorAll('#cars button,#pickcars button').forEach(b=>{b.style.outline=b.dataset.k===carKind?'3px solid #fff':'none'});
+  document.querySelectorAll('#cars button,#pickcars button').forEach(b=>{const on=b.dataset.k===carKind;b.classList.toggle('on',on);b.style.outline=on&&b.parentElement.id==='cars'?'3px solid #1a73e8':'none'});
 }
 for(const id of ['cars','pickcars'])for(const k in CARS){
   const b=document.createElement('button');b.dataset.k=k;
@@ -1144,20 +1212,32 @@ function getCenter(){return new Promise(res=>{
   if(last)return res({lat:last.lat,lon:last.lon,r:150000});
   if(!navigator.geolocation)return res(null);
   navigator.geolocation.getCurrentPosition(g=>res({lat:g.coords.latitude,lon:g.coords.longitude,r:150000}),()=>res(null),{timeout:8000,maximumAge:600000})})}
+async function fetchZip(st){
+  const m=location.hostname.match(/^([^.]+)\.github\.io$/);
+  const user=m?m[1]:'Tronbeczka',repo=m?(location.pathname.split('/')[1]||'Pociong'):'Pociong';
+  const urls=['https://raw.githubusercontent.com/'+user+'/'+repo+'/gtfs-data/polish_trains.zip'];
+  const man=$('gurl').value.trim();if(man&&!urls.includes(man))urls.push(man);
+  let err='';
+  for(const u of urls){
+    try{st('pobieranie…');const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.arrayBuffer()}
+    catch(e){err=e.message}
+  }
+  throw new Error(err||'brak źródła');
+}
 async function loadTimetable(force){
   if(ttBusy)return;ttBusy=true;
-  const st=t=>{$('gstat').textContent=t;if(!last)setBanner('warn','Import rozkładu',t)};
+  const st=t=>{$('gstat').textContent=t;const e=$('ttstat');if(e)e.textContent='Rozkład jazdy: '+t;if(!last)setBanner('warn','Import rozkładu',t)};
   try{
     const today=ymd(new Date()), file=$('gfile').files[0];
     let c=null;try{c=await idbGet('gtfs')}catch(e){}
-    if(!file&&!force&&c&&c.ymd===today){setTimetable(c);gtfsCenter=c.center||null;st('Rozkład z pamięci: '+c.trips.length+' kursów dziś');return}
+    if(!file&&!force&&c&&c.ymd===today){setTimetable(c);gtfsCenter=c.center||null;st('gotowy, '+c.trips.length+' kursów dziś');return}
     let buf=null;
     if(file)buf=await file.arrayBuffer();
     else{let z=null;try{z=await idbGet('zip')}catch(e){}
       if(z&&z.ymd===today)buf=z.buf;
-      else{st('Pobieranie rozkładu…');const r=await fetch($('gurl').value.trim());if(!r.ok)throw new Error('HTTP '+r.status);buf=await r.arrayBuffer()}}
+      else buf=await fetchZip(st)}
     try{await idbSet('zip',{ymd:today,buf})}catch(e){}
-    st('Rozpakowywanie…');await pause();
+    st('rozpakowywanie…');await pause();
     const want=['stops.txt','trips.txt','routes.txt','stop_times.txt','calendar.txt','calendar_dates.txt','shapes.txt'];
     const z=fflate.unzipSync(new Uint8Array(buf),{filter:e=>want.includes(e.name)});
     const files={};for(const k in z)files[k]=fflate.strFromU8(z[k]);
@@ -1166,13 +1246,14 @@ async function loadTimetable(force){
     const d=await buildGtfs(files,new Date(),center,st);
     d.ymd=today;d.center=center;setTimetable(d);gtfsCenter=center;
     const nsh=d.trips.filter(t=>t.sh).length;
-    st('Gotowe: '+d.trips.length+' kursów dziś, '+nsh+' z dopasowaniem do torów'+(center?' (promień '+center.r/1000+' km)':''));
+    st('gotowy, '+d.trips.length+' kursów dziś'+(center?' w promieniu '+center.r/1000+' km':''));
     try{await idbSet('gtfs',d)}catch(e){}
-  }catch(e){st('Błąd: '+e.message+'. Jeśli pobieranie jest blokowane, zapisz plik zip na dysku i wybierz go w ustawieniach.')}
+  }catch(e){st('niedostępny ('+e.message+'). Plik zip możesz wskazać w ustawieniach.')}
   finally{ttBusy=false}
 }
 $('gload').onclick=()=>loadTimetable(!!$('gfile').files[0]);
-idbGet('gtfs').then(c=>{if(c&&c.ymd===ymd(new Date())){setTimetable(c);gtfsCenter=c.center||null;$('gstat').textContent='Rozkład z pamięci: '+c.trips.length+' kursów dziś'}}).catch(()=>{});
+idbGet('gtfs').then(c=>{if(c&&c.ymd===ymd(new Date())){setTimetable(c);gtfsCenter=c.center||null;$('gstat').textContent='Rozkład z pamięci: '+c.trips.length+' kursów dziś';$('ttstat').textContent='Rozkład jazdy: gotowy, '+c.trips.length+' kursów dziś'}}).catch(()=>{});
+setTimeout(()=>{if(!gtfs&&!gKey&&!ttBusy)loadTimetable(false)},1200);
 setInterval(()=>{
   if(gKey||demo||!gtfs)return;
   const nowS=Date.now()/1000, out=[];

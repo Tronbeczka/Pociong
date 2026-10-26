@@ -1,0 +1,31 @@
+name: Aktualizacja rozkładu jazdy (GTFS)
+
+on:
+  schedule:
+    - cron: '30 2 * * *'      # codziennie ok. 03:30 czasu polskiego
+  workflow_dispatch:           # ręczne uruchomienie: zakładka Actions -> Run workflow
+  push:
+    paths:
+      - '.github/workflows/gtfs.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobierz rozkład (PKP PLK przez mkuran.pl)
+        run: |
+          curl -fL --retry 3 --retry-delay 10 -o polish_trains.zip https://mkuran.pl/gtfs/polish_trains.zip
+          unzip -tq polish_trains.zip
+          date -u +%FT%TZ > updated.txt
+          ls -la polish_trains.zip
+      - name: Opublikuj w gałęzi gtfs-data (bez narastania historii)
+        run: |
+          git init -q -b gtfs-data
+          git config user.name "gtfs-bot"
+          git config user.email "gtfs-bot@users.noreply.github.com"
+          git add polish_trains.zip updated.txt
+          git commit -qm "GTFS $(date -u +%F)"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gtfs-data
