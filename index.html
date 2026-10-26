@@ -1276,7 +1276,8 @@ async function loadFlow(){
   }catch(e){}
   finally{flowBusy=false}
 }
-setInterval(()=>{if(ttKey&&vec&&vecData&&!flowBusy&&(!vecData.flow||Date.now()-flowAt>180000))loadFlow()},4000);
+const FLOW_MAP=false;   // true = czerwone korki na całej mapie; false = tylko na wyznaczonej trasie
+setInterval(()=>{if(FLOW_MAP&&ttKey&&vec&&vecData&&!flowBusy&&(!vecData.flow||Date.now()-flowAt>180000))loadFlow()},4000);
 // co ~2,5 min: sprawdź, czy nie ma szybszej trasy (np. przez nowy korek) i odśwież korki na trasie
 setInterval(async()=>{
   if(!ttKey||!route||!endPt||demo||sim||rerouting||!last||Date.now()-trChk<150000||Date.now()-route.lastRr<60000)return;
