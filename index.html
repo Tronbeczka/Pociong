@@ -644,7 +644,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 102</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 103</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -2585,7 +2585,7 @@ async function reportEvent(ty,pos){
   if(!P0){evToast('Brak pozycji GPS','Spróbuj za chwilę.');return}
   const T=EV_TYPES[ty],now=Date.now();
   if(evLastRep[ty]&&now-evLastRep[ty]<60000){evToast('Zgłoszono przed chwilą','Poczekaj minutę przed kolejnym takim zgłoszeniem.');return}
-  evLastRep[ty]=now;ACH_ST.rep++;achSave();achCheck();
+  evLastRep[ty]=now;ACH_ST.rep++;achSave();achCheck(true);
   const e={id:now.toString(36)+Math.random().toString(36).slice(2,6),ty,lat:+P0.lat.toFixed(5),lon:+P0.lon.toFixed(5),t:now,u:evUid};
   evMine.unshift(e);evMine=evMine.slice(0,30);LSput('evMine',evMine);
   let ok=false;
@@ -4410,11 +4410,13 @@ function achAll(){
   BADGES.forEach(b=>a.push(['badge:'+b.id,lkOk(b.l),'Odznaka: '+b.n,b.l.d]));
   return a;
 }
-function achCheck(){
-  const known=LSget('achKnown',[]),fresh=[];
+let achKnownC=null,achChkAt=0;
+function achCheck(force){
+  const nw=Date.now();if(!force&&nw-achChkAt<4000)return;achChkAt=nw;   // nie częściej niż co 4 s
+  const known=achKnownC||(achKnownC=LSget('achKnown',[])),fresh=[];
   for(const [id,ok,t1,t2] of achAll())if(ok&&!known.includes(id)){known.push(id);fresh.push([t1,t2])}
   if(!fresh.length)return;
-  LSput('achKnown',known);achSave();
+  achKnownC=known;LSput('achKnown',known);achSave();
   const t1=fresh.length===1?'🏆 '+fresh[0][0]:'🏆 Nowe nagrody: '+fresh.length,t2=fresh.length===1?fresh[0][1]+' – szczegóły w ustawieniach → Osiągnięcia.':fresh.map(x=>x[0]).slice(0,3).join(' · ')+(fresh.length>3?' …':'');
   try{evToast(t1,t2,[],8000)}catch(e){}
   try{say('ach'+known.length,fresh.length===1?'Odblokowano nagrodę: '+fresh[0][0].replace(/^[^:]+: /,''):'Odblokowano '+fresh.length+' nowe nagrody.',[100],'Nowa nagroda')}catch(e){}
@@ -4625,7 +4627,7 @@ setInterval(()=>{
     ACH_ST.seen[key]=day;ACH_ST.tr++;const c=trainCat(nm);ACH_ST.catn[c.k]=(ACH_ST.catn[c.k]||0)+1;if(!ACH_ST.cats.includes(c.k))ACH_ST.cats.push(c.k);
     ACH_ST.log.unshift({id:nm,k:c.k,t:Date.now()});ACH_ST.log.length=Math.min(ACH_ST.log.length,40);ch=true;
   }
-  if(ch){for(const k in ACH_ST.seen)if(ACH_ST.seen[k]!==day&&ACH_ST.seen[k]!==dayKey(-1))delete ACH_ST.seen[k];achSave();achCheck()}
+  if(ch){for(const k in ACH_ST.seen)if(ACH_ST.seen[k]!==day&&ACH_ST.seen[k]!==dayKey(-1))delete ACH_ST.seen[k];achSave();achCheck(true)}
 },4000);
 
 // ---- skórki pociągów ----
@@ -4724,19 +4726,21 @@ $('gpxRoute').onclick=()=>{
   fileDl(x,'trasa.gpx','application/gpx+xml');
 };
 // mapa przejechanych ulic
-let heatOn=LSget('heatOn',false),visView=[],visAt=0;
+let heatOn=LSget('heatOn',false),visView=[],visAt=0,visCam=null;
 $('heatOn').checked=!!heatOn;
 function setHeat(v){heatOn=!!v;LSput('heatOn',heatOn);$('heatOn').checked=heatOn;visAt=0}
 $('heatOn').onchange=()=>setHeat($('heatOn').checked);
 function drawHeat(){
   if(!heatOn||!vf||!vis.size)return;const now=Date.now();
-  if(now-visAt>2000){visAt=now;const c=vf.cam;visView=[];for(const k of vis){const [a,b]=k.split('_');const la=a*.0009,lo=b*.0014;if(Math.abs(la-c.lat)<.12&&Math.abs(lo-c.lon)<.2)visView.push([la,lo])}if(visView.length>4000)visView.length=4000}
+  const c0=vf.cam;
+  if(now-visAt>(visCam&&dist(visCam.lat,visCam.lon,c0.lat,c0.lon)>400?800:8000)){visAt=now;visCam={lat:c0.lat,lon:c0.lon};visView=[];
+    for(const k of vis){const i=k.indexOf('_'),la=k.slice(0,i)*.0009,lo=k.slice(i+1)*.0014;if(Math.abs(la-c0.lat)<.04&&Math.abs(lo-c0.lon)<.07)visView.push(la,lo)}}
   if(!visView.length)return;
-  const q0=proj(visView[0][0],visView[0][1]),q1=q0&&proj(visView[0][0]+.0009,visView[0][1]);if(!q0||!q1)return;
-  const rr=Math.max(3,Math.min(26,Math.hypot(q1.x-q0.x,q1.y-q0.y)*.6));
-  mx.save();mx.fillStyle='rgba(46,204,113,.38)';mx.beginPath();
-  for(const [la,lo] of visView){const q=proj(la,lo);if(!q||q.x<-rr||q.x>innerWidth+rr||q.y<-rr||q.y>innerHeight+rr)continue;mx.moveTo(q.x+rr,q.y);mx.arc(q.x,q.y,rr,0,6.2832)}
-  mx.fill();mx.restore();
+  const q0=proj(visView[0],visView[1]),q1=q0&&proj(visView[0]+.0009,visView[1]);if(!q0||!q1)return;
+  const rr=Math.max(3,Math.min(26,Math.hypot(q1.x-q0.x,q1.y-q0.y)*.6)),W=innerWidth,H=innerHeight,d=rr*1.7;
+  mx.save();mx.fillStyle='rgba(46,204,113,.34)';
+  for(let i=0;i<visView.length;i+=2){const q=proj(visView[i],visView[i+1]);if(!q||q.x<-d||q.x>W+d||q.y<-d||q.y>H+d)continue;mx.fillRect(q.x-d/2,q.y-d/2,d,d)}
+  mx.restore();
 }
 // ---- ranking grupy: tygodniowe kilometry (tylko przy włączonym udostępnianiu) ----
 let lbPut=0;
@@ -5035,7 +5039,22 @@ function applyLive(j){
 }
 setInterval(loadLive,60000);
 const lateOf=(tr,seg)=>tr.dly?Math.round(tr.dly.a[Math.max(0,Math.min(tr.st.length-1,(seg||0)+1))]/60):null;   // opóźnienie wg prognozy na następnej stacji
-function idb(){return new Promise((ok,no)=>{const r=indexedDB.open('przejazdy',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+let idbP=null;   // jedno połączenie z bazą na całą sesję (wcześniej każdy odczyt otwierał nowe)
+function idb(){if(idbP)return idbP;idbP=new Promise((ok,no)=>{const r=indexedDB.open('przejazdy',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{const d=r.result;d.onclose=d.onversionchange=()=>{idbP=null;try{d.close()}catch(e){}};ok(d)};r.onerror=()=>{idbP=null;no(r.error)}});return idbP}
+// raz na tydzień: usuń stare kafelki (>30 dni) i zostaw najwyżej 1500 najnowszych – pamięć urządzenia nie rośnie bez końca
+async function idbPrune(){
+  try{
+    if(Date.now()-LSget('tilePrune',0)<7*864e5)return;
+    const d=await idb(),rows=[];
+    await new Promise((ok,no)=>{const q=d.transaction('kv').objectStore('kv').openCursor();q.onerror=()=>no(q.error);
+      q.onsuccess=()=>{const c=q.result;if(!c)return ok();if(typeof c.key==='string'&&c.key.startsWith('tile|'))rows.push([c.key,(c.value&&c.value.t)||0]);c.continue()}});
+    rows.sort((a,b)=>b[1]-a[1]);
+    const old=rows.filter((x,i)=>i>=1500||Date.now()-x[1]>30*864e5);
+    if(old.length)await new Promise(ok=>{const t=d.transaction('kv','readwrite'),o=t.objectStore('kv');for(const x of old)o.delete(x[0]);t.oncomplete=t.onerror=()=>ok()});
+    LSput('tilePrune',Date.now());
+  }catch(e){}
+}
+setTimeout(idbPrune,45000);
 async function idbGet(k){const d=await idb();return new Promise((ok,no)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})}
 async function idbSet(k,v){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>ok();t.onerror=()=>no(t.error)})}
 function getCenter(){return new Promise(res=>{
