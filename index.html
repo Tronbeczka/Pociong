@@ -373,7 +373,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 45</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 46</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -2243,10 +2243,30 @@ function buildVec(j,lat,lon){
   return {lat,lon,P,LB,SP};
 }
 // kamera: ostatni odczyt GPS + przewidywanie ruchu (dead reckoning), płynne dociąganie do nowego odczytu
+var lastSnapD=null;
+// najbliższy punkt na osi drogi (do 12 m, kierunek ±35°) – zwraca [lat,lon,odległość]
+function snapPoint(lat,lon,hr){
+  const D=vecData;if(!D||!D.RS||!D.RS.length)return null;
+  const g=snapGrid(D),CS=40,kx=111195*Math.cos(rad(D.lat)),X=(lon-D.lon)*kx,Y=(lat-D.lat)*111195;
+  let best=12,bx=0,by=0,found=false;const cx=Math.floor(X/CS),cy=Math.floor(Y/CS);
+  for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){
+    const l=g.get(u+','+v);if(!l)continue;
+    for(let j=0;j<l.length;j+=4){
+      const dx=l[j+2]-l[j],dy=l[j+3]-l[j+1],L2=dx*dx+dy*dy;if(L2<.01)continue;
+      let t=((X-l[j])*dx+(Y-l[j+1])*dy)/L2;t=t<0?0:t>1?1:t;
+      const px=l[j]+dx*t,py=l[j+1]+dy*t,d=Math.hypot(px-X,py-Y);if(d>=best)continue;
+      let da=Math.abs(Math.atan2(dx,dy)-hr)%Math.PI;da=Math.min(da,Math.PI-da);if(da>.6)continue;
+      best=d;bx=px;by=py;found=true;
+    }
+  }
+  return found?[D.lat+by/111195,D.lon+bx/kx,best]:null;
+}
 function camFix(p,h){
   const now=performance.now(),d=vecCam0(now),sp=(p.speed||0)>1.5?p.speed:0,hr=rad(h||0);
   const nf={lat:p.lat,lon:p.lon,t:now,ve:sp*Math.sin(hr),vn:sp*Math.cos(hr)};
-  corr=d?{e:(d.lon-p.lon)*111195*Math.cos(rad(p.lat)),n:(d.lat-p.lat)*111195}:{e:0,n:0};
+  // pozycja GPS bywa przesunięta o kilka metrów – gdy jedziemy bez trasy, przyciągamy ją do osi drogi o zgodnym kierunku
+  if(!route&&sp>3&&vecData&&vecData.RS){const q=snapPoint(p.lat,p.lon,hr);if(q){nf.lat=p.lat+(q[0]-p.lat)*.8;nf.lon=p.lon+(q[1]-p.lon)*.8;lastSnapD=q[2]}else lastSnapD=null}
+  corr=d?{e:(d.lon-nf.lon)*111195*Math.cos(rad(nf.lat)),n:(d.lat-nf.lat)*111195}:{e:0,n:0};
   fix=nf;
 }
 function vecCam(now){   // kamera = pozycja samochodu + ręczne przesunięcie
@@ -2377,7 +2397,7 @@ function buildMvt(tiles,lat0,lon0){
         path.moveTo(x0,y0);let px=x0,py=y0;const ra=(f.l==='transportation'&&(cls==='mw'||cls==='pr'||cls==='sc'||cls==='tr'||cls==='rs'||cls==='sv'))?[x0,y0]:null;
         for(let i=2;i+1<rg.length;i+=2){
           const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;if(ra)ra.push(x,y);
-          if(Math.abs(x-px)+Math.abs(y-py)<2.5&&i+3<rg.length)continue;
+          if(Math.abs(x-px)+Math.abs(y-py)<1.1&&i+3<rg.length)continue;   // dokładniejsze łuki
           path.lineTo(x,y);px=x;py=y;
         }
         if(fill)path.closePath();
