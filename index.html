@@ -76,6 +76,12 @@ body.night #settings input[type=checkbox]{background:#4a5059}body.night #setting
 #settings #cars button div{margin-top:4px}
 #settings .sInfo{padding:14px 0;color:var(--mut);font-size:.9rem;line-height:1.4}
 @media (prefers-reduced-motion:reduce){#settings.open{animation:none}}
+.clipRow{display:flex;align-items:center;gap:6px;padding:12px 0}
+.clipRow .ct{flex:1;min-width:0}.clipRow .ct b{display:block;font-size:.98rem;font-weight:700}
+.clipRow .ct small{display:block;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem}
+.clipRow .ct small.on{color:#1a9c55;font-weight:700}
+.clipRow button{padding:8px 11px;border-radius:10px;background:var(--bg);color:var(--tx);font-size:.85rem;font-weight:700;margin:0}
+.clipRow button.del{color:#d93025}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -417,6 +423,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div class="sBody">
 <section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"></div></section>
 <section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
+<section><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
 <section><h3><i>🚗</i>Samochód</h3><div class="sc" data-g="car"></div></section>
 <section><h3><i>🔋</i>Jazda i bateria</h3><div class="sc" data-g="drive"></div></section>
 <section><h3><i>📊</i>Historia i dane</h3><div class="sc" data-g="data"></div></section>
@@ -488,7 +495,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 72</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 73</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -622,6 +629,7 @@ var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch
 function say(key,text,vib,short){if(window.preview)return;const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
   const cat=/^[tmxe]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
   if(vcOff[cat])return;
+  {const sl=clipSlot(key);if(sl&&clips[sl]&&$('voice').checked&&!voiceMuted){if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}if(playClip(sl,cat==='Train'?volTrain:.9))return}}
   beep(cat);if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
   speak(vbose==='short'&&short?short:text,cat==='Train'?volTrain:.9)}
 
@@ -2200,6 +2208,72 @@ function openSettings(){
 function closeSettings(){$('settings').classList.remove('open')}
 $('setfab').onclick=openSettings;$('pickset').onclick=openSettings;$('setBack').onclick=closeSettings;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings()});
+
+// ================= Własne nagrania komunikatów (zamiast głosu lektora) =================
+const CLIP_SLOTS=[
+ ['train','Nadjeżdża pociąg','Proszę uważać, nadjeżdża pociąg. Proszę zwolnić.',/^t\d/],
+ ['maybe','Pociąg w pobliżu przejazdu','W pobliżu przejazdu może być pociąg.',/^m\d/],
+ ['second','Drugi pociąg / drugi tor','Nadjeżdżają co najmniej dwa pociągi.',/^u\d/],
+ ['early','Wczesne ostrzeżenie o pociągu','Za kilometr przejazd kolejowy. Pociąg minie go w podobnym czasie.',/^e\d/],
+ ['cross','Przejazd kolejowy przed Tobą','Za 300 metrów przejazd kolejowy.',/^x\d/],
+ ['over','Przekroczona prędkość','Proszę zwolnić. Obowiązuje ograniczenie prędkości.',/^over$/],
+ ['limit','Zmiana ograniczenia prędkości','Za 200 metrów ograniczenie prędkości.',/^limA/],
+ ['camera','Fotoradar','Za 300 metrów fotoradar.',null],
+ ['bump','Próg zwalniający','Za 100 metrów próg zwalniający.',null],
+ ['incident','Wypadek lub roboty drogowe','Za 500 metrów zdarzenie drogowe. Proszę zachować ostrożność.',/^inc/],
+ ['jam','Korek na trasie','Za kilometr na trasie jest korek.',/^jam$/],
+ ['reroute','Nowa trasa / objazd','Nowa trasa jest gotowa.',/^(rerout|detour|nodetour|faster)/],
+ ['zone','Szkoła / granica miejscowości','Za 200 metrów szkoła. Proszę zwolnić.',/^z/],
+ ['weather','Ślisko, mgła lub deszcz','Na trasie może być ślisko.',/^wx$/],
+ ['rest','Czas na przerwę','Jedzie Pan już ponad dwie godziny. Proszę rozważyć postój.',/^rest$/],
+ ['fuel','Mało paliwa','Zostało paliwa na 40 kilometrów. Proszę zatankować.',/^fuel/]
+];
+const clips={},clipAudio=new Audio();
+const CLIP_SILENCE='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+function clipSlot(key){for(const x of CLIP_SLOTS)if(x[3]&&x[3].test(key))return x[0];return null}
+function playClip(slot,vol){
+  const c=clips[slot];if(!c||!$('voice').checked||(voiceMuted&&!speak.force))return false;
+  try{clipAudio.src=c.url;clipAudio.volume=Math.max(.1,Math.min(1,vol||.9));const p=clipAudio.play();if(p&&p.catch)p.catch(()=>{});return true}catch(e){return false}
+}
+document.addEventListener('pointerdown',()=>{try{clipAudio.src=CLIP_SILENCE;clipAudio.volume=0;const p=clipAudio.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}},{once:true});   // odblokowanie odtwarzania po pierwszym dotknięciu
+async function loadClips(){
+  for(const x of CLIP_SLOTS){
+    try{const c=await idbGet('clip|'+x[0]);if(c&&c.buf){clips[x[0]]={url:URL.createObjectURL(new Blob([c.buf],{type:c.type||'audio/mpeg'})),name:c.name||'nagranie'}}}catch(e){}
+  }
+  renderClips();
+}
+function renderClips(){
+  const box=$('clipList');if(!box)return;
+  box.querySelectorAll('.clipRow').forEach(e=>e.remove());
+  for(const [id,label,sample] of CLIP_SLOTS){
+    const row=document.createElement('div');row.className='clipRow';
+    const has=!!clips[id];
+    row.innerHTML='<div class="ct"><b></b><small></small></div><button class="pl" type="button" aria-label="Odtwórz">▶</button><button class="up" type="button">'+(has?'Zmień':'Wgraj')+'</button>'+(has?'<button class="del" type="button" aria-label="Usuń">✕</button>':'');
+    row.querySelector('b').textContent=label;
+    const sm=row.querySelector('small');sm.textContent=has?'Własne nagranie: '+clips[id].name:'Głos lektora';if(has)sm.className='on';
+    row.querySelector('.pl').onclick=()=>{
+      if(has){try{clipAudio.src=clips[id].url;clipAudio.volume=1;clipAudio.play()}catch(e){}}
+      else{speak.force=true;speak(sample);speak.force=false}
+    };
+    const inp=document.createElement('input');inp.type='file';inp.accept='audio/*';inp.style.display='none';
+    row.querySelector('.up').onclick=()=>inp.click();
+    inp.onchange=async()=>{
+      const f=inp.files[0];if(!f)return;
+      if(f.size>3*1024*1024){alert('Plik jest za duży (limit 3 MB).');return}
+      try{
+        const buf=await f.arrayBuffer(),type=f.type||'audio/mpeg',url=URL.createObjectURL(new Blob([buf],{type}));
+        await new Promise((ok,no)=>{const a=new Audio();a.oncanplaythrough=ok;a.onloadedmetadata=ok;a.onerror=()=>no(new Error('nie da się odtworzyć tego pliku'));a.src=url});
+        await idbSet('clip|'+id,{name:f.name,type,buf,t:Date.now()});
+        if(clips[id])try{URL.revokeObjectURL(clips[id].url)}catch(e){}
+        clips[id]={url,name:f.name};renderClips();
+        try{clipAudio.src=url;clipAudio.volume=1;clipAudio.play()}catch(e){}
+      }catch(e){alert('Nie udało się wczytać: '+e.message)}
+    };
+    const del=row.querySelector('.del');if(del)del.onclick=async()=>{try{await idbSet('clip|'+id,null)}catch(e){}try{URL.revokeObjectURL(clips[id].url)}catch(e){}delete clips[id];renderClips()};
+    row.appendChild(inp);box.appendChild(row);
+  }
+}
+renderClips();loadClips();
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
@@ -2432,8 +2506,8 @@ function signCheck(p){
   const now=Date.now();
   if($('sigsnd').checked&&(!sigSeen[best.sg.id]||now-sigSeen[best.sg.id]>90000)){
     sigSeen[best.sg.id]=now;chime(K==='stop'?'stop':'give_way');if(navigator.vibrate)try{navigator.vibrate(30)}catch(e){}
-    if(K==='camera')speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.');
-    else if(K==='bump')speak(vbose==='short'?'Próg zwalniający':'Za '+dd+' metrów próg zwalniający. Proszę zwolnić.');
+    if(K==='camera'){if(!playClip('camera',.9))speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.')}
+    else if(K==='bump'){if(!playClip('bump',.9))speak(vbose==='short'?'Próg zwalniający':'Za '+dd+' metrów próg zwalniający. Proszę zwolnić.')}
   }
 }
 const HZ={camera:{k:14,minD:150,max:500,min:1.5},bump:{k:8,minD:70,max:250,min:1.5},crossing:{k:5,minD:50,max:140,min:4.2}};
