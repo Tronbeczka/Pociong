@@ -724,7 +724,7 @@ $('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg===0?50:tilt
 function follow(p){
   const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   updLimit(p);
-  scaleBase=kmh>110?.6:kmh>80?.8:kmh>50?1.1:kmh>25?1.5:2.1;scaleTgt=clampS(scaleBase*zoomMul);   // px na metr: im wolniej, tym bliżej ulicy (× ręczne zbliżenie)
+  scaleBase=kmh>110?.85:kmh>80?1.1:kmh>50?1.5:kmh>25?2.05:2.8;scaleTgt=clampS(scaleBase*zoomMul);   // px na metr: im wolniej, tym bliżej ulicy (× ręczne zbliżenie)
   if(vec){
     camFix(p,p.heading!=null&&!isNaN(p.heading)?p.heading:lastH);
     const cp=vecCam(performance.now())||p;   // mapę doczytujemy wokół kamery (też po ręcznym przesunięciu)
@@ -2064,7 +2064,7 @@ setInterval(async()=>{
   }catch(e){}
 },20000);
 let vctx=null,vq=1,lastVt=0,vd=null;
-function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(1.25,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0;vd=null}
+function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(1.1,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0;vd=null}
 // Mapa jest rysowana RZADKO (gdy kamera odjedzie o ~12% płótna, zmieni się skala/dane/tryb nocny);
 // między przerysowaniami płótno przesuwa i skaluje karta graficzna (CSS), więc ruch jest płynny.
 function paintVec(cam){
@@ -2250,7 +2250,7 @@ function updCarSnap(){
 }
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
 const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
-let wallKey='',wallCol=null;
+let wallKey='',wallCol=null,bldCache=null,bldTick=0;
 function drawBuildings3D(){
   if(ecoOn||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
   const D=vecData,pal=PAL[night?'night':'day'],S=$('rot').clientWidth,s=vf.s;
@@ -2259,15 +2259,20 @@ function drawBuildings3D(){
   const kk=111195,kxx=1;
   const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
   const R=rad(curRot),sunDir=rad(-35);   // „słońce” z lewej-góry: ściany zwrócone na południowy zachód jaśniejsze
-  const lst=[];
   const hs=Math.min(1.6,.9+tiltDeg/90);
-  for(const b of D.B){
-    const q=proj(D.lat+b.cy/111195,D.lon+b.cx/(111195*Math.cos(rad(D.lat))));
-    if(!q||q.x<-120||q.x>W+120||q.y<-160||q.y>H+120)continue;
-    lst.push({b,y:q.y,k:q.k});
+  let lst;
+  if(bldCache&&bldCache.D===D&&(bldTick++%5)&&Math.abs(bldCache.rot-curRot)<2&&Math.abs(bldCache.s-s)<.05*s)lst=bldCache.lst;   // kolejność rysowania liczymy co kilka klatek
+  else{
+    lst=[];
+    for(const b of D.B){
+      const q=proj(D.lat+b.cy/111195,D.lon+b.cx/(111195*Math.cos(rad(D.lat))));
+      if(!q||q.x<-160||q.x>W+160||q.y<-220||q.y>H+160)continue;
+      lst.push({b,y:q.y,k:q.k});
+    }
+    lst.sort((a,b)=>a.y-b.y);
+    bldCache={D,lst,rot:curRot,s};
   }
-  lst.sort((a,b)=>a.y-b.y);
-  const cap=Math.min(lst.length,900),start=lst.length-cap;   // przy nadmiarze pomijamy najdalsze
+  const cap=Math.min(lst.length,520),start=lst.length-cap;   // przy nadmiarze pomijamy najdalsze
   const cl=Math.cos(rad(D.lat));
   const g=(x,y,h)=>proj(D.lat+y/111195,D.lon+x/(111195*cl),h);
   mx.lineJoin='round';
@@ -2327,11 +2332,14 @@ function drawMarkers(){
   }
 }
 var ecoOn=false,fcnt=0;
+var lastFt=0;
 function frame(){
   if(ecoOn&&(fcnt++&1)){requestAnimationFrame(frame);return}
-  scaleCur+=(scaleTgt-scaleCur)*.08;
+  const fnow=performance.now(),fdt=Math.min(.12,Math.max(.004,(fnow-(lastFt||fnow-16))/1000));lastFt=fnow;
+  const fk=1-Math.pow(1-.08,fdt*60),fr=1-Math.pow(1-.15,fdt*60);   // wygładzanie niezależne od liczby klatek na sekundę
+  scaleCur+=(scaleTgt-scaleCur)*fk;
   const d=((tgtRot-curRot)%360+540)%360-180;
-  curRot=Math.abs(d)<.05?tgtRot:curRot+d*.15;
+  curRot=Math.abs(d)<.05?tgtRot:curRot+d*fr;
   $('rot').style.transform='rotateX('+tiltDeg+'deg) rotate('+curRot+'deg)';
   drawMarkers();
   $('compass').style.transform='rotate('+curRot+'deg)';
