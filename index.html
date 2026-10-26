@@ -9,6 +9,29 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <style>
+/* ekran ładowania i płynne przejścia */
+#splash{position:fixed;inset:0;z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none;background:radial-gradient(900px 600px at 50% 30%,#1f3b63 0%,#0a1220 70%);color:#fff;transition:opacity .55s ease,transform .55s ease,visibility 0s .55s}
+#splash.out{opacity:0;transform:scale(1.04);visibility:hidden}
+#splash svg{width:104px;height:104px;filter:drop-shadow(0 10px 28px #0008);animation:spPop .7s cubic-bezier(.2,.9,.3,1.2) both}
+#splash .nm{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;animation:spUp .6s .15s ease both}
+#splash .sb{font-size:.9rem;opacity:.7;animation:spUp .6s .3s ease both;margin-top:-8px}
+#splash .bar{width:120px;height:4px;border-radius:2px;background:#ffffff26;overflow:hidden;margin-top:12px;animation:spUp .6s .4s ease both}
+#splash .bar i{display:block;height:100%;width:40%;border-radius:2px;background:#4da3ff;animation:spBar 1.2s ease-in-out infinite}
+#splash .lt{animation:spBlink 1s steps(1) infinite}
+@keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
+@keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
+@keyframes spBlink{0%{opacity:1}50%{opacity:.25}}
+@keyframes sheetUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+#pick{animation:sheetUp .38s cubic-bezier(.2,.8,.2,1)}
+#intro{animation:fadeIn .3s ease}#intro .card{animation:cardIn .4s cubic-bezier(.2,.8,.2,1)}
+#planfab,#recenter{animation:cardIn .3s ease}
+#vmap{transition:opacity .7s ease}
+#banner,#bar{transition:background .3s,transform .3s}
+@media (prefers-reduced-motion:reduce){#splash,#splash *,#pick,#intro,#intro .card{animation:none!important;transition:none!important}}
+
 body.preview #carIcon,body.preview #strip,body.preview #speed{display:none!important}
 :root{--ok:#1f9d55;--warn:#d9822b;--bad:#d62828;--bg:#0e1116;--fg:#fff;--btn:#2b6cb0}
 *{box-sizing:border-box}
@@ -17,7 +40,7 @@ body.night{background:#10141a}
 #view{position:absolute;inset:0;overflow:hidden;perspective:900px;perspective-origin:50% 45%;background:#e8eaed}
 body.night #view{background:#10141a}
 #rot{position:absolute;left:50%;top:68%;width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;will-change:transform;transform-origin:50% 50%}
-#vmap{position:absolute;left:0;top:0;width:100%;height:100%;display:none;transform-origin:50% 50%;will-change:transform}
+#vmap{opacity:0;position:absolute;left:0;top:0;width:100%;height:100%;display:none;transform-origin:50% 50%;will-change:transform}
 #sky{position:absolute;left:0;right:0;top:0;height:40%;z-index:400;pointer-events:none;background:linear-gradient(var(--sky,#e8eaed) 12%,transparent)}
 body.night #sky{background:linear-gradient(var(--sky,#10141a) 12%,transparent)}
 body.flat #sky{display:none}
@@ -292,6 +315,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 </style>
 </head>
 <body>
+<div id="splash"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#fff"/><rect x="5" y="5" width="90" height="90" rx="19" fill="#fff" stroke="#d32f2f" stroke-width="7"/><g stroke="#d32f2f" stroke-width="12" stroke-linecap="butt"><path d="M24 24L76 76"/><path d="M76 24L24 76"/></g><circle class="lt" cx="31" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2"/><circle class="lt" cx="69" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2" style="animation-delay:.5s"/></svg><div class="nm">Przejazd</div><div class="sb">alert kolejowy</div><div class="bar"><i></i></div></div>
 <div id="view"><div id="rot"><div id="map"></div><canvas id="vmap"></canvas></div><div id="sky"></div></div>
 <canvas id="mk"></canvas>
 <div id="carIcon"></div>
@@ -377,7 +401,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 55</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 56</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1931,6 +1955,13 @@ function snapRoute(R){
 }
 setInterval(()=>{if(route&&vecData&&route.snapFor!==vecData)snapRoute(route)},400);
 
+
+// ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 1,1 s, maks. 7 s) ----
+{
+  const sp=$('splash'),t0=Date.now();let done=false;
+  const hide=()=>{if(done)return;done=true;sp.classList.add('out');setTimeout(()=>sp.remove(),900)};
+  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>1100&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)))){clearInterval(tick);hide()}},150);
+}
 // ---- Ekran informacyjny (raz) i ostrzeżenie o pracy w tle ----
 {
   let seen=false;try{seen=localStorage.getItem('intro1')==='1'}catch(e){}
@@ -2686,6 +2717,7 @@ function paintVec(cam){
     }
   }
   vd={cam,s,kx,night,rot:curRot,data:vecData};
+  $('vmap').style.opacity=1;
 }
 function drawVec(){
   const now=performance.now(),cam=vecCam(now);
