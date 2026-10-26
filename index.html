@@ -642,7 +642,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 97</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 98</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -703,9 +703,26 @@ const xLayer=L.layerGroup().addTo(map), tLayer=L.layerGroup().addTo(map);
 
 const xAll=new Map();let xErr=0,xViewAt=null,xViewNext=0;
 function xParse(e){const t=e.tags||{};
-  return {id:e.id,lat:e.lat,lon:e.lon,tr:+t.tracks||1,br:t['crossing:barrier'],li:t['crossing:light'],bell:t['crossing:bell'],nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}}   // nb = przejazd bez zapór
+  return {id:e.id,lat:e.lat,lon:e.lon,tr:+t.tracks||1,br:t['crossing:barrier'],li:t['crossing:light'],bell:t['crossing:bell'],nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled',inf:t.railway!=='level_crossing'}}   // nb = przejazd bez zapór
 function xAdd(list){for(const c of list){if(c.lat==null||c.lon==null||isNaN(c.lat))continue;xAll.set(c.id,c)}
   if(xAll.size>4000){let n=xAll.size-3500;for(const k of xAll.keys()){xAll.delete(k);if(--n<=0)break}}}
+// przejazdy wykryte z geometrii mapy (tor przecina drogę bez mostu i tunelu) – uzupełniają dane z Overpass
+function xDerSync(){
+  const real=[];for(const c of xAll.values())if(!c.der)real.push(c);
+  for(const [id,c] of xAll){if(!c.der)continue;
+    if(real.some(q=>Math.abs(q.lat-c.lat)<.0004&&Math.abs(q.lon-c.lon)<.0007&&dist(q.lat,q.lon,c.lat,c.lon)<35)){xAll.delete(id);const i=crossings.indexOf(c);if(i>=0)crossings.splice(i,1)}
+    else if(!crossings.includes(c)&&(!last||dist(last.lat,last.lon,c.lat,c.lon)<6000))crossings.push(c)}
+}
+function xDerAdd(list){
+  if(!list||!list.length)return;
+  for(const p of list){
+    const id='d'+Math.round(p.lat*1e5)+'_'+Math.round(p.lon*1e5);if(xAll.has(id))continue;
+    let dup=false;for(const c of xAll.values()){if(Math.abs(c.lat-p.lat)<.0004&&Math.abs(c.lon-p.lon)<.0007&&dist(c.lat,c.lon,p.lat,p.lon)<35){dup=true;break}}
+    if(dup)continue;
+    xAll.set(id,{id,lat:p.lat,lon:p.lon,tr:p.n||1,nb:false,der:true});
+  }
+  xDerSync();
+}
 let crossings=[], trains=[], last=null, lastFetch=null, feedUrl='', demo=false, watchId=null, spoken={}, audio=null, feedAt=0, trackPrev={};
 try{feedUrl=localStorage.getItem('feed')||'';$('feed').value=feedUrl}catch(e){}
 
@@ -795,10 +812,15 @@ async function cachedOverpass(key,q){
 }
 async function loadCrossings(lat,lon){
   lastFetch={lat,lon};
-  const q=`[out:json][timeout:20];node(around:4000,${lat},${lon})["railway"="level_crossing"];out;`;
+  // 1) węzły oznaczone railway=level_crossing, 2) węzły wspólne toru i drogi (przejazdy, których nikt nie opisał tagami)
+  const q=`[out:json][timeout:25];way(around:4000,${lat},${lon})["railway"~"^(rail|narrow_gauge|preserved)$"]["service"!~"."][!"bridge"][!"tunnel"]->.r;node(w.r)->.rn;way(bn.rn)["highway"]["highway"!~"^(footway|path|cycleway|steps|pedestrian|bridleway|construction|proposed|corridor|elevator)$"][!"bridge"][!"tunnel"]->.h;node(w.h)->.hn;(node.rn.hn;node(around:4000,${lat},${lon})["railway"="level_crossing"];);out;`;
+  const q0=`[out:json][timeout:20];node(around:4000,${lat},${lon})["railway"="level_crossing"];out;`;
   try{
-    const j=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q);
-    crossings=j.elements.map(xParse);xAdd(crossings);xErr=0;
+    let j;
+    try{j=await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q)}
+    catch(e){j=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q0)}   // zapas: tylko oznaczone przejazdy
+    const seen=new Set();crossings=j.elements.filter(e=>e.lat!=null&&!seen.has(e.id)&&seen.add(e.id)).map(xParse);xAdd(crossings);xErr=0;
+    xDerSync();
     xLayer.clearLayers();
   }catch(e){lastFetch=null;xErr=Date.now();}
 }
@@ -2698,7 +2720,7 @@ function xDepartures(c){
 function showBoard(c){
   const B=$('xBoard'),L=xDepartures(c);
   const hh=t=>new Date(t*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  const kind=c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
+  const kind=c.der?'wykryty na mapie (tor przecina drogę), rodzaj nieznany':c.inf&&!c.br&&!c.li&&!c.nb?'rodzaj nieznany (brak opisu w OpenStreetMap)':c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
   let h='<h3>🚆 Przejazd kolejowy</h3><div class="xs">'+kind+tracks+' · najbliższe pociągi (wg rozkładu i opóźnień na żywo)</div>';
   {const X=LSget('xwait',{})[c.id],hk=hourKey(),cs=(LSget('cstat',{})[c.id]||{})[hk]||0,own=[];
    if(X&&X.n>0)own.push('Zwykle czekasz tu ok. '+(X.s/X.n>=90?Math.round(X.s/X.n/60)+' min':Math.round(X.s/X.n)+' s')+' ('+X.n+' '+(X.n===1?'raz':'razy')+')');
@@ -3636,7 +3658,7 @@ function mvtDecode(buf){
 const MV_ROAD={motorway:'mw',trunk:'mw',primary:'pr',secondary:'sc',tertiary:'tr',minor:'rs',service:'sv'};
 function buildMvt(tiles,lat0,lon0){
   const W=40075016.686,cl=Math.cos(rad(lat0)),cx=lon0/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(lat0)/2));
-  const P={},LB=[],B=[],RS=[];
+  const P={},LB=[],B=[],RS=[],XR=[],XD=[];
   const gp=k=>P[k]||(P[k]=new Path2D());
   for(const t of tiles){
     const T=W/Math.pow(2,t.z),ox=-W/2+t.x*T,oy=W/2-t.y*T;
@@ -3661,6 +3683,11 @@ function buildMvt(tiles,lat0,lon0){
               const a=pts[i-1],b=pts[i];LB.push({x:(a[0]+b[0])/2,y:(a[1]+b[1])/2,ex:b[0]-a[0],ny:b[1]-a[1],n:pr.name,c:MV_ROAD[pr.class]})}
           }
           continue;
+      }
+      if(f.l==='transportation'&&cls&&f.t===2&&pr.brunnel!=='bridge'){   // linie do wykrywania przejazdów (tor × droga na jednym poziomie)
+        const isRail=cls==='rail'&&pr.class==='rail'&&!pr.service&&(!pr.subclass||pr.subclass==='rail'||pr.subclass==='narrow_gauge'||pr.subclass==='preserved');
+        const isRoad=!isRail&&(cls==='mw'||cls==='pr'||cls==='sc'||cls==='tr'||cls==='rs');
+        if(isRail||isRoad)for(const rg of f.r){const a=[];for(let i=0;i+1<rg.length;i+=2)a.push((ox+rg[i]*k-cx)*cl,(oy-rg[i+1]*k-cy)*cl);if(a.length>=4)(isRail?XR:XD).push(a)}
       }
       if(!cls)continue;
       const path=new Path2D(),one=cls==='rs'&&f.l==='transportation'&&(pr.oneway==1||pr.oneway===true);   // jednokierunkowe ulice osiedlowe = jeden pas
@@ -3698,7 +3725,23 @@ function buildMvt(tiles,lat0,lon0){
       gp(cls).addPath(path);if(one)gp('one1').addPath(path);
     }
   }
-  return {lat:lat0,lon:lon0,P,LB,B,RS,SP:[]};
+  const XC=[];
+  if(XR.length&&XD.length){
+    const CS=150,G=new Map(),cells=(x1,y1,x2,y2,fn)=>{for(let gx=Math.floor(Math.min(x1,x2)/CS);gx<=Math.floor(Math.max(x1,x2)/CS);gx++)for(let gy=Math.floor(Math.min(y1,y2)/CS);gy<=Math.floor(Math.max(y1,y2)/CS);gy++)fn(gx+','+gy)};
+    for(const a of XD)for(let i=0;i+3<a.length;i+=2){const sg=[a[i],a[i+1],a[i+2],a[i+3]];cells(sg[0],sg[1],sg[2],sg[3],k=>{let l=G.get(k);if(!l)G.set(k,l=[]);l.push(sg)})}
+    const pts=[];
+    for(const a of XR)for(let i=0;i+3<a.length;i+=2){
+      const x1=a[i],y1=a[i+1],x2=a[i+2],y2=a[i+3];if(x1*x1+y1*y1>4600*4600)continue;
+      const seen=new Set(),l1=Math.hypot(x2-x1,y2-y1);if(l1<.01)continue;
+      cells(x1,y1,x2,y2,k=>{const l=G.get(k);if(!l)return;for(const sg of l){if(seen.has(sg))continue;seen.add(sg);
+        const [x3,y3,x4,y4]=sg,l2=Math.hypot(x4-x3,y4-y3),d=(x2-x1)*(y4-y3)-(y2-y1)*(x4-x3);if(l2<.01||Math.abs(d)/(l1*l2)<.2)continue;   // pomijamy niemal równoległe
+        const t=((x3-x1)*(y4-y3)-(y3-y1)*(x4-x3))/d,u=((x3-x1)*(y2-y1)-(y3-y1)*(x2-x1))/d;
+        if(t>=0&&t<=1&&u>=0&&u<=1)pts.push([x1+t*(x2-x1),y1+t*(y2-y1)])}});
+    }
+    for(const p of pts){const c=XC.find(q=>Math.hypot(q.x-p[0],q.y-p[1])<25);if(c)c.n++;else XC.push({x:p[0],y:p[1],n:1})}
+    for(const c of XC){c.lat=lat0+c.y/111195;c.lon=lon0+c.x/(111195*cl)}
+  }
+  return {lat:lat0,lon:lon0,P,LB,B,RS,SP:[],XC};
 }
 async function ofmUrl(){
   let c=null;try{c=JSON.parse(localStorage.getItem('ofm')||'null');if(c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
@@ -3756,10 +3799,10 @@ async function loadVec(lat,lon){
       const first=await getTile(tpl,z,tx,ty);
       let dat=buildMvt([first],lat,lon);
       if(!Object.keys(dat.P).length)throw new Error('pusta mapa');
-      vecData=dat;$('attr').textContent='© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap';
+      vecData=dat;xDerAdd(dat.XC);$('attr').textContent='© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap';
       const rest=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(dx||dy)rest.push(getTile(tpl,z,tx+dx,ty+dy));
       const all=[first,...(await Promise.allSettled(rest)).filter(r=>r.status==='fulfilled').map(r=>r.value)];
-      dat=buildMvt(all,lat,lon);dat.tx=tx;dat.ty=ty;dat.z=z;vecData=dat;
+      dat=buildMvt(all,lat,lon);dat.tx=tx;dat.ty=ty;dat.z=z;vecData=dat;xDerAdd(dat.XC);
       fetchSpeed(lat,lon,dat);
       return;
     }catch(e){tileMem.clear()}
