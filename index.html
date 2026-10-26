@@ -642,7 +642,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 95</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 96</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -4581,14 +4581,18 @@ function drawTrainSkin(x,y,r,o){
 }
 
 // ---- motyw sezonowy: Halloween (24.10–1.11), Święta (1.12–6.01), urodziny Natalki (6.12) ----
-const sFx=[];
+const sFx=[],sT0=Date.now();
+// efekt tylko przez chwilę (20 s po starcie, potem 8 s co 10 min), żeby nie rozpraszać kierowcy; płynnie się pojawia i znika
+function seasonEnv(){const t=Date.now()-sT0;let a=null,len=0;if(t<20000){a=t;len=20000}else{const ph=t%600000;if(t>=600000&&ph<8000){a=ph;len=8000}}
+  if(a==null)return 0;return Math.max(0,Math.min(1,Math.min(a,len-a,1500)/1500))}
 function drawSeasonFx(){
   if(!seasonCur.s||ecoOn||window.__rm)return;
+  const env=seasonEnv();if(env<=0){if(sFx.length)sFx.length=0;return}
   const W=window.innerWidth,H=window.innerHeight,hal=seasonCur.s==='halloween';
   while(sFx.length<(hal?14:26))sFx.push({x:Math.random()*W,y:Math.random()*H,v:hal?.5+Math.random()*.9:.6+Math.random()*1.1,p:Math.random()*6.28,s:hal?13+Math.random()*9:1.6+Math.random()*2.6,e:['🍂','🦇','🍂','🎃','🍁'][Math.floor(Math.random()*5)]});
   mx.save();
-  if(hal){mx.font='16px "Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.globalAlpha=.8}
-  else mx.fillStyle='rgba(255,255,255,.82)';
+  if(hal){mx.font='16px "Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.globalAlpha=.8*env}
+  else mx.fillStyle='rgba(255,255,255,'+(.82*env).toFixed(2)+')';
   const t=Date.now()/1000;
   for(const p of sFx){
     p.y+=p.v;p.x+=Math.sin(t+p.p)*.5;if(p.y>H+20){p.y=-20;p.x=Math.random()*W}
