@@ -96,6 +96,14 @@ body.night #repGrid button{background:#2d3139;color:#e8eaed}
 #evToast{position:fixed;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 150px);z-index:3200;background:#202124ee;color:#fff;border-radius:18px;padding:12px 14px;display:none;box-shadow:0 10px 30px #0008;animation:cardIn .25s ease}
 #evToast b{display:block;font-size:1rem;margin-bottom:2px}#evToast .evb{display:flex;gap:8px;margin-top:10px}
 #evToast button{flex:1;padding:10px;border-radius:12px;background:#ffffff26;color:#fff;font-weight:700}
+#srchfab{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 466px);z-index:900;width:50px;height:50px;padding:0;border-radius:16px;background:#fff;font-size:22px;box-shadow:0 6px 20px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
+body.night #srchfab{background:#2d3139}
+#srchBox{position:fixed;left:0;right:0;top:0;z-index:3300;background:#fff;color:#202124;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 14px;border-radius:0 0 24px 24px;box-shadow:0 10px 40px rgba(0,0,0,.4);display:none;animation:cardIn .25s ease}
+body.night #srchBox{background:#202228;color:#e8eaed}
+#srchRow{display:flex;gap:8px}#srchIn{flex:1;padding:13px 14px;border-radius:14px;border:1px solid #9aa0a688;background:transparent;color:inherit;font:inherit;font-size:1rem}
+#srchX{width:46px;border-radius:14px;background:#8884;color:inherit;font-size:1.1rem}
+#srchSug{margin-top:8px;max-height:50vh;overflow:auto}#srchSug div{padding:11px 6px;border-bottom:1px solid #8883;cursor:pointer}#srchSug small{display:block;opacity:.65}
+#brwBack{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:950;padding:13px 22px;border-radius:26px;background:#1a73e8;color:#fff;font-weight:700;font-size:1rem;box-shadow:0 8px 24px #0006;display:none;animation:cardIn .3s ease}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -516,11 +524,14 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="repfab" aria-label="Zgłoś zdarzenie" type="button">⚠️</button>
 <div id="repSheet"><h3>Zgłoś zdarzenie dla innych kierowców</h3><p id="repSub">Zgłoszenie dotyczy Twojej obecnej pozycji.</p><div id="repGrid"></div><button id="repCancel" type="button">Anuluj</button></div>
 <div id="evToast"><b id="evT1"></b><span id="evT2"></span><div class="evb" id="evB"></div></div>
+<button id="srchfab" aria-label="Szukaj miejsca" type="button">🔍</button>
+<div id="srchBox"><div id="srchRow"><input id="srchIn" placeholder="Wpisz miejscowość lub ulicę, np. Pszenno" autocomplete="off"><button id="srchX" type="button">✕</button></div><div id="srchSug"></div></div>
+<button id="brwBack" type="button">📍 Wróć do mojej pozycji (GPS)</button>
 <button id="planfab" aria-label="Wyznacz trasę" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6"/></svg></button>
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 77</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 78</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1526,7 +1537,7 @@ async function planRoute(){
 }
 // podgląd trasy z wybranego startu (bez GPS i bez samochodu): trasa i czas przejazdu
 window.preview=false;
-function exitPreview(){window.preview=false;document.body.classList.remove('preview');clearInterval(window.pvT)}
+function exitPreview(){window.preview=false;window.browse=false;document.body.classList.remove('preview');clearInterval(window.pvT);clearInterval(window.brwT);const b=$('brwBack');if(b)b.style.display='none'}
 function enterPreview(r){
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   stopSim();window.preview=true;document.body.classList.add('preview');
@@ -2489,6 +2500,54 @@ $('evTest').onclick=async()=>{
   catch(e){st.textContent='Nie udało się: '+e.message}
 };
 setInterval(()=>{if(last)evPoll()},30000);
+
+// ================= Swobodne przeglądanie miejsca (np. „Pszenno”) =================
+window.browse=false;
+{
+  let tm=null,tok=0;
+  const box=$('srchBox'),inp=$('srchIn'),sg=$('srchSug');
+  const close=()=>{box.style.display='none';sg.innerHTML='';inp.blur()};
+  $('srchfab').onclick=()=>{box.style.display='block';inp.value='';sg.innerHTML='';setTimeout(()=>inp.focus(),80)};
+  $('srchX').onclick=close;
+  inp.addEventListener('input',()=>{
+    clearTimeout(tm);const q=inp.value.trim();if(q.length<3){sg.innerHTML='';return}
+    tm=setTimeout(async()=>{const t=++tok;
+      try{const l=await geocode(q);if(t!==tok)return;sg.innerHTML='';
+        l.forEach(it=>{const d=document.createElement('div'),b=document.createElement('b'),sm=document.createElement('small');b.textContent=it.title;sm.textContent=it.sub;d.appendChild(b);d.appendChild(sm);d.onclick=()=>{close();enterBrowse(it)};sg.appendChild(d)});
+        if(!l.length){const d=document.createElement('div');d.textContent='Brak wyników';sg.appendChild(d)}
+      }catch(e){sg.innerHTML='<div>Wyszukiwanie niedostępne: '+e.message+'</div>'}
+    },350);
+  });
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const d=sg.querySelector('div');if(d&&d.onclick)d.onclick()}});
+}
+function enterBrowse(it){
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  stopSim();try{clearRoute()}catch(e){}
+  $('pick').style.display='none';
+  window.preview=true;window.browse=true;document.body.classList.add('preview');
+  const p={lat:it.lat,lon:it.lon,speed:0,heading:0};last={lat:p.lat,lon:p.lon,t:Date.now()};
+  freeCam=false;panE=panN=0;zoomMul=.4;rotOff=0;lastH=0;tgtRot=0;curRot=0;
+  lastFetch=null;crossings=[];trains=[];vecNext=0;
+  if(!gtfs&&!gKey&&!ttBusy)loadTimetable(false);
+  else if(gtfsCenter&&!ttBusy&&dist(gtfsCenter.lat,gtfsCenter.lon,p.lat,p.lon)>100000)loadTimetable(true);
+  try{follow(p)}catch(e){}
+  loadCrossings(p.lat,p.lon);
+  window.pvTxt=it.label;$('bsub').textContent=it.label;
+  setBanner('ok','Przeglądasz: '+it.title,'Przesuwaj mapę palcem · pociągi i przejazdy w okolicy');
+  $('big').textContent=it.title;$('sub').textContent='Podgląd miejsca – bez GPS';
+  $('brwBack').style.display='block';
+  clearInterval(window.brwT);let tt=0;
+  window.brwT=setInterval(()=>{
+    if(!window.browse){clearInterval(window.brwT);return}
+    const cp=(vec&&typeof vecCam==='function'&&vecCam(performance.now()))||p;
+    if(vec&&(!vecData||dist(vecData.lat,vecData.lon,cp.lat,cp.lon)>600)&&Date.now()>vecNext)loadVec(cp.lat,cp.lon);
+    if(!lastFetch||dist(lastFetch.lat,lastFetch.lon,cp.lat,cp.lon)>1500)loadCrossings(cp.lat,cp.lon);
+    last={lat:cp.lat,lon:cp.lon,t:Date.now()};   // pociągi i rozkład podążają za oglądanym miejscem
+    if(gtfsCenter&&!ttBusy&&Date.now()-lastRecentre>60000&&dist(gtfsCenter.lat,gtfsCenter.lon,cp.lat,cp.lon)>100000){lastRecentre=Date.now();loadTimetable(true)}
+    if(ws&&ws.readyState===1&&(!gBox||dist(gBox.lat,gBox.lon,cp.lat,cp.lon)>3000))gSend(cp.lat,cp.lon);
+  },1500);
+}
+$('brwBack').onclick=()=>{$('start').click()};
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
