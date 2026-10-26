@@ -487,8 +487,8 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 </div>
 <div id="bar">
   <button id="closeNav" aria-label="Zakończ">✕</button>
-  <div id="bmid"><div id="bmain">Gotowy</div><div id="bsub">Naciśnij ⋮, aby otworzyć menu</div></div>
-  <button id="dots" aria-label="Menu">⋮</button>
+  <div id="bmid"><div id="bmain">Gotowy</div><div id="bsub">Ustawienia: ikona ⚙ na mapie</div></div>
+  <div id="barSp" style="width:48px;height:48px;flex:0 0 48px" aria-hidden="true"></div>
 </div>
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
 <button id="mic" aria-label="Polecenia głosowe">🎤</button><div id="micTo"></div>
@@ -497,7 +497,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 75</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 76</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -885,7 +885,7 @@ if(gmKey)useGoogle();
 // ---- Widok jak w nawigacji samochodowej ----
 function setDist(t){$('dist').textContent=t}
 let hAnch=null, tiltDeg=50, curRot=0, tgtRot=0, rotInit=true, lastH=0, night=(()=>{const h=new Date().getHours();return h>=19||h<6})();
-function applyNight(){document.body.classList.toggle('night',night);$('night').textContent=night?'Dzień':'Noc'}
+function applyNight(){document.body.classList.toggle('night',night);$('night').textContent=night?'Przełącz na tryb dzienny':'Przełącz na tryb nocny'}
 $('night').onclick=()=>{night=!night;applyNight();autoNight=false;$('autonight').checked=false;try{localStorage.setItem('autonight','0')}catch(e){}};
 var autoNight=true;try{autoNight=localStorage.getItem('autonight')!=='0'}catch(e){}
 $('autonight').checked=autoNight;$('autonight').onchange=()=>{autoNight=$('autonight').checked;try{localStorage.setItem('autonight',autoNight?'1':'0')}catch(e){}if(autoNight)updNight()};
@@ -1550,7 +1550,7 @@ function pin(x,y,k){
 
 // ---- Wygląd jak w nawigacji Google: menu, zakończenie, pasek informacji ----
 const fmtD=m=>m>=1000?(m/1000).toFixed(1)+' km':Math.round(m/10)*10+' m';
-$('dots').onclick=()=>$('menu').classList.toggle('open');
+
 ['start'].forEach(id=>$(id).addEventListener('click',()=>$('menu').classList.remove('open')));
 $('closeNav').onclick=()=>{
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
@@ -2200,7 +2200,9 @@ setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-al
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['theme','autonight','dimOn']);
+  mv('look',['night','mapmode','theme','autonight','dimOn']);
+  G('snd').prepend($('voice').closest('label'));
+  mv('drive',['start']);
   mv('snd',['vsel','vbose','sndsel','volTrain','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars']);
@@ -2211,10 +2213,13 @@ setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-al
   const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
 }
 function openSettings(){
+  $('start').classList.add('sec');$('start').textContent='Uruchom GPS (Start)';
   $('menu').classList.remove('open');$('setVer').textContent=($('ver')||{}).textContent||'';
   $('settings').classList.add('open');$('settings').querySelector('.sBody').scrollTop=0;
 }
 function closeSettings(){$('settings').classList.remove('open')}
+$('start').addEventListener('click',closeSettings);
+$('menu').style.display='none';   // dawne menu ⋮ zostało przeniesione do ustawień
 $('setfab').onclick=openSettings;$('pickset').onclick=openSettings;$('setBack').onclick=closeSettings;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings()});
 
