@@ -222,6 +222,61 @@ body.night #zoomb{background:#2b3140}
 .opts{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;margin:6px 2px;opacity:.9}
 .opts label{display:flex;align-items:center;gap:5px}
 #wxinfo{font-size:.82rem;margin:4px 2px 0;opacity:.9}
+
+/* ===== Planer trasy: dolny panel zgodny z resztą interfejsu (pojawia się po wyświetleniu mapy i ustaleniu pozycji) ===== */
+#pick{inset:auto 0 0 0;top:auto;left:0;right:0;bottom:0;max-height:84vh;background:#fff;color:#202124;border-radius:26px 26px 0 0;padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 14px);align-items:flex-start;justify-content:center;z-index:1200;box-shadow:0 -10px 40px rgba(0,0,0,.35);overflow:auto}
+body.night #pick{background:#202228;color:#e8eaed}
+#pick .box{padding:0;margin:0;max-width:560px;text-align:left}
+#pick .grab{width:42px;height:4px;border-radius:2px;background:#d0d4d9;margin:6px auto 10px}
+body.night #pick .grab{background:#4a4f58}
+#pickx{position:absolute;right:12px;top:10px;width:34px;height:34px;padding:0;border-radius:50%;background:#eef1f4;color:#3c4043;font-size:1rem}
+body.night #pickx{background:#2d3139;color:#e8eaed}
+#pick .logo{display:none}
+#pick h1{font-size:1.15rem;font-weight:800;margin:2px 0 0;letter-spacing:-.01em;color:inherit}
+#pick p{display:none}
+#pick .lbl{margin:12px 0 6px;color:#5f6368;opacity:1}
+body.night #pick .lbl{color:#a9b0bb}
+#pickcars{margin:0 0 12px;gap:8px}
+.pc{background:#f1f3f4;border:2px solid transparent;color:#202124;border-radius:16px;padding:6px 4px;box-shadow:none}
+body.night .pc{background:#2d3139;color:#e8eaed}
+.pc.on{background:#e8f0fe;border-color:#1a73e8;box-shadow:none}
+body.night .pc.on{background:#1f2f4d}
+.pc div{font-size:.74rem;margin-top:2px}
+.pc svg{max-height:54px}
+#pick .fld{background:#f1f3f4;box-shadow:none;border-radius:14px;padding:2px 10px}
+body.night #pick .fld{background:#2d3139}
+#pick .fld input{color:inherit;font-size:.98rem}
+#pick .fld input::placeholder{color:#7b838d}
+#pick .fld button{background:#e3e7eb;color:#202124}
+#pick .fld span{color:#fff}
+#pick .sec{background:#eceff1;color:#202124;border-radius:12px}
+body.night #pick .sec{background:#2d3139;color:#e8eaed}
+#addvia{padding:6px 12px;font-size:.85rem}
+#sug{background:#fff;color:#202124;border:1px solid #e1e4e8;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+body.night #sug{background:#2d3139;color:#e8eaed;border-color:#3b4048}
+#sug div{border-top:1px solid #eceff2}
+body.night #sug div{border-top-color:#3b4048}
+#pick .row{margin-top:10px;gap:8px;justify-content:stretch}
+#pick .row button{flex:1}
+#go{padding:14px 20px;font-size:1.05rem;border-radius:14px;box-shadow:none;background:#1a73e8;flex:2}
+#pick .row .sec{padding:14px 12px;font-size:.9rem;border-radius:14px;font-weight:700}
+#rinfo{color:#b3261e}
+#pick small,#rxinfo,#wxinfo,#dlst{color:#5f6368}
+body.night #pick small,body.night #rxinfo,body.night #wxinfo,body.night #dlst{color:#a9b0bb}
+#pick .opts{opacity:1}
+#chips button{background:#eef1f4;color:#202124}
+body.night #chips button{background:#2d3139;color:#e8eaed}
+#planfab{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 160px);z-index:900;width:52px;height:52px;padding:0;border-radius:16px;background:#1a73e8;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center}
+#planfab svg{width:26px;height:26px}
+#more{margin:8px 0}
+#more summary{cursor:pointer;font-size:.88rem;font-weight:700;color:#1a73e8;padding:6px 2px;list-style:none}
+#more summary::-webkit-details-marker{display:none}
+#more[open] summary{margin-bottom:6px}
+#pickcars{margin:0 0 8px}
+.pc svg{max-height:44px}
+body.night #pick .pc div,body.night .pc{color:#e8eaed}
+body.night .pc.on{background:#1f2f4d}
+body.night #more summary{color:#8ab4f8}
 </style>
 </head>
 <body>
@@ -298,10 +353,11 @@ body.night #zoomb{background:#2b3140}
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
 <button id="mic" aria-label="Polecenia głosowe">🎤</button><div id="micTo"></div>
 <div id="zoomb"><button id="zin" aria-label="Przybliż">+</button><button id="zout" aria-label="Oddal">−</button></div>
+<button id="planfab" aria-label="Wyznacz trasę" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6"/></svg></button>
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
-<div id="pick"><div class="box">
+<div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 40</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 41</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -313,9 +369,11 @@ body.night #zoomb{background:#2b3140}
     <div class="fld b"><span>B</span><input id="to" placeholder="Cel: wpisz ulicę lub adres" autocomplete="off"></div>
     <div id="sug"></div>
     <div id="habit"></div><div id="chips"></div><div id="savebar"></div>
+    <details id="more"><summary>Więcej opcji: godzina wyjazdu, unikanie dróg</summary>
     <div class="fld"><span>⏱</span><input id="dep" type="datetime-local" title="Wyjazd o (puste = teraz)"></div>
     <small>Wyjazd o wybranej godzinie (puste = teraz): prognoza korków i najlepsza pora wyjazdu.</small>
     <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label><label><input type="checkbox" id="avX"> Mniej przejazdów kolejowych</label></div>
+    </details>
     <div id="rinfo"></div><div id="rxinfo"></div><div id="wxinfo"></div>
     <button id="dlmap" class="sec" style="display:none;margin-top:6px">Pobierz mapę trasy (offline)</button><small id="dlst"></small>
   </div>
@@ -575,17 +633,18 @@ function onPos(g){
   evaluate({lat:c.latitude,lon:c.longitude,speed,heading});
 }
 
-$('start').onclick=async()=>{
+async function startGps(quiet){
   if(demo)stopDemo();
   if(!gtfs&&!gKey&&!ttBusy)loadTimetable(false);
   if(!navigator.geolocation){setBanner('warn','Brak GPS','Przeglądarka nie obsługuje geolokalizacji');return}
-  beep();try{if(navigator.wakeLock)await navigator.wakeLock.request('screen')}catch(e){}
+  if(!quiet)beep();try{if(navigator.wakeLock)await navigator.wakeLock.request('screen')}catch(e){}
   if(watchId!=null)navigator.geolocation.clearWatch(watchId);
   setBanner('ok','Szukam sygnału GPS…','Pobieram przejazdy z OpenStreetMap');
   watchId=navigator.geolocation.watchPosition(onPos,
     e=>setBanner('warn','Błąd GPS',e.message+' (wymagane HTTPS i zgoda na lokalizację)'),
     {enableHighAccuracy:true,maximumAge:1000,timeout:20000});
-};
+}
+$('start').onclick=()=>startGps(false);
 
 // ---- geOps Realtime API (WebSocket) ----
 let gKey='', ws=null, gTraj={}, gBox=null, pingT=null;
@@ -1771,6 +1830,18 @@ function replayLog(d){
     evaluate({lat:x.lat,lon:x.lon,speed:(x.v||0)/3.6,heading:x.h});
   },500);
 }
+
+// ---- Planer: mapa i pozycja najpierw, panel wyboru trasy dopiero potem ----
+let plannerShown=false;const t0load=Date.now();
+function showPlanner(){plannerShown=true;$('pick').style.display='flex';$('planfab').style.display='none'}
+$('pickx').onclick=()=>{$('pick').style.display='none';$('sug').innerHTML=''};
+$('planfab').onclick=showPlanner;
+setInterval(()=>{
+  const busy=!!route||demo||!!sim;
+  if(!plannerShown&&!busy&&((last&&(vecData||Date.now()-t0load>10000))||Date.now()-t0load>8000))showPlanner();
+  $('planfab').style.display=(plannerShown&&!busy&&$('pick').style.display==='none')?'flex':'none';
+},500);
+setTimeout(()=>{if(navigator.geolocation&&watchId==null&&!demo)startGps(true)},400);
 
 // ---- Polecenia głosowe (Chrome/Android; wymaga zgody na mikrofon) ----
 (function(){
