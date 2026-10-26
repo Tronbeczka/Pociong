@@ -23,6 +23,31 @@ jobs:
         run: |
           curl -fL --retry 3 --retry-delay 5 -o updates.json https://mkuran.pl/gtfs/polish_trains/updates.json
           python3 -c "import json;j=json.load(open('updates.json'));assert j.get('trip_updates') is not None;print(len(j['trip_updates']),'kursow')"
+      - name: Odchudź plik (bez autobusów i dawno zakończonych kursów, 32 MB -> ok. 1 MB)
+        run: |
+          python3 - <<'PY'
+          import json,sys,datetime,re
+          j=json.load(open('updates.json'))
+          now=datetime.datetime.now(datetime.timezone.utc)
+          def ts(s):
+              return datetime.datetime.fromisoformat(re.sub(r'(\.\d{6})\d+',r'\1',s))
+          out=[]
+          for u in j['trip_updates']:
+              st=u.get('stop_times') or []
+              if st and all(x.get('platform')=='BUS' for x in st): continue
+              last=None
+              for x in reversed(st):
+                  v=x.get('departure') or x.get('arrival')
+                  if v: last=ts(v);break
+              if last and (now-last).total_seconds()>3600 and not u.get('cancelled'): continue
+              k={a:u[a] for a in ('id','trip_id','start_date','agency_id','numbers','cancelled','detour') if a in u}
+              k['stop_times']=[{a:x[a] for a in ('stop_sequence','arrival','departure','confirmed','cancelled') if a in x} for x in st]
+              out.append(k)
+          r={'timestamp':j['timestamp'],'trip_updates':out}
+          json.dump(r,open('slim.json','w'),ensure_ascii=False,separators=(',',':'))
+          print(len(j['trip_updates']),'->',len(out))
+          PY
+          mv slim.json updates.json
       - name: Opublikuj w gałęzi gtfs-live (bez narastania historii)
         run: |
           git init -q -b gtfs-live
