@@ -377,7 +377,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 51</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 52</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1360,7 +1360,7 @@ async function planRoute(){
 }
 // podgląd trasy z wybranego startu (bez GPS i bez samochodu): trasa i czas przejazdu
 window.preview=false;
-function exitPreview(){window.preview=false;document.body.classList.remove('preview')}
+function exitPreview(){window.preview=false;document.body.classList.remove('preview');clearInterval(window.pvT)}
 function enterPreview(r){
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   stopSim();window.preview=true;document.body.classList.add('preview');
@@ -1368,6 +1368,8 @@ function enterPreview(r){
   zoomMul=Math.max(.3,Math.min(1,830/(route.len*1.15)));if(vec)scaleTgt=clampS(scaleBase*zoomMul);
   const p={lat:a[0],lon:a[1],speed:0,heading:h};last={lat:p.lat,lon:p.lon,t:Date.now()};
   try{follow(p);routeUpdate(p)}catch(e){}
+  clearInterval(window.pvT);vecNext=0;   // mapa wokół startu: ponawiamy ładowanie, aż się wczyta
+  window.pvT=setInterval(()=>{if(!window.preview){clearInterval(window.pvT);return}if(!vecData||dist(vecData.lat,vecData.lon,p.lat,p.lon)>600){vecNext=0;try{follow(p)}catch(e){}}else clearInterval(window.pvT)},800);
   const mn=Math.round(r.duration/60),t=mn>=60?Math.floor(mn/60)+' godz. '+(mn%60)+' min':mn+' min';
   setBanner('ok','Podgląd trasy',t+' · '+(r.distance/1000).toFixed(1).replace('.',',')+' km');
   $('big').textContent='Czas przejazdu: '+t;$('sub').textContent=(r.distance/1000).toFixed(1).replace('.',',')+' km · start: '+(F.from.el.value||'wybrany punkt');$('bmain').textContent=t;
