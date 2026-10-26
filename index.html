@@ -356,7 +356,7 @@ body.night #more summary{color:#8ab4f8}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 43</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 44</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1128,7 +1128,7 @@ function routeUpdate(p){
   route.idx=r.i;route.along=r.along;route.off=r.off;navUpdate();routeSignsUpdate();
   if(route.poiAt!=null&&route.len-route.along>8000&&route.along-route.poiAt>25000)loadPoi(route);
   const lim=r.along+6000,seg=[[p.lat,p.lon]];  // rysujemy tylko najbliższe ~6 km
-  for(let i=r.i+1;i<route.pts.length&&route.cum[i]<=lim;i++)seg.push(route.pts[i]);
+  const dpts=route.dp||route.pts;for(let i=r.i+1;i<route.pts.length&&route.cum[i]<=lim;i++)seg.push(dpts[i]);
   if(seg.length<2)seg.push(route.pts[route.pts.length-1]);
   rCase.setLatLngs(seg);rLine.setLatLngs(seg);routeSeg=seg;routeSegI=r.i;
   // korki na trasie: pierwszy odcinek >= czerwonego przed nami
@@ -1842,6 +1842,54 @@ setInterval(()=>{
 },500);
 setTimeout(()=>{if(navigator.geolocation&&watchId==null&&!demo)startGps(true)},400);
 
+// ---- Dopasowanie linii trasy do jezdni na mapie (map matching): punkty trasy przyciągane do osi najbliższej drogi o zgodnym kierunku ----
+function dAt(R,d){
+  const P=R.dp||R.pts;let lo=0,hi=R.pts.length-1;d=Math.max(0,Math.min(d,R.len));
+  while(hi-lo>1){const m=(lo+hi)>>1;if(R.cum[m]<=d)lo=m;else hi=m}
+  const L=R.cum[hi]-R.cum[lo],f=L>0?(d-R.cum[lo])/L:0;
+  return [P[lo][0]+(P[hi][0]-P[lo][0])*f,P[lo][1]+(P[hi][1]-P[lo][1])*f];
+}
+function snapGrid(D){
+  if(D.grid)return D.grid;
+  const g=new Map(),CS=40;
+  for(const ra of D.RS||[])for(let i=0;i+3<ra.length;i+=2){
+    const x1=ra[i],y1=ra[i+1],x2=ra[i+2],y2=ra[i+3],ax=Math.floor(Math.min(x1,x2)/CS),bx=Math.floor(Math.max(x1,x2)/CS),ay=Math.floor(Math.min(y1,y2)/CS),by=Math.floor(Math.max(y1,y2)/CS);
+    for(let a=ax;a<=bx;a++)for(let b=ay;b<=by;b++){const k=a+','+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(x1,y1,x2,y2)}
+  }
+  return D.grid=g;
+}
+function snapRoute(R){
+  const D=vecData;if(!D||!D.RS||!D.RS.length||!R||R.pts.length<2)return;
+  if(!R.dp)R.dp=R.pts.map(q=>q.slice());
+  const g=snapGrid(D),CS=40,kx=111195*Math.cos(rad(D.lat)),n=R.pts.length,X=new Float64Array(n),Y=new Float64Array(n);
+  for(let i=0;i<n;i++){X[i]=(R.pts[i][1]-D.lon)*kx;Y[i]=(R.pts[i][0]-D.lat)*111195}
+  R.snapFor=D;const res=new Array(n);
+  for(let i=0;i<n;i++){
+    if(Math.abs(X[i])>1400||Math.abs(Y[i])>1400)continue;
+    const a=Math.max(0,i-1),b=Math.min(n-1,i+1),rb=Math.atan2(X[b]-X[a],Y[b]-Y[a]);
+    let best=14,bx=0,by=0,found=false;
+    const cx=Math.floor(X[i]/CS),cy=Math.floor(Y[i]/CS);
+    for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){
+      const l=g.get(u+','+v);if(!l)continue;
+      for(let j=0;j<l.length;j+=4){
+        const dx=l[j+2]-l[j],dy=l[j+3]-l[j+1],L2=dx*dx+dy*dy;if(L2<.01)continue;
+        let t=((X[i]-l[j])*dx+(Y[i]-l[j+1])*dy)/L2;t=t<0?0:t>1?1:t;
+        const px=l[j]+dx*t,py=l[j+1]+dy*t,d=Math.hypot(px-X[i],py-Y[i]);if(d>=best)continue;
+        let da=Math.abs(Math.atan2(dx,dy)-rb)%Math.PI;da=Math.min(da,Math.PI-da);if(da>.6)continue;   // kierunek zgodny (±35°)
+        best=d;bx=px;by=py;found=true;
+      }
+    }
+    if(found)res[i]=[bx,by];
+  }
+  // wygładzenie: pojedyncze „skoki” na inną drogę (przejazd przez skrzyżowanie) odrzucamy, gdy sąsiedzi są dopasowani w innym miejscu
+  for(let i=0;i<n;i++){
+    const r=res[i];
+    if(r){R.dp[i]=[D.lat+r[1]/111195,D.lon+r[0]/kx]}
+    else if(Math.abs(X[i])<=1400&&Math.abs(Y[i])<=1400)R.dp[i]=R.pts[i].slice();
+  }
+}
+setInterval(()=>{if(route&&vecData&&route.snapFor!==vecData)snapRoute(route)},400);
+
 // ---- Polecenia głosowe (Chrome/Android; wymaga zgody na mikrofon) ----
 (function(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
@@ -2252,7 +2300,7 @@ function mvtDecode(buf){
 const MV_ROAD={motorway:'mw',trunk:'mw',primary:'pr',secondary:'sc',tertiary:'tr',minor:'rs',service:'sv'};
 function buildMvt(tiles,lat0,lon0){
   const W=40075016.686,cl=Math.cos(rad(lat0)),cx=lon0/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(lat0)/2));
-  const P={},LB=[],B=[];
+  const P={},LB=[],B=[],RS=[];
   const gp=k=>P[k]||(P[k]=new Path2D());
   for(const t of tiles){
     const T=W/Math.pow(2,t.z),ox=-W/2+t.x*T,oy=W/2-t.y*T;
@@ -2284,13 +2332,14 @@ function buildMvt(tiles,lat0,lon0){
         if(rg.length<4)continue;
         const x0=(ox+rg[0]*k-cx)*cl,y0=(oy-rg[1]*k-cy)*cl;
         if(cut<1e8&&x0*x0+y0*y0>cut*cut)continue;
-        path.moveTo(x0,y0);let px=x0,py=y0;
+        path.moveTo(x0,y0);let px=x0,py=y0;const ra=(f.l==='transportation'&&(cls==='mw'||cls==='pr'||cls==='sc'||cls==='tr'||cls==='rs'||cls==='sv'))?[x0,y0]:null;
         for(let i=2;i+1<rg.length;i+=2){
-          const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;
+          const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;if(ra)ra.push(x,y);
           if(Math.abs(x-px)+Math.abs(y-py)<2.5&&i+3<rg.length)continue;
           path.lineTo(x,y);px=x;py=y;
         }
         if(fill)path.closePath();
+        if(ra&&ra.length>=4)RS.push(ra);
       }
       if(cls==='bld'&&B.length<2200&&!(pr.render_min_height>0)){   // bryły 3D: obrysy budynków z wysokością
         let sg=0;
@@ -2313,7 +2362,7 @@ function buildMvt(tiles,lat0,lon0){
       gp(cls).addPath(path);if(one)gp('one1').addPath(path);
     }
   }
-  return {lat:lat0,lon:lon0,P,LB,B,SP:[]};
+  return {lat:lat0,lon:lon0,P,LB,B,RS,SP:[]};
 }
 async function ofmUrl(){
   let c=null;try{c=JSON.parse(localStorage.getItem('ofm')||'null');if(c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
@@ -2669,7 +2718,7 @@ function updCarSnap(){
   el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px';
   const n=route.pts.length-2,m=projRoute(route,vf.car.lat,vf.car.lon,Math.max(0,route.idx-2),Math.min(n,route.idx+12));
   if(m.off>30){el.style.transform=base;return}
-  const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=routeAt(route,m.along),a=routeAt(route,Math.max(0,m.along-6)),b=routeAt(route,Math.min(route.len,m.along+6));
+  const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=dAt(route,m.along),a=dAt(route,Math.max(0,m.along-6)),b=dAt(route,Math.min(route.len,m.along+6));
   const brg=dist(a[0],a[1],b[0],b[1])>2?bear(a[0],a[1],b[0],b[1]):lastH;
   const tg=laneTarget(Rr);if(laneCur==null)laneCur=tg;
   const prev=laneCur;laneCur+=(tg-laneCur)*.07;laneYaw+=(Math.max(-9,Math.min(9,(laneCur-prev)*14))-laneYaw)*.2;   // płynna zmiana pasa + lekkie wychylenie auta
