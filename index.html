@@ -453,7 +453,9 @@ $('start').onclick=async()=>{
 // ---- geOps Realtime API (WebSocket) ----
 let gKey='', ws=null, gTraj={}, gBox=null, pingT=null;
 try{gKey=localStorage.getItem('gkey')||'';$('gkey').value=gKey}catch(e){}
-var ttKey='',flowAt=0,trChk=0;try{ttKey=localStorage.getItem('ttkey')||'';$('ttkey').value=ttKey}catch(e){}
+var ttKey='',flowAt=0,trChk=0;const TT_DEFAULT='ymHjGK410xEE9zLpmv1BScrzOZQjQD0o';
+try{ttKey=localStorage.getItem('ttkey')||TT_DEFAULT}catch(e){ttKey=TT_DEFAULT}
+$('ttkey').value=ttKey;
 const MX=20037508.34;
 const toM=(lat,lon)=>[lon*MX/180, Math.log(Math.tan((90+lat)*Math.PI/360))/Math.PI*MX];
 const fromM=(x,y)=>[(2*Math.atan(Math.exp(y/MX*Math.PI))-Math.PI/2)*180/Math.PI, x/MX*180];
