@@ -296,7 +296,6 @@ body.night #more summary{color:#8ab4f8}
 <div id="histbox" style="display:none"></div>
 <div id="menu">
   <button id="start">Start</button>
-  <button id="demo" class="sec">Demo</button>
   <button id="gear" class="sec">Ustawienia</button>
   <button id="night" class="sec">Noc</button>
   <button id="mapmode" class="sec">Mapa: 2D</button>
@@ -357,7 +356,7 @@ body.night #more summary{color:#8ab4f8}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 42</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 43</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -377,7 +376,7 @@ body.night #more summary{color:#8ab4f8}
     <div id="rinfo"></div><div id="rxinfo"></div><div id="wxinfo"></div>
     <button id="dlmap" class="sec" style="display:none;margin-top:6px">Pobierz mapę trasy (offline)</button><small id="dlst"></small>
   </div>
-  <div class="row"><button id="go">Jedź</button><button id="sim" class="sec">Symulacja trasy</button><button id="skip" class="sec">Demo</button></div>
+  <div class="row"><button id="go">Jedź</button></div>
   <div id="ttstat"></div>
   <p style="font-size:.7rem;opacity:.55;margin-top:6px">Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
 </div></div>
@@ -1344,7 +1343,7 @@ $('go').onclick=async()=>{
   $('pick').style.display='none';$('start').click();
 };
 function stopSim(){clearInterval(sim);sim=null}
-$('sim').onclick=async()=>{
+({}).onclick=async()=>{
   if(!await planRoute())return;
   $('pick').style.display='none';
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
@@ -1368,7 +1367,7 @@ function pin(x,y,k){
 // ---- Wygląd jak w nawigacji Google: menu, zakończenie, pasek informacji ----
 const fmtD=m=>m>=1000?(m/1000).toFixed(1)+' km':Math.round(m/10)*10+' m';
 $('dots').onclick=()=>$('menu').classList.toggle('open');
-['start','demo'].forEach(id=>$(id).addEventListener('click',()=>$('menu').classList.remove('open')));
+['start'].forEach(id=>$(id).addEventListener('click',()=>$('menu').classList.remove('open')));
 $('closeNav').onclick=()=>{
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   if(demo)stopDemo();
@@ -2816,7 +2815,7 @@ for(const id of ['cars','pickcars'])for(const k in CARS){
   $(id).appendChild(b);
 }
 showCar();
-$('skip').onclick=()=>{$('pick').style.display='none';$('demo').click()};
+
 
 // ---- Rozkład jazdy (GTFS): pozycja pociągu wzdłuż toru, import wewnątrz aplikacji ----
 let gtfsCenter=null, ttBusy=false, lastRecentre=0;
@@ -3128,7 +3127,7 @@ setInterval(()=>{
 // ---- DEMO: wirtualny kierowca jedzie na północ, pociąg nadjeżdża ze wschodu ----
 let demoTimer=null;
 function stopDemo(){demo=false;clearInterval(demoTimer);crossings=[];trains=[];xLayer.clearLayers();tLayer.clearLayers();lastFetch=null}
-$('demo').onclick=()=>{
+({}).onclick=()=>{
   stopDemo();demo=true;
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   beep();
