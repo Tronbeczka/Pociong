@@ -18,6 +18,12 @@
 #splash .bar{width:120px;height:4px;border-radius:2px;background:#ffffff26;overflow:hidden;margin-top:12px;animation:spUp .6s .4s ease both}
 #splash .bar i{display:block;height:100%;width:40%;border-radius:2px;background:#4da3ff;animation:spBar 1.2s ease-in-out infinite}
 #splash .lt{animation:spBlink 1s steps(1) infinite}
+#splash .scn{width:260px;height:70px;margin-top:6px;animation:spUp .6s .5s ease both;overflow:hidden}
+#splash .scn svg{width:100%;height:100%}
+#splash .trn{animation:spTrain 4.2s cubic-bezier(.45,0,.55,1) infinite}
+#splash .arm{transform-origin:196px 18px;animation:spArm 4.2s ease-in-out infinite}
+@keyframes spTrain{0%,22%{transform:translateX(-80px)}60%,100%{transform:translateX(280px)}}
+@keyframes spArm{0%,10%{transform:rotate(-70deg)}22%,60%{transform:rotate(0)}74%,100%{transform:rotate(-70deg)}}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -315,7 +321,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 </style>
 </head>
 <body>
-<div id="splash"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#fff"/><rect x="5" y="5" width="90" height="90" rx="19" fill="#fff" stroke="#d32f2f" stroke-width="7"/><g stroke="#d32f2f" stroke-width="12" stroke-linecap="butt"><path d="M24 24L76 76"/><path d="M76 24L24 76"/></g><circle class="lt" cx="31" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2"/><circle class="lt" cx="69" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2" style="animation-delay:.5s"/></svg><div class="nm">Przejazd</div><div class="sb">alert kolejowy</div><div class="bar"><i></i></div></div>
+<div id="splash"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#fff"/><rect x="5" y="5" width="90" height="90" rx="19" fill="#fff" stroke="#d32f2f" stroke-width="7"/><g stroke="#d32f2f" stroke-width="12" stroke-linecap="butt"><path d="M24 24L76 76"/><path d="M76 24L24 76"/></g><circle class="lt" cx="31" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2"/><circle class="lt" cx="69" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2" style="animation-delay:.5s"/></svg><div class="nm">Przejazd</div><div class="sb">alert kolejowy</div><div class="bar"><i></i></div><div class="scn"><svg viewBox="0 0 260 70" aria-hidden="true"><line x1="0" y1="52" x2="260" y2="52" stroke="#6b7b93" stroke-width="3"/><line x1="0" y1="60" x2="260" y2="60" stroke="#6b7b93" stroke-width="3"/><g stroke="#4a5873" stroke-width="3"><line x1="6" y1="49" x2="6" y2="63"/><line x1="22" y1="49" x2="22" y2="63"/><line x1="38" y1="49" x2="38" y2="63"/><line x1="54" y1="49" x2="54" y2="63"/><line x1="70" y1="49" x2="70" y2="63"/><line x1="86" y1="49" x2="86" y2="63"/><line x1="102" y1="49" x2="102" y2="63"/><line x1="118" y1="49" x2="118" y2="63"/><line x1="134" y1="49" x2="134" y2="63"/><line x1="150" y1="49" x2="150" y2="63"/><line x1="166" y1="49" x2="166" y2="63"/><line x1="182" y1="49" x2="182" y2="63"/><line x1="198" y1="49" x2="198" y2="63"/><line x1="214" y1="49" x2="214" y2="63"/><line x1="230" y1="49" x2="230" y2="63"/><line x1="246" y1="49" x2="246" y2="63"/></g><g class="trn"><rect x="0" y="30" width="62" height="24" rx="6" fill="#e8eaed"/><rect x="0" y="43" width="62" height="5" fill="#d32f2f"/><rect x="40" y="34" width="16" height="10" rx="2" fill="#4da3ff"/><rect x="8" y="34" width="12" height="10" rx="2" fill="#4da3ff"/><rect x="24" y="34" width="12" height="10" rx="2" fill="#4da3ff"/><circle cx="14" cy="56" r="4" fill="#2b3446"/><circle cx="48" cy="56" r="4" fill="#2b3446"/><circle cx="60" cy="40" r="3" fill="#ffd54f"/></g><g class="brr"><line x1="196" y1="48" x2="196" y2="20" stroke="#fff" stroke-width="4"/></g><g class="arm"><rect x="196" y="16" width="52" height="5" rx="2" fill="#fff"/><rect x="210" y="16" width="8" height="5" fill="#d32f2f"/><rect x="226" y="16" width="8" height="5" fill="#d32f2f"/><rect x="242" y="16" width="6" height="5" fill="#d32f2f"/><circle class="lt" cx="198" cy="12" r="3.5" fill="#ff3b30"/></g></svg></div></div>
 <div id="view"><div id="rot"><div id="map"></div><canvas id="vmap"></canvas></div><div id="sky"></div></div>
 <canvas id="mk"></canvas>
 <div id="carIcon"></div>
@@ -401,7 +407,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 56</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 57</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1956,11 +1962,11 @@ function snapRoute(R){
 setInterval(()=>{if(route&&vecData&&route.snapFor!==vecData)snapRoute(route)},400);
 
 
-// ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 1,1 s, maks. 7 s) ----
+// ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
   const hide=()=>{if(done)return;done=true;sp.classList.add('out');setTimeout(()=>sp.remove(),900)};
-  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>1100&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)))){clearInterval(tick);hide()}},150);
+  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>2000&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)))){clearInterval(tick);hide()}},150);
 }
 // ---- Ekran informacyjny (raz) i ostrzeżenie o pracy w tle ----
 {
