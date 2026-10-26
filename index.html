@@ -377,7 +377,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 54</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 55</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -630,7 +630,7 @@ function evaluate(p){
 }
 
 let gpsOk=null; // ostatni przyjęty odczyt (do filtrowania skoków i słabych fixów)
-function onPos(g){
+function onPos(g){window.gpsErr=false;
   const c=g.coords, t=g.timestamp;
   const acc=c.accuracy||0;
   // odrzuć słaby odczyt (>60 m) i nierealny skok (>70 m/s = 250 km/h), chyba że trwa to już kilka sekund
@@ -661,7 +661,7 @@ async function startGps(quiet){
   if(watchId!=null)navigator.geolocation.clearWatch(watchId);
   setBanner('ok','Szukam sygnału GPS…','Pobieram przejazdy z OpenStreetMap');
   watchId=navigator.geolocation.watchPosition(onPos,
-    e=>setBanner('warn','Błąd GPS',e.message+' (wymagane HTTPS i zgoda na lokalizację)'),
+    e=>{window.gpsErr=true;setBanner('warn','Brak GPS',(e.code===1?'Brak zgody na lokalizację – włącz ją w ustawieniach przeglądarki. ':e.message+' ')+'Możesz wybrać start ręcznie (pole A).');if(!last&&!plannerShown)showPlanner()},
     {enableHighAccuracy:true,maximumAge:1000,timeout:20000});
 }
 $('start').onclick=()=>{exitPreview();startGps(false)};
@@ -1376,6 +1376,7 @@ function enterPreview(r){
   $('big').textContent='Czas przejazdu: '+t;$('sub').textContent=(r.distance/1000).toFixed(1).replace('.',',')+' km · start: '+(F.from.el.value||'wybrany punkt');$('bmain').textContent=t;
 }
 $('go').onclick=async()=>{
+  clearTimeout(sugTimer);sugTok++;
   let r=null;
   if(F.to.pt||F.to.el.value.trim()){r=await planRoute();if(!r)return}
   else clearRoute();
@@ -3222,7 +3223,7 @@ async function fetchZip(st){
 }
 async function loadTimetable(force){
   if(ttBusy)return;ttBusy=true;
-  const st=t=>{$('gstat').textContent=t;const e=$('ttstat');if(e)e.textContent='Rozkład jazdy: '+t;if(!last)setBanner('warn','Import rozkładu',t)};
+  const st=t=>{$('gstat').textContent=t;const e=$('ttstat');if(e)e.textContent='Rozkład jazdy: '+t;if(!last&&!window.gpsErr)setBanner('warn','Import rozkładu',t)};
   try{
     const today=wToday(), file=$('gfile').files[0];
     let c=null;try{c=await idbGet('gtfs')}catch(e){}
