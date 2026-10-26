@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <style>
+body.preview #carIcon,body.preview #strip,body.preview #speed{display:none!important}
 :root{--ok:#1f9d55;--warn:#d9822b;--bad:#d62828;--bg:#0e1116;--fg:#fff;--btn:#2b6cb0}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#e8e4da;color:var(--fg)}
@@ -376,11 +377,11 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 50</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 51</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
-    <div class="fld"><span>A</span><input id="from" placeholder="Start: Twoja aktualna lokalizacja (GPS)" autocomplete="off" disabled><button id="fromGps" class="sec" aria-label="GPS" style="display:none">⌖</button></div>
+    <div class="fld"><span>A</span><input id="from" placeholder="Start: Twoja lokalizacja (GPS) – lub wpisz adres" autocomplete="off"><button id="fromGps" class="sec" aria-label="Użyj GPS jako start">⌖</button></div>
     <div class="fld v"><span>+</span><input id="via" placeholder="Przystanek po drodze (opcjonalnie)" autocomplete="off"></div>
     <div class="fld v" id="via2w" style="display:none"><span>+</span><input id="via2" placeholder="Drugi przystanek" autocomplete="off"></div>
     <div class="fld v" id="via3w" style="display:none"><span>+</span><input id="via3" placeholder="Trzeci przystanek" autocomplete="off"></div>
@@ -500,7 +501,7 @@ fillVoices();
 $('vsel').onchange=e=>{voiceName=e.target.value;try{localStorage.setItem('vname',voiceName)}catch(_){}speak('Dzień dobry. Tak będę do Pana mówił.')};
 $('vbose').value=vbose;$('vbose').onchange=e=>{vbose=e.target.value;try{localStorage.setItem('vbose',vbose)}catch(_){}};
 var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch(e){return {}}})();
-function say(key,text,vib,short){const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
+function say(key,text,vib,short){if(window.preview)return;const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
   const cat=/^[tmxe]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
   if(vcOff[cat])return;
   beep(cat);if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
@@ -663,7 +664,7 @@ async function startGps(quiet){
     e=>setBanner('warn','Błąd GPS',e.message+' (wymagane HTTPS i zgoda na lokalizację)'),
     {enableHighAccuracy:true,maximumAge:1000,timeout:20000});
 }
-$('start').onclick=()=>startGps(false);
+$('start').onclick=()=>{exitPreview();startGps(false)};
 
 // ---- geOps Realtime API (WebSocket) ----
 let gKey='', ws=null, gTraj={}, gBox=null, pingT=null;
@@ -1313,7 +1314,7 @@ function showSug(list,k){
   list.forEach(it=>{
     const d=document.createElement('div'),b=document.createElement('b'),s=document.createElement('small');
     b.textContent=it.title;s.textContent=it.sub;d.appendChild(b);d.appendChild(s);
-    d.onclick=()=>{F[k].el.value=it.label;F[k].pt={lat:it.lat,lon:it.lon,label:it.label};box.innerHTML='';$('rinfo').textContent='';if(k==='to')renderChips()};
+    d.onclick=()=>{F[k].el.value=it.label;F[k].pt={lat:it.lat,lon:it.lon,label:it.label};box.innerHTML='';$('rinfo').textContent='';if(k==='to')renderChips();if((k==='from'||k==='to')&&F.from.pt&&F.to.pt)planRoute()};
     box.appendChild(d);
   });
   if(!list.length){const d=document.createElement('div');d.textContent='Brak wyników';box.appendChild(d)}
@@ -1328,7 +1329,7 @@ function showSug(list,k){
     catch(e){$('rinfo').textContent='Podpowiedzi niedostępne: '+e.message}
   },350);
 }));
-$('fromGps').onclick=()=>{F.from.el.value='';F.from.pt=null;$('sug').innerHTML=''};
+$('fromGps').onclick=()=>{F.from.el.value='';F.from.pt=null;$('sug').innerHTML='';$('rinfo').textContent='Start: Twoja lokalizacja (GPS)'};
 try{$('osrm').value=localStorage.getItem('osrm')||''}catch(e){}
 $('osrm').onchange=()=>{try{localStorage.setItem('osrm',$('osrm').value.trim())}catch(e){}};
 
@@ -1336,8 +1337,8 @@ async function planRoute(){
   const info=t=>{$('rinfo').textContent=t};
   try{
     if(!F.to.pt)throw new Error('wybierz cel z podpowiedzi');
-    if(F.from.el.value.trim()&&!F.from.pt)throw new Error('start jest ustawiany z GPS');
-    info('Ustalanie pozycji…');
+    if(F.from.el.value.trim()&&!F.from.pt)throw new Error('wybierz start z podpowiedzi albo wyczyść pole (⌖ = GPS)');
+    if(!F.from.pt)info('Ustalanie pozycji…');
     for(const k of ['via','via2','via3'])if(F[k].el.value.trim()&&!F[k].pt)throw new Error('wybierz przystanek z podpowiedzi albo wyczyść pole');
     const a=F.from.pt||await gpsNow(), b=F.to.pt;
     {const rest=['via','via2','via3'].filter(k=>F[k].pt).map(k=>({lat:F[k].pt.lat,lon:F[k].pt.lon})),ord=[];let cur=a;   // kolejność: zawsze najbliższy kolejny przystanek
@@ -1354,13 +1355,29 @@ async function planRoute(){
     loadWeather(route);loadPoi(route);renderChips();$('dlmap').style.display='block';
     startTrip(a,b,r);loadRouteCrossings(route,planRoute.dt);loadZones(route);
     info((planRoute.dt?'Prognoza na '+planRoute.dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · ':'')+'Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+typicalTxt(a,b,r.duration)+pickNote+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
-    return true;
+    planRoute.r=r;return true;
   }catch(e){info('Błąd: '+e.message);return false}
 }
+// podgląd trasy z wybranego startu (bez GPS i bez samochodu): trasa i czas przejazdu
+window.preview=false;
+function exitPreview(){window.preview=false;document.body.classList.remove('preview')}
+function enterPreview(r){
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  stopSim();window.preview=true;document.body.classList.add('preview');
+  const a=route.pts[0],b=routeAt(route,Math.min(route.len*.5,400)),h=bear(a[0],a[1],b[0],b[1]);
+  zoomMul=Math.max(.3,Math.min(1,830/(route.len*1.15)));if(vec)scaleTgt=clampS(scaleBase*zoomMul);
+  const p={lat:a[0],lon:a[1],speed:0,heading:h};last={lat:p.lat,lon:p.lon,t:Date.now()};
+  try{follow(p);routeUpdate(p)}catch(e){}
+  const mn=Math.round(r.duration/60),t=mn>=60?Math.floor(mn/60)+' godz. '+(mn%60)+' min':mn+' min';
+  setBanner('ok','Podgląd trasy',t+' · '+(r.distance/1000).toFixed(1).replace('.',',')+' km');
+  $('big').textContent='Czas przejazdu: '+t;$('sub').textContent=(r.distance/1000).toFixed(1).replace('.',',')+' km · start: '+(F.from.el.value||'wybrany punkt');$('bmain').textContent=t;
+}
 $('go').onclick=async()=>{
-  if(F.to.pt||F.to.el.value.trim()){if(!await planRoute())return}
+  let r=null;
+  if(F.to.pt||F.to.el.value.trim()){r=await planRoute();if(!r)return}
   else clearRoute();
-  $('pick').style.display='none';$('start').click();
+  $('pick').style.display='none';
+  if(F.from.pt&&route){enterPreview(planRoute.r)}else{exitPreview();$('start').click()}
 };
 function stopSim(){clearInterval(sim);sim=null}
 ({}).onclick=async()=>{
@@ -1391,7 +1408,7 @@ $('dots').onclick=()=>$('menu').classList.toggle('open');
 $('closeNav').onclick=()=>{
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   if(demo)stopDemo();
-  stopSim();clearRoute();
+  stopSim();exitPreview();clearRoute();
   $('menu').classList.remove('open');$('then').style.display='none';setDist('');
   setBanner('ok','Zakończono','Wybierz samochód i naciśnij Jedź');
   $('pick').style.display='flex';
@@ -2864,7 +2881,7 @@ function drawMarkers(){
   drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
   drawPoi();
-  if(freeCam){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
+  if(freeCam&&!window.preview){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
     if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
       mx.save();mx.translate(q.x,q.y);mx.rotate(rad(lastH+curRot));
