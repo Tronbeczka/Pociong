@@ -644,7 +644,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 101</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 102</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -2790,6 +2790,7 @@ window.mapTap=(x,y)=>{
   const cam=vf.cam;let bc=null,bcd=1e9,bt=null,btd=40;
   for(const c of xAll.values()){
     if(Math.abs(c.lat-cam.lat)>.14||Math.abs(c.lon-cam.lon)>.22)continue;
+    if(!xZoomOk()){const cv=vf.car||cam;if(dist(cv.lat,cv.lon,c.lat,c.lon)>300)continue}
     const q=proj(c.lat,c.lon);if(!q)continue;const u=xU(q.k);
     const d=Math.min(Math.hypot(q.x-x,q.y-y)-8,Math.hypot(q.x-x,q.y-u*1.75-y)-u);   // odległość od krawędzi znaku albo od kropki
     if(d<bcd){bcd=d;bc=c}
@@ -4222,6 +4223,7 @@ const xNC={};
 function xNext(c){const n=Date.now(),e=xNC[c.id];if(e&&n-e.at<15000)return e.v;let v=null;
   if(gtfs){const L=xDepartures(c);if(L){const f=L.find(x=>x.t>n/1000-60);v=f?Math.max(0,Math.round((f.t-n/1000)/60)):-1}}
   xNC[c.id]={at:n,v};return v}
+const xZoomOk=()=>!vf||vf.s>=.25;   // ok. 1,7 km na szerokość ekranu
 function drawXMark(o,rank){
   const {x,y,k}=o.p,c=o.c,u=xU(k),near=o.d<500;
   mx.save();mx.translate(x,y);mx.lineJoin='round';mx.lineCap='round';
@@ -4271,7 +4273,9 @@ function drawMarkers(){
   const list=[],camP=(vf&&vf.cam)||last,carP=(vf&&vf.car)||last;
   if(camP)for(const c of xAll.values()){
     if(Math.abs(c.lat-camP.lat)>.14||Math.abs(c.lon-camP.lon)>.22)continue;
-    const p=P(c.lat,c.lon);if(p)list.push({p,t:0,c,d:carP?dist(carP.lat,carP.lon,c.lat,c.lon):1e9})}
+    const dc=carP?dist(carP.lat,carP.lon,c.lat,c.lon):1e9;
+    if(!xZoomOk()&&dc>300)continue;   // z daleka (mapa oddalona) przejazdów nie rysujemy – pojawiają się po przybliżeniu; najbliższe zawsze widać
+    const p=P(c.lat,c.lon);if(p)list.push({p,t:0,c,d:dc})}
   trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt,near:t.id===nearTrainId,name:t.id,hd:t.heading})});
   if(endPt){const p=P(endPt.lat,endPt.lon);if(p)list.push({p,t:2})}
   list.sort((a,b)=>a.p.y-b.p.y); // dalsze najpierw
