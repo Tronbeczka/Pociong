@@ -83,7 +83,7 @@ body.night #settings input[type=checkbox]{background:#4a5059}body.night #setting
 .clipRow button{padding:8px 11px;border-radius:10px;background:var(--bg);color:var(--tx);font-size:.85rem;font-weight:700;margin:0}
 .clipRow button.del{color:#d93025}
 .clipRow button.rc{color:#d93025}.clipRow button.rc.rec{background:#d93025;color:#fff;animation:alPulse 1s ease-in-out infinite}
-#repfab{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 398px);z-index:900;width:50px;height:50px;padding:0;border-radius:16px;background:#fff;font-size:24px;box-shadow:0 6px 20px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
+#repfab{position:absolute;right:12px;top:calc(100% + 118px);z-index:900;width:46px;height:46px;padding:0;border-radius:50%;background:#fff;font-size:24px;box-shadow:0 6px 20px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
 body.night #repfab{background:#2d3139}body.preview #repfab{display:none}
 #repSheet{position:fixed;left:0;right:0;bottom:0;z-index:3300;background:#fff;color:#202124;border-radius:26px 26px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:0 -10px 40px rgba(0,0,0,.4);display:none;animation:sheetUp .3s cubic-bezier(.2,.8,.2,1)}
 body.night #repSheet{background:#202228;color:#e8eaed}
@@ -93,7 +93,7 @@ body.night #repSheet{background:#202228;color:#e8eaed}
 body.night #repGrid button{background:#2d3139;color:#e8eaed}
 #repGrid button span{font-size:2rem;line-height:1}
 #repCancel{width:100%;margin-top:12px;padding:14px;border-radius:14px;background:transparent;color:inherit;font-weight:700;font-size:1rem;opacity:.75}
-#evToast{position:fixed;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 150px);z-index:3200;background:#202124ee;color:#fff;border-radius:18px;padding:12px 14px;display:none;box-shadow:0 10px 30px #0008;animation:cardIn .25s ease}
+#evToast{position:fixed;left:14px;right:70px;top:calc(env(safe-area-inset-top,0px) + 120px);z-index:3200;background:#202124ee;color:#fff;border-radius:18px;padding:12px 14px;display:none;box-shadow:0 10px 30px #0008;animation:cardIn .25s ease}
 #evToast b{display:block;font-size:1rem;margin-bottom:2px}#evToast .evb{display:flex;gap:8px;margin-top:10px}
 #evToast button{flex:1;padding:10px;border-radius:12px;background:#ffffff26;color:#fff;font-weight:700}
 #srchfab{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 466px);z-index:900;width:50px;height:50px;padding:0;border-radius:16px;background:#fff;font-size:22px;box-shadow:0 6px 20px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
@@ -430,6 +430,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
  <div id="strip"><div id="info">Pociągi w pobliżu: –</div><div id="then"></div></div>
  <div id="compass"><svg viewBox="0 0 44 44"><polygon points="22,6 28,22 16,22" fill="#d93025"/><polygon points="22,38 28,22 16,22" fill="#9aa0a6"/></svg></div>
  <button id="setfab" aria-label="Ustawienia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+<button id="repfab" aria-label="Zgłoś zdarzenie" type="button">⚠️</button>
 </div>
 <div id="intro"><div class="card"><h2>Zanim ruszysz</h2><ul>
 <li><b>To wsparcie, nie zabezpieczenie.</b> Aplikacja ostrzega o pociągach, ale nie zastępuje Twojej uwagi. Zawsze rozejrzyj się przy przejeździe.</li>
@@ -521,7 +522,6 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
 <button id="mic" aria-label="Polecenia głosowe">🎤</button><div id="micTo"></div>
 <div id="zoomb"><button id="zin" aria-label="Przybliż">+</button><button id="zout" aria-label="Oddal">−</button></div>
-<button id="repfab" aria-label="Zgłoś zdarzenie" type="button">⚠️</button>
 <div id="repSheet"><h3>Zgłoś zdarzenie dla innych kierowców</h3><p id="repSub">Zgłoszenie dotyczy Twojej obecnej pozycji.</p><div id="repGrid"></div><button id="repCancel" type="button">Anuluj</button></div>
 <div id="evToast"><b id="evT1"></b><span id="evT2"></span><div class="evb" id="evB"></div></div>
 <button id="srchfab" aria-label="Szukaj miejsca" type="button">🔍</button>
@@ -531,7 +531,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 78</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 79</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
