@@ -277,6 +277,14 @@ body.night #chips button{background:#2d3139;color:#e8eaed}
 body.night #pick .pc div,body.night .pc{color:#e8eaed}
 body.night .pc.on{background:#1f2f4d}
 body.night #more summary{color:#8ab4f8}
+#info.warn{background:#fde7e5;color:#8c1d18}
+body.night #info.warn{background:#4a1f1d;color:#ffd7d3}
+#intro{position:fixed;inset:0;z-index:3600;background:#000a;display:none;align-items:center;justify-content:center;padding:18px}
+#intro .card{background:#fff;color:#202124;border-radius:24px;padding:20px 18px;max-width:460px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px #0009}
+body.night #intro .card{background:#202228;color:#e8eaed}
+#intro h2{margin:0 0 10px;font-size:1.25rem}
+#intro li{margin:7px 0;line-height:1.35;font-size:.95rem}
+#intro button{width:100%;margin-top:12px;padding:14px;border-radius:14px;background:#1a73e8;color:#fff;font-weight:800;font-size:1.05rem}
 </style>
 </head>
 <body>
@@ -292,6 +300,14 @@ body.night #more summary{color:#8ab4f8}
  <div id="strip"><div id="info">Pociągi w pobliżu: –</div><div id="then"></div></div>
  <div id="compass"><svg viewBox="0 0 44 44"><polygon points="22,6 28,22 16,22" fill="#d93025"/><polygon points="22,38 28,22 16,22" fill="#9aa0a6"/></svg></div>
 </div>
+<div id="intro"><div class="card"><h2>Zanim ruszysz</h2><ul>
+<li><b>To wsparcie, nie zabezpieczenie.</b> Aplikacja ostrzega o pociągach, ale nie zastępuje Twojej uwagi. Zawsze rozejrzyj się przy przejeździe.</li>
+<li><b>Pozycje pociągów są przybliżone.</b> Pochodzą z rozkładu jazdy i danych o opóźnieniach, a nie z GPS pociągu. Pociąg może jechać inaczej, niż pokazuje aplikacja.</li>
+<li><b>Gdy dane są stare lub ich brak</b>, na górze ekranu pojawi się czerwony pasek z ostrzeżeniem.</li>
+<li><b>Trzymaj ekran włączony.</b> Gdy telefon się wygasi, przeglądarka wstrzyma GPS i ostrzeżenia nie dojdą.</li>
+<li><b>Nie obsługuj telefonu w czasie jazdy.</b> Ustaw trasę przed ruszeniem albo użyj poleceń głosowych.</li>
+<li>Ograniczenia prędkości i pasy pochodzą z OpenStreetMap i mogą być nieaktualne lub niepełne.</li>
+</ul><button id="introOk">Rozumiem</button></div></div>
 <div id="fps" style="display:none"></div><div id="dim"></div><canvas id="jp" width="240" height="240" style="display:none"></canvas><div id="wait" style="display:none"></div>
 <div id="histbox" style="display:none"></div>
 <div id="menu">
@@ -319,6 +335,7 @@ body.night #more summary{color:#8ab4f8}
   <label style="font-size:.9rem">Głośność ostrzeżeń o pociągach <input type="range" id="volTrain" min="3" max="10" step="1" style="vertical-align:middle;width:110px"></label>
   <label style="font-size:.9rem"><input type="checkbox" id="dimOn" checked> Przyciemnij ekran w nocy</label>
   <button id="logan" class="sec">Analiza i odtworzenie logu jazdy</button><input id="logFile" type="file" accept="application/json" style="display:none">
+  <button id="about" class="sec">O dokładności danych</button>
   <button id="expSet" class="sec">Eksport ustawień</button>
   <button id="impSet" class="sec">Import ustawień</button><input id="impFile" type="file" accept="application/json" style="display:none">
   <div id="cfg">
@@ -356,7 +373,7 @@ body.night #more summary{color:#8ab4f8}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 44</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 45</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1890,6 +1907,22 @@ function snapRoute(R){
 }
 setInterval(()=>{if(route&&vecData&&route.snapFor!==vecData)snapRoute(route)},400);
 
+// ---- Ekran informacyjny (raz) i ostrzeżenie o pracy w tle ----
+{
+  let seen=false;try{seen=localStorage.getItem('intro1')==='1'}catch(e){}
+  const el=$('intro');
+  $('introOk').onclick=()=>{el.style.display='none';try{localStorage.setItem('intro1','1')}catch(e){}};
+  $('about').onclick=()=>{$('menu').classList.remove('open');el.style.display='flex'};
+  if(!seen)el.style.display='flex';
+  let hiddenAt=0;
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='hidden'){hiddenAt=Date.now();return}
+    try{if(navigator.wakeLock&&watchId!=null)navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}
+    if(hiddenAt&&Date.now()-hiddenAt>15000&&watchId!=null&&route)setBanner('warn','Aplikacja była w tle','Ostrzeżenia mogły nie dotrzeć. Trzymaj ekran włączony');
+    hiddenAt=0;
+  });
+}
+
 // ---- Polecenia głosowe (Chrome/Android; wymaga zgody na mikrofon) ----
 (function(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
@@ -2148,9 +2181,18 @@ function updTrainCard(p){
 function updInfo(p){
   $('wait').style.display='none';
   const nT=trains.filter(t=>dist(p.lat,p.lon,t.lat,t.lon)<10000).length;
-  const src=demo?'demo':gKey?'':gtfs?'':feedUrl?'':'brak danych o pociągach';
+  const src=demo?'demo':gKey?'':gtfs?'':feedUrl?'':'';
   const bad=(t)=>t&&/błąd|brak danych|HTTP/i.test(t);
-  const parts=[src,vec&&vecErr?vecErr:'',route&&ttKey&&bad(ttSt)?'ruch: '+ttSt:'',route&&ttKey&&bad(flSt)?flSt:'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
+  let dq='';
+  if(!demo){
+    if(!gtfs&&!gKey&&!feedUrl)dq='⚠ brak danych o pociągach – aplikacja nie ostrzeże';
+    else if(gtfs&&!gKey&&!feedUrl){
+      if(!liveOk)dq='⚠ tylko rozkład jazdy, bez opóźnień – pozycje przybliżone';
+      else if(liveTs&&(Date.now()-liveTs)>600000)dq='⚠ opóźnienia sprzed '+Math.round((Date.now()-liveTs)/60000)+' min';
+    }else if(feedUrl&&feedAt&&Date.now()-feedAt>60000)dq='⚠ dane o pociągach nieaktualne';
+  }
+  $('info').classList.toggle('warn',!!dq);
+  const parts=[dq,src,vec&&vecErr?vecErr:'',route&&ttKey&&bad(ttSt)?'ruch: '+ttSt:'',route&&ttKey&&bad(flSt)?flSt:'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
   $('info').textContent=parts.join(' · ');$('info').style.display=parts.length?'':'none';
 }
 
@@ -3083,7 +3125,7 @@ function gtfsApproach(t,nowS,c){
 }
 function setTimetable(d){gtfs=d.trips;gtfsShapes=d.shapes||{};for(const k in SHC)delete SHC[k];APC.clear();buildIdx();setTimeout(loadLive,400)}
 // ---- Opóźnienia na żywo (GTFS-RT w JSON z mkuran.pl, z kopią na GitHubie, gdyby serwer blokował CORS) ----
-var gtfsIdx=new Map(),liveOk=false,liveN=0;
+var gtfsIdx=new Map(),liveOk=false,liveN=0,liveTs=0;
 function buildIdx(){gtfsIdx=new Map();liveOk=false;if(gtfs)for(const tr of gtfs)if(tr.id)gtfsIdx.set(tr.id+'|'+tr.dy,tr)}
 async function loadLive(){
   if(!gtfs||!gtfsIdx.size||demo)return;
@@ -3110,7 +3152,7 @@ function applyLive(j){
     }
     tr.dly={a,d};n++;
   }
-  liveN=n;const age=(Date.now()-Date.parse(j.timestamp||0))/60000;liveOk=n>0&&age<40;
+  liveN=n;const age=(Date.now()-Date.parse(j.timestamp||0))/60000;liveOk=n>0&&age<40;liveTs=Date.parse(j.timestamp||0)||0;
 }
 setInterval(loadLive,60000);
 const lateOf=(tr,seg)=>tr.dly?Math.round(tr.dly.a[Math.max(0,Math.min(tr.st.length-1,(seg||0)+1))]/60):null;   // opóźnienie wg prognozy na następnej stacji

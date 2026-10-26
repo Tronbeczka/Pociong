@@ -1,0 +1,22 @@
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skladnia JavaScript w index.html
+        run: |
+          python3 - <<'PY'
+          import re,sys
+          s=open('index.html',encoding='utf-8').read()
+          m=re.search(r'<script>\n(.*)</script>\s*</body>',s,re.S)
+          if not m: sys.exit('brak bloku <script>')
+          open('/tmp/app.js','w').write(m.group(1))
+          PY
+          node --check /tmp/app.js
+      - name: Numer wersji
+        run: grep -o 'wersja [0-9]*' index.html | head -1
