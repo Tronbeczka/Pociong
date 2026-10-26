@@ -82,6 +82,13 @@ body.night #bsub{color:#9aa0a6}
 #histbox{position:absolute;left:12px;right:12px;top:70px;bottom:90px;z-index:1300;background:#fff;color:#202124;border-radius:20px;padding:14px;overflow:auto;box-shadow:0 14px 40px rgba(0,0,0,.45);font-size:.92rem}
 #histbox h3{margin:0 0 8px}#histbox .it{padding:8px 0;border-top:1px solid #e3e5e8}#histbox small{opacity:.7}
 #fps{position:absolute;left:8px;top:calc(env(safe-area-inset-top,0px) + 118px);z-index:1400;background:#000b;color:#9f9;font:11px/1.35 monospace;padding:4px 7px;border-radius:8px;pointer-events:none;white-space:pre}
+#dim{position:fixed;inset:0;z-index:1350;pointer-events:none;display:none;background:rgba(40,20,0,.22);mix-blend-mode:multiply}
+body.night.dimon #dim{display:block}
+#jp{position:absolute;left:10px;top:calc(env(safe-area-inset-top,0px) + 215px);width:120px;height:120px;border-radius:18px;z-index:880;box-shadow:0 4px 16px rgba(0,0,0,.4);border:2px solid #fff;background:#e8e5dc}
+#wait{position:absolute;left:14px;right:14px;top:34%;z-index:1250;background:#b3261eee;color:#fff;border-radius:20px;padding:16px;text-align:center;font-size:1.05rem;box-shadow:0 10px 30px #0008}
+#wait b{font-size:1.6rem;display:block;margin-bottom:4px}
+body.big #bmain{font-size:1.35em}body.big #bsub{font-size:1.1em}body.big #menu button,body.big #menu select,body.big #menu label{font-size:1.15rem}body.big #tname,body.big #tdist{font-size:1.15em}body.big #spd{font-size:1.2em}
+body.hc #sky{opacity:.6}
 #rxinfo{font-size:.82rem;margin:4px 0;opacity:.95}
 #menu{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);z-index:1100;display:none;max-height:60vh;overflow:auto;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;background:#fff;color:#202124;border-radius:16px;padding:12px;box-shadow:0 6px 20px #0008}
 #menu.open{display:flex}
@@ -226,7 +233,7 @@ body.night #zoomb{background:#2b3140}
  <div id="strip"><div id="info">Pociągi w pobliżu: –</div><div id="then"></div></div>
  <div id="compass"><svg viewBox="0 0 44 44"><polygon points="22,6 28,22 16,22" fill="#d93025"/><polygon points="22,38 28,22 16,22" fill="#9aa0a6"/></svg></div>
 </div>
-<div id="fps" style="display:none"></div>
+<div id="fps" style="display:none"></div><div id="dim"></div><canvas id="jp" width="240" height="240" style="display:none"></canvas><div id="wait" style="display:none"></div>
 <div id="histbox" style="display:none"></div>
 <div id="menu">
   <button id="start">Start</button>
@@ -249,6 +256,11 @@ body.night #zoomb{background:#2b3140}
   <button id="report" class="sec">Zgłoś błąd mapy</button>
   <button id="logdl" class="sec">Pobierz log jazdy</button>
   <label style="font-size:.9rem"><input type="checkbox" id="fpsOn"> Licznik klatek (FPS)</label>
+  <select id="theme" class="sec"><option value="classic">Motyw: klasyczny</option><option value="hc">Motyw: wysoki kontrast</option><option value="big">Motyw: duży interfejs</option></select>
+  <select id="sndsel" class="sec"><option value="gong">Sygnał: gong</option><option value="bell">Sygnał: dzwonek</option><option value="none">Sygnał: brak (tylko głos)</option></select>
+  <label style="font-size:.9rem">Głośność ostrzeżeń o pociągach <input type="range" id="volTrain" min="3" max="10" step="1" style="vertical-align:middle;width:110px"></label>
+  <label style="font-size:.9rem"><input type="checkbox" id="dimOn" checked> Przyciemnij ekran w nocy</label>
+  <button id="logan" class="sec">Analiza i odtworzenie logu jazdy</button><input id="logFile" type="file" accept="application/json" style="display:none">
   <button id="expSet" class="sec">Eksport ustawień</button>
   <button id="impSet" class="sec">Import ustawień</button><input id="impFile" type="file" accept="application/json" style="display:none">
   <div id="cfg">
@@ -285,7 +297,7 @@ body.night #zoomb{background:#2b3140}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick"><div class="box">
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 36</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 37</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -378,10 +390,12 @@ function navSay(st){
 }
 var ICON_X='<circle cx="20" cy="20" r="17" fill="none" stroke="#fff" stroke-width="3"/><path d="M11 11L29 29M29 11L11 29" stroke="#fff" stroke-width="5" stroke-linecap="round"/>';
 
-function beep(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
-  const t=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();   // miękki, krótki dźwięk
-  o.type='sine';o.frequency.value=660;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+.5);
-  o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.55)}catch(e){}}
+var sndKind=(()=>{try{return localStorage.getItem('snd')||'gong'}catch(e){return 'gong'}})(),volTrain=(()=>{try{return +localStorage.getItem('volTrain')||.9}catch(e){return .9}})();
+function beep(cat){if(sndKind==='none')return;try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
+  const vol=(cat==='Train'?volTrain:.8)/.8,tones=sndKind==='bell'?[[1100,0],[880,.16]]:[[660,0]];   // miękki, krótki dźwięk (gong albo dzwonek)
+  for(const [f,dl] of tones){const t=audio.currentTime+dl,o=audio.createOscillator(),g=audio.createGain();
+    o.type=sndKind==='bell'?'triangle':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09*vol,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+.5);
+    o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.55)}}catch(e){}}
 // ---- Głos: łagodny, męski (pl-PL) ----
 var voiceName='',vbose='full';try{voiceName=localStorage.getItem('vname')||'';vbose=localStorage.getItem('vbose')||'full'}catch(e){}
 const V_MALE=/krzysztof|adam|marek|jacek|piotr|filip|jan\b|\bmale\b|m[eę]sk|\bmark\b/i,V_FEMALE=/zosia|ewa|paulina|agnieszka|maja|ola\b|zofia|female|kobiec|anna|\bola\b/i;
@@ -391,12 +405,12 @@ function pickVoice(){
   return vs.find(x=>x.name===voiceName)||vs.find(x=>V_MALE.test(x.name)&&!V_FEMALE.test(x.name))||vs.find(x=>!V_FEMALE.test(x.name))||vs[0];
 }
 let voiceMuted=false;
-function speak(text){if(voiceMuted&&text!==undefined&&!speak.force)return;
+function speak(text,vol){if(voiceMuted&&text!==undefined&&!speak.force)return;
   if(!$('voice').checked||!window.speechSynthesis)return;
   try{
     const u=new SpeechSynthesisUtterance(text),v=pickVoice();u.lang='pl-PL';if(v)u.voice=v;
     const male=v&&V_MALE.test(v.name)&&!V_FEMALE.test(v.name);
-    u.rate=.9;u.pitch=male?.9:.75;u.volume=.9;   // spokojne tempo; niższy ton, gdy brak wyraźnie męskiego głosu
+    u.rate=.9;u.pitch=male?.9:.75;u.volume=vol||.9;   // spokojne tempo; niższy ton, gdy brak wyraźnie męskiego głosu
     speechSynthesis.speak(u);
   }catch(e){}
 }
@@ -408,8 +422,8 @@ var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch
 function say(key,text,vib,short){const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
   const cat=/^[tmxe]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
   if(vcOff[cat])return;
-  beep();if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
-  speak(vbose==='short'&&short?short:text)}
+  beep(cat);if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
+  speak(vbose==='short'&&short?short:text,cat==='Train'?volTrain:.9)}
 
 // zapytanie Overpass z pamięcią podręczną: bez internetu użyjemy ostatniego wyniku dla tego obszaru
 async function cachedOverpass(key,q){
@@ -422,7 +436,7 @@ async function loadCrossings(lat,lon){
   try{
     const j=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q);
     crossings=j.elements.map(e=>{const t=e.tags||{};
-      return {id:e.id,lat:e.lat,lon:e.lon,nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}});   // nb = przejazd bez zapór
+      return {id:e.id,lat:e.lat,lon:e.lon,tr:+t.tracks||1,br:t['crossing:barrier'],li:t['crossing:light'],bell:t['crossing:bell'],nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}});   // nb = przejazd bez zapór
     xLayer.clearLayers();
     
   }catch(e){lastFetch=null;}
@@ -454,7 +468,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
-  logSample(p);tripTick(p);fatigue(p);earlyTrainWarn(p);
+  logSample(p);tripTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -517,16 +531,19 @@ function evaluate(p){
     const m=Math.round(threat.a.d/10)*10, s=Math.round(threat.eta), td=Math.round(threat.td/10)*10;
     const bar=s<=25?' · rogatki są zamknięte':s<=50?' · rogatki zaraz się zamkną':'';
     if(s<=50&&threat.a.d<400)recCross(threat.a.c.id);
+    const nTr=trainsToward(threat.a.c);
+    if(nTr>=2)say('u'+threat.a.c.id,'Nadjeżdżają co najmniej dwa pociągi. Po przejechaniu pierwszego proszę sprawdzić drugi tor.',[200,100,200],'Może być drugi pociąg');
+    if((p.speed||0)<1&&threat.a.d<120)showWait(threat,s,nTr);
     window._thr={id:threat.a.c.id,eta:s,d:m};
-    setBanner('bad','Nadjeżdża pociąg',`Przejazd za ${m} m · pociąg za ok. ${s} s${bar}${(p.speed||0)<2&&threat.a.d<250?' · otwarcie ok. '+Math.round((s+200/Math.max(8,(threat.t.speed||60)/3.6)+15)/5)*5+' s':''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}`);
+    setBanner('bad','Nadjeżdża pociąg',`Przejazd za ${m} m · pociąg za ok. ${s} s${bar}${(p.speed||0)<2&&threat.a.d<250?' · otwarcie ok. '+Math.round((s+200/Math.max(8,(threat.t.speed||60)/3.6)+15)/5)*5+' s':''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}${trainsToward(threat.a.c)>=2?' · drugi pociąg: sprawdź drugi tor':''}`);
     say('t'+threat.a.c.id,`Proszę uważać, nadjeżdża pociąg. Przejazd kolejowy za ${m} metrów. Proszę zwolnić.`,[300,120,300],'Nadjeżdża pociąg, proszę zwolnić');
   }else if(maybe){
     const m=Math.round(maybe.a.d/10)*10, td=Math.round(maybe.td/10)*10;
     setBanner(maybe.td<800?'bad':'warn','Pociąg w pobliżu',`Przejazd za ${m} m · pociąg ok. ${td} m od przejazdu (kierunek nieznany)`);
     say('m'+maybe.a.c.id,`Proszę uważać, w pobliżu przejazdu kolejowego może być pociąg. Przejazd za ${m} metrów.`,[250,120,250],'W pobliżu przejazdu może być pociąg');
   }else if(near.d<warnDist){
-    setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',`za ${n} m`+(nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu')+feedNote);
-    say('x'+near.c.id,near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`,near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy');
+    setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',`za ${n} m`+(crossRisk(near.c)>=3&&!near.c.nb?' · wymaga szczególnej uwagi':'')+(nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu')+feedNote);
+    say('x'+near.c.id,(near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`)+(crossRisk(near.c)>=3&&!near.c.nb?' Ten przejazd wymaga szczególnej uwagi.':''),near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy');
   }else setBanner('ok','Przejazd w oddali',`za ${n} m`);
 }
 
@@ -680,6 +697,7 @@ function updNight(){
   const n=night?el<-1:el<-4;   // histereza: wieczorem po zmroku, rano po świcie
   if(n!==night){night=n;applyNight()}
 }
+var dimPref=(()=>{try{return localStorage.getItem('dim')!=='0'}catch(e){return true}})();document.body.classList.toggle('dimon',dimPref);
 setInterval(updNight,60000);setTimeout(updNight,1500);
 applyNight();
 window.addEventListener('resize',()=>map.invalidateSize());
@@ -1237,7 +1255,7 @@ async function planRoute(){
     endPt=b;setRoute(r.geometry.coordinates,r.duration,r.steps,r.jam,r.delay,r.inc);
     places.recent=[{label:F.to.el.value,lat:b.lat,lon:b.lon}].concat(places.recent.filter(x=>x.label!==F.to.el.value)).slice(0,6);savePlaces();
     loadWeather(route);loadPoi(route);renderChips();$('dlmap').style.display='block';
-    startTrip(a,b,r);loadRouteCrossings(route,planRoute.dt);
+    startTrip(a,b,r);loadRouteCrossings(route,planRoute.dt);loadZones(route);
     info((planRoute.dt?'Prognoza na '+planRoute.dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · ':'')+'Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+typicalTxt(a,b,r.duration)+pickNote+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
     return true;
   }catch(e){info('Błąd: '+e.message);return false}
@@ -1437,29 +1455,6 @@ function carShadow(){
   }
   if(v!==carShKey){carShKey=v;el.style.filter=v}
 }
-// strzałka skrętu namalowana na jezdni przed skrzyżowaniem (tam, gdzie OSM zna pasy)
-function drawLaneArrow(){
-  if(!(vec&&vf&&route&&nav&&nav.i>0&&!freeCam))return;
-  const st=route.steps&&route.steps[nav.i];if(!st||!st.lanes||!st.lanes.lanes||st.lanes.lanes.length<2)return;
-  if(nav.d<22||nav.d>150)return;
-  const dir=lnDir(st),at=Math.max(route.along+14,route.along+nav.d-34),c=routeAt(route,at),a=routeAt(route,at-6),b2=routeAt(route,at+6);
-  const brg=rad(bear(a[0],a[1],b2[0],b2[1])),Rr=rw('tr',scaleCur),L=st.lanes,n=L.lanes.length;
-  let best=n-1;for(let i=n-1;i>=0;i--)if(L.valid[i]){best=i;break}
-  const pl=Math.min(22,Rr*.6/(n-1)),latPx=Rr/4+(best-(n-1))*pl,lm=latPx/scaleCur;
-  const fE=Math.sin(brg),fN=Math.cos(brg),rE=Math.cos(brg),rN=-Math.sin(brg);
-  const W=(x,y)=>{const e=rE*(x+lm)+fE*y,nn=rN*(x+lm)+fN*y;return proj(c[0]+nn/111195,c[1]+e/(111195*Math.cos(rad(c[0]))))};
-  const sgn=dir==='L'?-1:dir==='R'?1:0,pts=sgn?[[0,-4.5],[0,0],[sgn*2.8,2.8]]:[[0,-4.5],[0,3.2]];
-  const P=pts.map(q=>W(q[0],q[1]));if(P.some(q=>!q))return;
-  const last=pts[pts.length-1],prev=pts[pts.length-2],ang=Math.atan2(last[0]-prev[0],last[1]-prev[1]);
-  const hd=[[0,2.4],[-1.6,-1],[1.6,-1]].map(([x,y])=>W(last[0]+x*Math.cos(ang)+y*Math.sin(ang),last[1]-x*Math.sin(ang)+y*Math.cos(ang)));
-  if(hd.some(q=>!q))return;
-  const k=(P[0].k+P[P.length-1].k)/2,lw=Math.max(3,.55*scaleCur*k);
-  mx.save();mx.lineCap='butt';mx.lineJoin='round';
-  const tr=()=>{mx.beginPath();mx.moveTo(P[0].x,P[0].y);for(let i=1;i<P.length;i++)mx.lineTo(P[i].x,P[i].y)},hh=()=>{mx.beginPath();mx.moveTo(hd[0].x,hd[0].y);mx.lineTo(hd[1].x,hd[1].y);mx.lineTo(hd[2].x,hd[2].y);mx.closePath()};
-  mx.strokeStyle='#111';mx.fillStyle='#111';mx.lineWidth=lw+3;tr();mx.stroke();hh();mx.stroke();   // ciemny kontur, żeby strzałkę było widać na niebieskiej trasie
-  mx.strokeStyle='#fff';mx.fillStyle='#fff';mx.lineWidth=lw;tr();mx.stroke();hh();mx.fill();
-  mx.restore();
-}
 // ostrzeżenie z wyprzedzeniem: według rozkładu pociąg minie przejazd mniej więcej wtedy, gdy tam dojedziemy
 const earlyAt={};
 function earlyTrainWarn(p){
@@ -1587,6 +1582,175 @@ $('impFile').onchange=async e=>{
 };
 // aktualizacja pogody w trakcie jazdy (gołoledź, mgła)
 setInterval(()=>{if(route&&!demo&&!sim)loadWeather(route)},1500000);
+
+// ================= Wersja 37: ocena ryzyka, drugi tor, tryb oczekiwania, pasy, limity z wyprzedzeniem, strefy, motywy, podgląd skrzyżowania, analiza logu =================
+// ocena ryzyka przejazdu (0–6) z tagów OpenStreetMap
+function crossRisk(c){
+  if(c.risk!=null)return c.risk;
+  let r=0;
+  if(c.nb)r+=3;else if(c.br!=='yes'&&c.br!=='half'&&c.br!=='double_half')r+=2;
+  if(c.li!=='yes')r+=1;
+  if((c.tr||1)>=2)r+=1;
+  if(c.bell==='no')r+=1;
+  return c.risk=Math.min(6,r);
+}
+// liczba pociągów zmierzających do przejazdu w ciągu 5 minut (do ostrzeżenia o drugim torze)
+function trainsToward(c){
+  const nowS=Date.now()/1000;let n=0;
+  for(const t of trains){
+    const td=dist(t.lat,t.lon,c.lat,c.lon);if(td>8000)continue;
+    if(t.tr&&t.tr.sh){const r=gtfsApproach(t,nowS,c);if(r&&r.eta>-5&&r.eta<300)n++;continue}
+    if(t.heading!=null&&t.speed!=null&&t.speed>5&&angDiff(bear(t.lat,t.lon,c.lat,c.lon),t.heading)<35&&td/(t.speed/3.6)<300)n++;
+  }
+  return n;
+}
+// ekran „stoję przed zamkniętym przejazdem”
+function showWait(th,s,nTr){
+  const w=$('wait'),open=Math.round((s+200/Math.max(8,(th.t.speed||60)/3.6)+15)/5)*5;
+  const nm=String(th.t.id||'pociąg').split(' → ')[0].slice(0,40);
+  w.innerHTML='<b></b><span></span>';w.firstChild.textContent='Czekamy na przejeździe';
+  w.lastChild.textContent='Pociąg: '+nm+' · przejazd otworzy się za ok. '+open+' s'+(nTr>=2?' · po nim może jechać kolejny — proszę sprawdzić drugi tor':'');
+  w.style.display='block';
+}
+// limit prędkości z wyprzedzeniem (na trasie)
+function limAt(lat,lon,hd){
+  const D=vecData;if(!D||!D.SP||!D.SP.length)return null;
+  const kx=111195*Math.cos(rad(D.lat)),x=(lon-D.lon)*kx,y=(lat-D.lat)*111195;let best=1e9,v=null;
+  for(const sg of D.SP){const q=sg.p;for(let i=0;i<q.length-1;i++){
+    const ax=q[i][0],ay=q[i][1],dx=q[i+1][0]-ax,dy=q[i+1][1]-ay,L2=dx*dx+dy*dy;
+    let t=L2>0?((x-ax)*dx+(y-ay)*dy)/L2:0;t=t<0?0:t>1?1:t;
+    const d=Math.hypot(ax+dx*t-x,ay+dy*t-y);if(d>=20)continue;
+    let pen=0;if(hd!=null&&L2>4){const sb=(Math.atan2(dx,dy)*180/Math.PI+360)%360,df=Math.abs(sb-hd)%180;pen=Math.min(df,180-df)>50?30:0}
+    if(d+pen<best){best=d+pen;v=sg.v}}}
+  return v;
+}
+let limAheadAt=0,limAheadSaid={};
+function limitAhead(p){
+  if(!route||demo||!vecData||route.off>60||(p.speed||0)<4||limV==null)return;
+  const now=Date.now();if(now-limAheadAt<2500)return;limAheadAt=now;
+  for(const d of [250,450]){
+    const q=routeAt(route,route.along+d),q2=routeAt(route,route.along+d+10),v=limAt(q[0],q[1],bear(q[0],q[1],q2[0],q2[1]));
+    if(v!=null&&v<limV&&!(limAheadSaid[v+'@'+Math.round(route.along/300)]&&now-limAheadSaid[v+'@'+Math.round(route.along/300)]<120000)){
+      limAheadSaid[v+'@'+Math.round(route.along/300)]=now;
+      say('limA'+v,'Za około '+d+' metrów ograniczenie prędkości do '+v+' kilometrów na godzinę.',[100],'Za '+d+' m limit '+v);return;
+    }
+  }
+}
+// strefy: szkoły i granice miejscowości na trasie
+async function loadZones(R){
+  R.zones=[];
+  try{
+    const step=Math.max(600,R.len/110),pts=[];let lastD=-1e9;
+    for(let i=0;i<R.pts.length;i++)if(R.cum[i]-lastD>=step||i===R.pts.length-1){pts.push(R.pts[i][0].toFixed(5),R.pts[i][1].toFixed(5));lastD=R.cum[i]}
+    const q='[out:json][timeout:25];(nwr(around:45,'+pts.join(',')+')[amenity~"^(school|kindergarten)$"];node(around:25,'+pts.join(',')+')[traffic_sign=city_limit];);out center tags 120;';
+    const j=await cachedOverpass('zn|'+pts[0]+'|'+pts[pts.length-1]+'|'+Math.round(R.len/100),q);
+    if(route!==R)return;
+    R.zones=(j.elements||[]).map(e=>{const la=e.lat??(e.center&&e.center.lat),lo=e.lon??(e.center&&e.center.lon);if(la==null)return null;
+      const pr=projRoute(R,la,lo,0,R.pts.length-2);return pr.off<60?{id:e.id,kind:e.tags&&e.tags.traffic_sign?'city':'school',along:pr.along}:null}).filter(Boolean);
+  }catch(e){}
+}
+const zoneSaid={};
+function zoneCheck(p){
+  if(!route||!route.zones||!route.zones.length||demo||route.off>80)return;
+  const hr=new Date().getHours(),wd=new Date().getDay()%6!==0;
+  for(const z of route.zones){
+    const d=z.along-route.along;if(d<40||d>260||zoneSaid[z.id])continue;
+    if(z.kind==='school'&&!(wd&&hr>=6&&hr<18))continue;
+    zoneSaid[z.id]=1;
+    say('z'+z.id,z.kind==='school'?'Za około '+Math.round(d/50)*50+' metrów szkoła lub przedszkole. Proszę zwolnić i uważać na dzieci.':'Za około '+Math.round(d/50)*50+' metrów granica miejscowości. Proszę zwrócić uwagę na ograniczenie prędkości.',[100],z.kind==='school'?'Szkoła, proszę zwolnić':'Granica miejscowości');
+    break;
+  }
+}
+// strzałki na wszystkich pasach przed skrzyżowaniem (nasz pas wyróżniony)
+function drawLaneArrow(){
+  if(!(vec&&vf&&route&&nav&&nav.i>0&&!freeCam))return;
+  const st=route.steps&&route.steps[nav.i];if(!st||!st.lanes||!st.lanes.lanes||st.lanes.lanes.length<2)return;
+  if(nav.d<22||nav.d>150)return;
+  const at=Math.max(route.along+14,route.along+nav.d-34),c=routeAt(route,at),a=routeAt(route,at-6),b2=routeAt(route,at+6);
+  const brg=rad(bear(a[0],a[1],b2[0],b2[1])),Rr=rw('tr',scaleCur),L=st.lanes,n=L.lanes.length;
+  let best=n-1;for(let i=n-1;i>=0;i--)if(L.valid[i]){best=i;break}
+  const pl=Math.min(22,Rr*.6/(n-1)),fE=Math.sin(brg),fN=Math.cos(brg),rE=Math.cos(brg),rN=-Math.sin(brg);
+  for(let i=0;i<n;i++){
+    const lm=(Rr/4+(i-(n-1))*pl)/scaleCur;
+    const Wp=(x,y)=>{const e=rE*(x+lm)+fE*y,nn=rN*(x+lm)+fN*y;return proj(c[0]+nn/111195,c[1]+e/(111195*Math.cos(rad(c[0]))))};
+    const dirs=[...L.lanes[i]].filter(ch=>'LSR'.includes(ch));if(!dirs.length)dirs.push('S');
+    const ok=!!L.valid[i],sc=ok?1:.8,segs=[[[0,-4.5*sc],[0,0]]];
+    for(const dch of dirs)segs.push(dch==='L'?[[0,0],[-2.8*sc,2.8*sc]]:dch==='R'?[[0,0],[2.8*sc,2.8*sc]]:[[0,0],[0,3.2*sc]]);
+    const k=(Wp(0,0)||{k:1}).k,lw=Math.max(2.5,.45*scaleCur*k);
+    const col=ok?'#fff':'rgba(200,205,215,.55)',edge=ok?'#111':'rgba(30,30,30,.35)';
+    mx.save();mx.lineCap='butt';mx.lineJoin='round';
+    for(const pass of [0,1]){
+      mx.strokeStyle=pass?col:edge;mx.fillStyle=pass?col:edge;mx.lineWidth=pass?lw:lw+3;
+      for(const sg of segs){
+        const P0=Wp(sg[0][0],sg[0][1]),P1=Wp(sg[1][0],sg[1][1]);if(!P0||!P1)continue;
+        mx.beginPath();mx.moveTo(P0.x,P0.y);mx.lineTo(P1.x,P1.y);mx.stroke();
+        if(sg!==segs[0]){
+          const dx=sg[1][0]-sg[0][0],dy=sg[1][1]-sg[0][1],an=Math.atan2(dx,dy),tip=sg[1];
+          const hd=[[0,2.1],[-1.4,-.9],[1.4,-.9]].map(([x,y])=>Wp(tip[0]+x*Math.cos(an)+y*Math.sin(an),tip[1]-x*Math.sin(an)+y*Math.cos(an)));
+          if(hd.every(q=>q)){mx.beginPath();mx.moveTo(hd[0].x,hd[0].y);mx.lineTo(hd[1].x,hd[1].y);mx.lineTo(hd[2].x,hd[2].y);mx.closePath();pass?mx.fill():mx.stroke()}
+        }
+      }
+    }
+    mx.restore();
+  }
+}
+// mały podgląd skrzyżowania z góry (kierunek przejazdu u góry)
+let jpAt=0;
+function drawJunction(){
+  const cv=$('jp');
+  const st=route&&route.steps&&nav&&nav.i>0?route.steps[nav.i]:null;
+  const on=vec&&vecData&&vecData.P&&st&&['turn','fork','roundabout','rotary','off ramp','on ramp','end of road','merge'].includes(st.type)&&nav.d<130&&nav.d>4&&!freeCam&&!ecoOn;
+  if(!on){if(cv.style.display!=='none')cv.style.display='none';return}
+  const now=performance.now();if(now-jpAt<140)return;jpAt=now;
+  cv.style.display='block';
+  const D=vecData,P=D.P,c=cv.getContext('2d'),sc=1.9,at=route.along+nav.d;
+  const m=routeAt(route,at),a=routeAt(route,at-25),b=routeAt(route,at+25);
+  const brg=rad(bear(a[0],a[1],m[0],m[1])),kx=111195*Math.cos(rad(D.lat)),mx_=(m[1]-D.lon)*kx,my=(m[0]-D.lat)*111195;
+  const pal=themePal(PAL[night?'night':'day']);
+  c.setTransform(1,0,0,1,0,0);c.fillStyle=pal.bg;c.fillRect(0,0,240,240);
+  c.save();c.translate(120,150);c.rotate(-brg);c.scale(1.5,-1.5);c.translate(-mx_,-my);c.lineCap='round';c.lineJoin='round';
+  for(const k of ['sv','rs','tr','sc','pr','mw'])if(P[k]){c.strokeStyle=pal.casing;c.lineWidth=(VC[k].m+2)*1.05;c.stroke(P[k])}
+  for(const k of ['sv','rs','tr','sc','pr','mw'])if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].m*.95;c.stroke(P[k])}
+  c.strokeStyle='#1a73e8';c.lineWidth=5;c.beginPath();let first=true;
+  for(let d=Math.max(0,route.along-30);d<=Math.min(route.len,at+90);d+=6){const q=routeAt(route,d);const x=(q[1]-D.lon)*kx,y=(q[0]-D.lat)*111195;first?c.moveTo(x,y):c.lineTo(x,y);first=false}
+  c.stroke();c.restore();
+  // znacznik auta: dolna część obrazu = pozycja auta względem skrzyżowania
+  c.fillStyle='#1a73e8';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(120,Math.min(228,150+nav.d*1.5),8,0,6.3);c.fill();c.stroke();
+}
+// motywy, sygnały, przyciemnienie nocne
+$('theme').value=themeK;document.body.classList.toggle('big',themeK==='big');document.body.classList.toggle('hc',themeK==='hc');
+$('theme').onchange=()=>{themeK=$('theme').value;try{localStorage.setItem('theme',themeK)}catch(e){}document.body.classList.toggle('big',themeK==='big');document.body.classList.toggle('hc',themeK==='hc');vd=null};
+$('sndsel').value=sndKind;$('sndsel').onchange=()=>{sndKind=$('sndsel').value;try{localStorage.setItem('snd',sndKind)}catch(e){}beep('Train')};
+$('volTrain').value=Math.round(volTrain*10);$('volTrain').onchange=()=>{volTrain=+$('volTrain').value/10;try{localStorage.setItem('volTrain',volTrain)}catch(e){}beep('Train')};
+$('dimOn').checked=dimPref;$('dimOn').onchange=()=>{dimPref=$('dimOn').checked;try{localStorage.setItem('dim',dimPref?'1':'0')}catch(e){}document.body.classList.toggle('dimon',dimPref)};
+// analiza i odtworzenie zapisanego logu jazdy
+$('logan').onclick=()=>{$('menu').classList.remove('open');$('logFile').click()};
+$('logFile').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  let d;try{d=JSON.parse(await f.text());if(!Array.isArray(d)||!d.length)throw new Error('pusty log')}catch(err){alert('Nie udało się wczytać logu: '+err.message);return}
+  // analiza: pierwsze ostrzeżenie dla każdego przejazdu
+  const by={};d.forEach(x=>{if(x.thr&&!by[x.thr.id])by[x.thr.id]=x});
+  const b=$('histbox');b.innerHTML='<h3>Analiza logu jazdy</h3>';
+  const dur=(d[d.length-1].t-d[0].t)/1000,mxv=Math.max(...d.map(x=>x.v||0));
+  const sm=document.createElement('div');sm.className='it';sm.textContent=d.length+' próbek · '+Math.round(dur/60)+' min · maks. '+Math.round(mxv)+' km/h';b.appendChild(sm);
+  const ids=Object.keys(by);
+  if(!ids.length){const o=document.createElement('div');o.className='it';o.textContent='W tym logu nie było ostrzeżeń o nadjeżdżającym pociągu.';b.appendChild(o)}
+  ids.forEach(id=>{const x=by[id],v=Math.max(1,(x.v||1)/3.6),carT=x.thr.d/v,margin=x.thr.eta-carT,o=document.createElement('div');o.className='it';
+    o.innerHTML='<b></b><br><small></small>';
+    o.firstChild.textContent=new Date(x.t).toLocaleTimeString('pl-PL')+' · przejazd '+id+': pierwsze ostrzeżenie '+x.thr.d+' m przed nim';
+    o.querySelector('small').textContent='pociąg za '+x.thr.eta+' s, auto potrzebowało ok. '+Math.round(carT)+' s ('+Math.round(x.v||0)+' km/h) — zapas '+(margin>=0?Math.round(margin)+' s po stronie auta':'pociąg byłby pierwszy o '+Math.round(-margin)+' s');b.appendChild(o)});
+  const r=document.createElement('button');r.textContent='Odtwórz przejazd na mapie (4×)';r.onclick=()=>{b.style.display='none';replayLog(d)};b.appendChild(r);
+  const c=document.createElement('button');c.textContent='Zamknij';c.style.marginLeft='8px';c.onclick=()=>b.style.display='none';b.appendChild(c);b.style.display='block';
+};
+function replayLog(d){
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  $('pick').style.display='none';stopSim();let i=0;
+  sim=setInterval(()=>{
+    if(i>=d.length){stopSim();return}
+    const x=d[i];i+=1;last={lat:x.lat,lon:x.lon,t:Date.now()};
+    evaluate({lat:x.lat,lon:x.lon,speed:(x.v||0)/3.6,heading:x.h});
+  },500);
+}
 
 // ---- Polecenia głosowe (Chrome/Android; wymaga zgody na mikrofon) ----
 (function(){
@@ -1860,6 +2024,7 @@ function updTrainCard(p){
   $('tarr').firstElementChild.style.transform='rotate('+((bear(p.lat,p.lon,nb.lat,nb.lon)-lastH+360)%360)+'deg)';
 }
 function updInfo(p){
+  $('wait').style.display='none';
   const nT=trains.filter(t=>dist(p.lat,p.lon,t.lat,t.lon)<10000).length;
   const src=demo?'demo':gKey?'geOps':gtfs?(liveOk?'rozkład PKP + opóźnienia na żywo':'rozkład PKP'):feedUrl?'własne dane':'brak danych o pociągach';
   $('info').textContent='Pociągi w promieniu 10 km: '+nT+' · '+src+(vec?(vecErr?' · '+vecErr:vecData?'':' · ładowanie mapy…'):'')+(route&&ttKey?' · ruch: '+(ttSt||'…')+(flSt?', '+flSt:''):'')+(route&&wxTxt?' · pogoda: '+wxTxt:'');
@@ -2256,8 +2421,10 @@ let vctx=null,vq=1,lastVt=0,vd=null;
 function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(1.1,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0;vd=null}
 // Mapa jest rysowana RZADKO (gdy kamera odjedzie o ~12% płótna, zmieni się skala/dane/tryb nocny);
 // między przerysowaniami płótno przesuwa i skaluje karta graficzna (CSS), więc ruch jest płynny.
+var themeK='classic';try{themeK=localStorage.getItem('theme')||'classic'}catch(e){}
+function themePal(p){if(themeK!=='hc')return p;return Object.assign({},p,night?{bg:'#0b0e14',casing:'#000',rs:'#7a86aa',tr:'#8a96ba',sv:'#667090',lbl:'#fff',halo:'#000'}:{bg:'#f6f4ee',casing:'#2f2b22',csSc:'#7a5b10',csPr:'#7a5b10',rs:'#ffffff',sv:'#ffffff',lbl:'#000',halo:'#fff',bld:'#d9d3c6',bldEdge:'#8a8372'})}
 function paintVec(cam){
-  const S=$('rot').clientWidth,s=scaleCur,kx=111195*Math.cos(rad(cam.lat)),pal=PAL[night?'night':'day'],c=vctx;
+  const S=$('rot').clientWidth,s=scaleCur,kx=111195*Math.cos(rad(cam.lat)),pal=themePal(PAL[night?'night':'day']),c=vctx;
   $('view').style.background=pal.bg;document.documentElement.style.setProperty('--sky',pal.bg);
   c.setTransform(vq,0,0,vq,0,0);
   c.fillStyle=pal.bg;c.fillRect(0,0,S,S);
@@ -2504,7 +2671,7 @@ function drawMarkers(){
   if(vec)drawVec();const P=proj;
   updCarSnap();carShadow();
   drawBuildings3D();
-  drawRouteTop();drawLaneArrow();
+  drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
   drawPoi();
   if(freeCam){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
