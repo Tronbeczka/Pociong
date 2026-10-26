@@ -185,6 +185,9 @@ body.night #tcard{background:#202228;color:#e6e9ee}
 body.night #sig{background:rgba(32,34,40,.95);color:#e6e9ee}
 #from:disabled{opacity:.75;cursor:not-allowed;background:transparent}
 #ttstat{font-size:.75rem;opacity:.6;margin-top:12px;min-height:1.2em}
+#view{touch-action:none;cursor:grab}
+#recenter{display:none;position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 154px);z-index:900;width:50px;height:50px;padding:0;border-radius:16px;background:#fff;color:#1a73e8;box-shadow:0 6px 20px rgba(0,0,0,.28);align-items:center;justify-content:center}
+#recenter svg{width:28px;height:28px}
 </style>
 </head>
 <body>
@@ -236,6 +239,7 @@ body.night #sig{background:rgba(32,34,40,.95);color:#e6e9ee}
   <button id="dots" aria-label="Menu">⋮</button>
 </div>
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
+<button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick"><div class="box">
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
   <h1>Przejazd</h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
@@ -543,15 +547,42 @@ $('night').onclick=()=>{night=!night;applyNight()};
 applyNight();
 window.addEventListener('resize',()=>map.invalidateSize());
 function applyRot(){document.body.classList.toggle('flat',!tiltDeg)}
-$('tilt').onclick=()=>{tiltDeg=tiltDeg?0:50;$('tilt').textContent=tiltDeg?'2D':'3D';applyRot()};
+// ręczne przesuwanie mapy palcem/myszą; przycisk wyśrodkowania wraca do samochodu
+var freeCam=false,panE=0,panN=0,savedTilt=50;
+function enterFree(){
+  if(freeCam)return;freeCam=true;savedTilt=tiltDeg||50;tiltDeg=0;applyRot();tgtRot=curRot;
+  $('recenter').style.display='flex';$('carIcon').style.display='none';$('tilt').style.display='none';
+}
+function recenter(){
+  if(!freeCam)return;freeCam=false;panE=panN=0;tiltDeg=savedTilt;applyRot();$('tilt').textContent=tiltDeg?'2D':'3D';
+  $('recenter').style.display='none';$('carIcon').style.display='';$('tilt').style.display='block';tgtRot=-lastH;
+  if(!vec&&last)map.setView([last.lat,last.lon],map.getZoom(),{animate:false});
+  vd=null;
+}
+$('recenter').onclick=recenter;
+$('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg?0:50;$('tilt').textContent=tiltDeg?'2D':'3D';applyRot()};
+{
+  const vw=$('view');let pdr=null;
+  vw.addEventListener('pointerdown',e=>{pdr={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};try{vw.setPointerCapture(e.pointerId)}catch(_){}});
+  vw.addEventListener('pointermove',e=>{
+    if(!pdr||pdr.id!==e.pointerId)return;
+    const dx=e.clientX-pdr.x,dy=e.clientY-pdr.y;
+    if(!pdr.moved){if(Math.hypot(dx,dy)<8)return;pdr.moved=true;enterFree()}
+    pdr.x=e.clientX;pdr.y=e.clientY;
+    const R=rad(curRot),cx=dx*Math.cos(R)+dy*Math.sin(R),cy=-dx*Math.sin(R)+dy*Math.cos(R);   // przesunięcie palca w układzie mapy
+    if(vec){panE-=cx/scaleCur;panN+=cy/scaleCur}else map.panBy([-cx,-cy],{animate:false});
+  });
+  ['pointerup','pointercancel'].forEach(t=>vw.addEventListener(t,()=>{pdr=null}));
+}
 function follow(p){
   const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   updLimit(p);
   scaleTgt=kmh>110?.3:kmh>80?.4:kmh>50?.55:kmh>25?.75:1;
   if(vec){
     camFix(p,p.heading!=null&&!isNaN(p.heading)?p.heading:lastH);
-    if((!vecData||dist(vecData.lat,vecData.lon,p.lat,p.lon)>600)&&Date.now()>vecNext)loadVec(p.lat,p.lon);
-  }else map.setView([p.lat,p.lon],kmh>90?15:kmh>50?16:17,{animate:false});
+    const cp=vecCam(performance.now())||p;   // mapę doczytujemy wokół kamery (też po ręcznym przesunięciu)
+    if((!vecData||dist(vecData.lat,vecData.lon,cp.lat,cp.lon)>600)&&Date.now()>vecNext)loadVec(cp.lat,cp.lon);
+  }else if(!freeCam)map.setView([p.lat,p.lon],kmh>90?15:kmh>50?16:17,{animate:false});
   // kierunek jazdy: 1) trasa (jeśli jedziemy po niej) 2) kierunek z GPS 3) ruch z ostatnich metrów
   let h=null;
   if(route&&route.pts.length>1&&route.off<60&&!demo){const a=routeAt(route,route.along+8),b=routeAt(route,route.along+45);if(dist(a[0],a[1],b[0],b[1])>10)h=bear(a[0],a[1],b[0],b[1])}
@@ -560,7 +591,7 @@ function follow(p){
   const mv=dist(hAnch.lat,hAnch.lon,p.lat,p.lon);
   if(mv>6){const hm=bear(hAnch.lat,hAnch.lon,p.lat,p.lon);hAnch={lat:p.lat,lon:p.lon};if(h==null&&(p.speed||0)>0.8)h=hm}
   if(h!=null)lastH=h;
-  tgtRot=-lastH;if(rotInit&&h!=null){curRot=tgtRot;rotInit=false}
+  if(!freeCam)tgtRot=-lastH;if(rotInit&&h!=null){curRot=tgtRot;rotInit=false}
 }
 
 // ---- Trasa: adresy (Photon/OSM), najszybsza trasa (OSRM), niebieska linia ----
@@ -1054,12 +1085,16 @@ function buildVec(j,lat,lon){
 }
 // kamera: ostatni odczyt GPS + przewidywanie ruchu (dead reckoning), płynne dociąganie do nowego odczytu
 function camFix(p,h){
-  const now=performance.now(),d=vecCam(now),sp=(p.speed||0)>1.5?p.speed:0,hr=rad(h||0);
+  const now=performance.now(),d=vecCam0(now),sp=(p.speed||0)>1.5?p.speed:0,hr=rad(h||0);
   const nf={lat:p.lat,lon:p.lon,t:now,ve:sp*Math.sin(hr),vn:sp*Math.cos(hr)};
   corr=d?{e:(d.lon-p.lon)*111195*Math.cos(rad(p.lat)),n:(d.lat-p.lat)*111195}:{e:0,n:0};
   fix=nf;
 }
-function vecCam(now){
+function vecCam(now){   // kamera = pozycja samochodu + ręczne przesunięcie
+  const c=vecCam0(now);if(!c||!(panE||panN))return c;
+  return {lat:c.lat+panN/111195,lon:c.lon+panE/(111195*Math.cos(rad(c.lat)))};
+}
+function vecCam0(now){   // sam samochód (przewidywanie ruchu)
   if(!fix)return null;
   const dt=Math.min(2,(now-fix.t)/1000),w=Math.max(0,1-(now-fix.t)/700);
   const e=fix.ve*dt+corr.e*w,n=fix.vn*dt+corr.n*w;
@@ -1344,7 +1379,7 @@ function drawVec(){
   const S=$('rot').clientWidth;if(!S)return;
   if(!vctx||$('vmap').width!==Math.round(S*vq))sizeV();
   if(!vctx)return;
-  vf={cam,s:scaleCur,kx:111195*Math.cos(rad(cam.lat))};   // bieżąca kamera – dla znaczników i trasy
+  vf={cam,car:vecCam0(now)||cam,s:scaleCur,kx:111195*Math.cos(rad(cam.lat))};   // bieżąca kamera – dla znaczników i trasy
   let need=!vd||vd.data!==vecData||vd.night!==night;
   if(!need){
     const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s,dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);
@@ -1358,7 +1393,7 @@ function drawVec(){
 // trasa rysowana na wierzchu (pionowo), z szerokością malejącą z perspektywą
 function drawRouteTop(){
   if(!(vec&&routeSeg&&routeSeg.length>1&&vf))return;
-  const pal=PAL[night?'night':'day'],pts=[[vf.cam.lat,vf.cam.lon]];
+  const pal=PAL[night?'night':'day'],pts=[[vf.car.lat,vf.car.lon]];
   for(let i=1;i<routeSeg.length;i++)pts.push(routeSeg[i]);
   const pr=pts.map(q=>proj(q[0],q[1]));
   mx.lineCap='round';mx.lineJoin='round';
@@ -1378,6 +1413,7 @@ function setVec(on){
   $('mapmode').textContent=on?'Mapa: wektorowa':'Mapa: kafelki';
   $('tilt').style.display='block';
   if(!on){$('view').style.background='';document.documentElement.style.removeProperty('--sky')}
+  if(freeCam)recenter();
   tiltDeg=50;$('tilt').textContent='2D';applyRot();
   vd=null;if(on)sizeV();
   else{map.invalidateSize();if(last)map.setView([last.lat,last.lon],17,{animate:false})}
@@ -1405,6 +1441,14 @@ function drawMarkers(){
   mx.clearRect(0,0,W,H);
   if(vec)drawVec();const P=proj;
   drawRouteTop();
+  if(freeCam){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
+    const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
+    if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
+      mx.save();mx.translate(q.x,q.y);mx.rotate(rad(lastH+curRot));
+      mx.beginPath();mx.arc(0,0,13,0,6.2832);mx.fillStyle='#1a73e8';mx.fill();mx.lineWidth=3.5;mx.strokeStyle='#fff';mx.stroke();
+      mx.beginPath();mx.moveTo(0,-8);mx.lineTo(5.5,4);mx.lineTo(0,1.5);mx.lineTo(-5.5,4);mx.closePath();mx.fillStyle='#fff';mx.fill();mx.restore();
+    }
+  }
   const list=[];
   crossings.forEach(c=>{const p=P(c.lat,c.lon);if(p)list.push({p,t:0})});
   trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt,near:t.id===nearTrainId,name:t.id})});
