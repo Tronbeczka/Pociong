@@ -81,6 +81,7 @@ body.night #bar{background:#202124;color:#e8eaed}
 body.night #bsub{color:#9aa0a6}
 #histbox{position:absolute;left:12px;right:12px;top:70px;bottom:90px;z-index:1300;background:#fff;color:#202124;border-radius:20px;padding:14px;overflow:auto;box-shadow:0 14px 40px rgba(0,0,0,.45);font-size:.92rem}
 #histbox h3{margin:0 0 8px}#histbox .it{padding:8px 0;border-top:1px solid #e3e5e8}#histbox small{opacity:.7}
+#fps{position:absolute;left:8px;top:calc(env(safe-area-inset-top,0px) + 118px);z-index:1400;background:#000b;color:#9f9;font:11px/1.35 monospace;padding:4px 7px;border-radius:8px;pointer-events:none;white-space:pre}
 #rxinfo{font-size:.82rem;margin:4px 0;opacity:.95}
 #menu{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);z-index:1100;display:none;max-height:60vh;overflow:auto;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;background:#fff;color:#202124;border-radius:16px;padding:12px;box-shadow:0 6px 20px #0008}
 #menu.open{display:flex}
@@ -225,6 +226,7 @@ body.night #zoomb{background:#2b3140}
  <div id="strip"><div id="info">Pociągi w pobliżu: –</div><div id="then"></div></div>
  <div id="compass"><svg viewBox="0 0 44 44"><polygon points="22,6 28,22 16,22" fill="#d93025"/><polygon points="22,38 28,22 16,22" fill="#9aa0a6"/></svg></div>
 </div>
+<div id="fps" style="display:none"></div>
 <div id="histbox" style="display:none"></div>
 <div id="menu">
   <button id="start">Start</button>
@@ -246,6 +248,9 @@ body.night #zoomb{background:#2b3140}
   <button id="hist" class="sec">Historia przejazdów</button>
   <button id="report" class="sec">Zgłoś błąd mapy</button>
   <button id="logdl" class="sec">Pobierz log jazdy</button>
+  <label style="font-size:.9rem"><input type="checkbox" id="fpsOn"> Licznik klatek (FPS)</label>
+  <button id="expSet" class="sec">Eksport ustawień</button>
+  <button id="impSet" class="sec">Import ustawień</button><input id="impFile" type="file" accept="application/json" style="display:none">
   <div id="cfg">
     <small>Serwer tras OSRM (puste = publiczny serwer demo router.project-osrm.org):</small>
     <input id="osrm" placeholder="https://router.project-osrm.org">
@@ -280,7 +285,7 @@ body.night #zoomb{background:#2b3140}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick"><div class="box">
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 35</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 36</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -291,10 +296,10 @@ body.night #zoomb{background:#2b3140}
     <button id="addvia" class="sec" style="margin-bottom:8px">+ Dodaj przystanek</button>
     <div class="fld b"><span>B</span><input id="to" placeholder="Cel: wpisz ulicę lub adres" autocomplete="off"></div>
     <div id="sug"></div>
-    <div id="chips"></div><div id="savebar"></div>
+    <div id="habit"></div><div id="chips"></div><div id="savebar"></div>
     <div class="fld"><span>⏱</span><input id="dep" type="datetime-local" title="Wyjazd o (puste = teraz)"></div>
     <small>Wyjazd o wybranej godzinie (puste = teraz): prognoza korków i najlepsza pora wyjazdu.</small>
-    <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label></div>
+    <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label><label><input type="checkbox" id="avX"> Mniej przejazdów kolejowych</label></div>
     <div id="rinfo"></div><div id="rxinfo"></div><div id="wxinfo"></div>
     <button id="dlmap" class="sec" style="display:none;margin-top:6px">Pobierz mapę trasy (offline)</button><small id="dlst"></small>
   </div>
@@ -401,7 +406,7 @@ $('vsel').onchange=e=>{voiceName=e.target.value;try{localStorage.setItem('vname'
 $('vbose').value=vbose;$('vbose').onchange=e=>{vbose=e.target.value;try{localStorage.setItem('vbose',vbose)}catch(_){}};
 var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch(e){return {}}})();
 function say(key,text,vib,short){const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
-  const cat=/^[tmx]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
+  const cat=/^[tmxe]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
   if(vcOff[cat])return;
   beep();if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
   speak(vbose==='short'&&short?short:text)}
@@ -449,7 +454,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
-  logSample(p);
+  logSample(p);tripTick(p);fatigue(p);earlyTrainWarn(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -482,6 +487,7 @@ function evaluate(p){
   if(!ahead.length){setDist('');$('then').style.display='none';setBanner('ok','Droga wolna','Brak przejazdów kolejowych na trasie');return}
 
   const near=ahead[0], n=Math.round(near.d/10)*10;
+  if(trip&&near.d<40)trip.xs.add(near.c.id);
   setDist(n>=1000?(n/1000).toFixed(1)+' km':n+' m');
   // train threat for each upcoming crossing
   let threat=null, maybe=null, nearestTd=Infinity;
@@ -512,7 +518,7 @@ function evaluate(p){
     const bar=s<=25?' · rogatki są zamknięte':s<=50?' · rogatki zaraz się zamkną':'';
     if(s<=50&&threat.a.d<400)recCross(threat.a.c.id);
     window._thr={id:threat.a.c.id,eta:s,d:m};
-    setBanner('bad','Nadjeżdża pociąg',`Przejazd za ${m} m · pociąg za ok. ${s} s${bar}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}`);
+    setBanner('bad','Nadjeżdża pociąg',`Przejazd za ${m} m · pociąg za ok. ${s} s${bar}${(p.speed||0)<2&&threat.a.d<250?' · otwarcie ok. '+Math.round((s+200/Math.max(8,(threat.t.speed||60)/3.6)+15)/5)*5+' s':''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}`);
     say('t'+threat.a.c.id,`Proszę uważać, nadjeżdża pociąg. Przejazd kolejowy za ${m} metrów. Proszę zwolnić.`,[300,120,300],'Nadjeżdża pociąg, proszę zwolnić');
   }else if(maybe){
     const m=Math.round(maybe.a.d/10)*10, td=Math.round(maybe.td/10)*10;
@@ -652,6 +658,15 @@ function applyNight(){document.body.classList.toggle('night',night);$('night').t
 $('night').onclick=()=>{night=!night;applyNight();autoNight=false;$('autonight').checked=false;try{localStorage.setItem('autonight','0')}catch(e){}};
 var autoNight=true;try{autoNight=localStorage.getItem('autonight')!=='0'}catch(e){}
 $('autonight').checked=autoNight;$('autonight').onchange=()=>{autoNight=$('autonight').checked;try{localStorage.setItem('autonight',autoNight?'1':'0')}catch(e){}if(autoNight)updNight()};
+function sunPos(lat,lon,ms){   // wysokość i azymut Słońca (stopnie od północy, zgodnie z ruchem wskazówek)
+  const d=ms/86400000+2440587.5-2451545.0,g=rad((357.529+0.98560028*d)%360),q=(280.459+0.98564736*d)%360;
+  const L=rad((q+1.915*Math.sin(g)+0.020*Math.sin(2*g))%360),e=rad(23.439-0.00000036*d);
+  const dec=Math.asin(Math.sin(e)*Math.sin(L)),ra=Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L));
+  const gmst=((18.697374558+24.06570982441908*d)%24+24)%24,H=rad(((gmst*15+lon)%360+360)%360)-ra;
+  const el=deg(Math.asin(Math.sin(rad(lat))*Math.sin(dec)+Math.cos(rad(lat))*Math.cos(dec)*Math.cos(H)));
+  const az=deg(Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(rad(lat))-Math.tan(dec)*Math.cos(rad(lat))))+180;
+  return {el,az:(az%360+360)%360};
+}
 function sunElev(lat,lon,ms){   // wysokość Słońca nad horyzontem (stopnie)
   const d=ms/86400000+2440587.5-2451545.0,g=rad((357.529+0.98560028*d)%360),q=(280.459+0.98564736*d)%360;
   const L=rad((q+1.915*Math.sin(g)+0.020*Math.sin(2*g))%360),e=rad(23.439-0.00000036*d);
@@ -724,7 +739,8 @@ $('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg===0?50:tilt
 function follow(p){
   const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   updLimit(p);
-  scaleBase=kmh>110?.85:kmh>80?1.1:kmh>50?1.5:kmh>25?2.05:2.8;scaleTgt=clampS(scaleBase*zoomMul);   // px na metr: im wolniej, tym bliżej ulicy (× ręczne zbliżenie)
+  scaleBase=kmh>110?.85:kmh>80?1.1:kmh>50?1.5:kmh>25?2.05:2.8;if(nav&&nav.i>0&&nav.d<170&&nav.d>5)scaleBase*=1.25;   // przed skrętem kamera zbliża się do skrzyżowania
+  scaleTgt=clampS(scaleBase*zoomMul);   // px na metr: im wolniej, tym bliżej ulicy (× ręczne zbliżenie)
   if(vec){
     camFix(p,p.heading!=null&&!isNaN(p.heading)?p.heading:lastH);
     const cp=vecCam(performance.now())||p;   // mapę doczytujemy wokół kamery (też po ręcznym przesunięciu)
@@ -959,7 +975,7 @@ async function loadWeather(R){
     });
     wxTxt=worst?('na trasie możliwy(a) '+worst.kind+(worst.km>0?' (ok. '+worst.km+' km, '+worst.when+')':' na starcie'))+(end?', u celu '+end.t+'°C':''):'na trasie bez opadów'+(end?', u celu '+end.t+'°C':'');
     $('wxinfo').textContent='Pogoda: '+wxTxt;
-    if(worst&&worst.s>=3)setTimeout(()=>{if(route===R)say('wx','Na trasie możliwa jest zła pogoda: '+worst.kind+'. Proszę jechać ostrożnie.',[100],'Na trasie możliwa '+worst.kind)},4000);
+    if(worst&&worst.s>=3)setTimeout(()=>{if(route===R)say('wx',worst.kind==='gołoledź'?'Na trasie może być ślisko, możliwa gołoledź. Proszę zwolnić i zachować większy odstęp.':worst.kind==='mgła'?'Na trasie możliwa mgła i ograniczona widoczność. Proszę zwolnić i włączyć światła.':'Na trasie możliwa jest zła pogoda: '+worst.kind+'. Proszę jechać ostrożnie.',[100],'Na trasie możliwa '+worst.kind)},4000);
   }catch(e){}
 }
 // ---- Parkingi przy celu i stacje paliw przy trasie (OpenStreetMap) ----
@@ -972,9 +988,12 @@ async function loadPoi(R){
     const q='[out:json][timeout:25];(nwr(around:450,'+b[0]+','+b[1]+')[amenity=parking][access!~"private|customers|no"];'+(sample.length>=4?'nwr(around:140,'+sample.join(',')+')[amenity=fuel];':'')+');out center tags 80;';
     const j=await fetchOverpass(q);
     if(route!==R)return;
-    poi=(j.elements||[]).map(e=>({id:e.id,kind:e.tags&&e.tags.amenity==='fuel'?'fuel':'parking',lat:e.lat??(e.center&&e.center.lat),lon:e.lon??(e.center&&e.center.lon),name:(e.tags&&(e.tags.name||e.tags.brand))||''})).filter(x=>x.lat!=null);
+    poi=(j.elements||[]).map(e=>({id:e.id,kind:e.tags&&e.tags.amenity==='fuel'?'fuel':'parking',lat:e.lat??(e.center&&e.center.lat),lon:e.lon??(e.center&&e.center.lon),name:(e.tags&&(e.tags.name||e.tags.brand))||'',fee:e.tags&&e.tags.fee,cap:e.tags&&e.tags.capacity})).filter(x=>x.lat!=null);
     const np=poi.filter(x=>x.kind==='parking').length;
-    if(np)$('rinfo').textContent+=' · parkingi przy celu: '+np;
+    if(np){
+      const pk=poi.filter(x=>x.kind==='parking').map(x=>({x,d:dist(b[0],b[1],x.lat,x.lon)})).sort((u,v)=>u.d-v.d)[0];
+      $('rinfo').textContent+=' · parkingi przy celu: '+np+' (najbliższy '+Math.round(pk.d/10)*10+' m'+(pk.x.fee==='yes'?', płatny':pk.x.fee==='no'?', bezpłatny':'')+(pk.x.cap?', '+pk.x.cap+' miejsc':'')+')';
+    }
   }catch(e){}
 }
 $('dlmap').onclick=async()=>{
@@ -1143,11 +1162,12 @@ function gpsNow(){return new Promise((ok,no)=>{
 
 // --- podpowiedzi adresów (Photon, dane OpenStreetMap) ---
 const F={from:{el:$('from'),pt:null},via:{el:$('via'),pt:null},via2:{el:$('via2'),pt:null},via3:{el:$('via3'),pt:null},to:{el:$('to'),pt:null}};
-var places={home:null,work:null,recent:[]},viaPt=null,viaList=[],depTime=null,opts={mw:false,toll:false};
+var places={home:null,work:null,recent:[]},viaPt=null,viaList=[],depTime=null,opts={mw:false,toll:false,x:true};
 try{places=Object.assign(places,JSON.parse(localStorage.getItem('places')||'{}'));opts=Object.assign(opts,JSON.parse(localStorage.getItem('opts')||'{}'))}catch(e){}
 const savePlaces=()=>{try{localStorage.setItem('places',JSON.stringify(places))}catch(e){}};
 $('avMw').checked=!!opts.mw;$('avToll').checked=!!opts.toll;
-['avMw','avToll'].forEach(id=>$(id).onchange=()=>{opts.mw=$('avMw').checked;opts.toll=$('avToll').checked;try{localStorage.setItem('opts',JSON.stringify(opts))}catch(e){}});
+$('avX').checked=opts.x!==false;
+['avMw','avToll','avX'].forEach(id=>$(id).onchange=()=>{opts.mw=$('avMw').checked;opts.toll=$('avToll').checked;opts.x=$('avX').checked;try{localStorage.setItem('opts',JSON.stringify(opts))}catch(e){}});
 function pickDest(pt){F.to.el.value=pt.label;F.to.pt={lat:pt.lat,lon:pt.lon,label:pt.label};$('sug').innerHTML='';$('rinfo').textContent='';renderChips()}
 function renderChips(){
   const c=$('chips'),sb=$('savebar');c.innerHTML='';sb.innerHTML='';
@@ -1211,12 +1231,14 @@ async function planRoute(){
     depTime=null;{const dv=$('dep').value;if(dv){const d=new Date(dv);if(d.getTime()>Date.now()+300000)depTime=d}}
     info('Wyznaczanie najszybszej trasy…');
     let r;try{r=await fetchRoute(a,b)}finally{const dt=depTime;depTime=null;planRoute.dt=dt}
+    let pickNote='';
+    if(opts.x!==false&&r.alts&&r.alts.length>1){info('Porównuję trasy pod kątem przejazdów kolejowych…');try{const q=await pickFewerCrossings(r);r=q.r;pickNote=q.note}catch(e){}}
     if(!(r.distance>30)||!r.geometry||r.geometry.coordinates.length<2)throw new Error('start i cel są w tym samym miejscu – wybierz inny start (pole A) lub cel');
     endPt=b;setRoute(r.geometry.coordinates,r.duration,r.steps,r.jam,r.delay,r.inc);
     places.recent=[{label:F.to.el.value,lat:b.lat,lon:b.lon}].concat(places.recent.filter(x=>x.label!==F.to.el.value)).slice(0,6);savePlaces();
     loadWeather(route);loadPoi(route);renderChips();$('dlmap').style.display='block';
     startTrip(a,b,r);loadRouteCrossings(route,planRoute.dt);
-    info((planRoute.dt?'Prognoza na '+planRoute.dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · ':'')+'Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+typicalTxt(a,b,r.duration)+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
+    info((planRoute.dt?'Prognoza na '+planRoute.dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · ':'')+'Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+typicalTxt(a,b,r.duration)+pickNote+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
     return true;
   }catch(e){info('Błąd: '+e.message);return false}
 }
@@ -1331,11 +1353,12 @@ function typicalTxt(a,b,dur){
   const diff=Math.round((dur-t.avg)/60);
   return ' · zwykle '+Math.round(t.avg/60)+' min'+(Math.abs(diff)>=2?(diff<0?' (dziś szybciej)':' (dziś wolniej)'):'');
 }
-function startTrip(a,b,r){trip={t0:Date.now(),a:{lat:a.lat,lon:a.lon},b:{lat:b.lat,lon:b.lon},to:F.to.el.value||'cel',km:r.distance/1000,est:r.duration}}
+function startTrip(a,b,r){trip={t0:Date.now(),a:{lat:a.lat,lon:a.lon},b:{lat:b.lat,lon:b.lon},to:F.to.el.value||'cel',km:r.distance/1000,est:r.duration,dist:0,stop:0,max:0,l:0,xs:new Set()};recHabit(b,trip.to)}
 function finishTrip(){
   if(!trip||sim||demo){trip=null;return ''}
   const dur=(Date.now()-trip.t0)/1000;let out='';
   if(dur>180){
+    showReport(trip,dur);
     const h=LSget('hist',[]);h.unshift({t:trip.t0,to:trip.to,km:+trip.km.toFixed(1),min:Math.round(dur/60),est:Math.round(trip.est/60)});LSput('hist',h.slice(0,40));
     const ty=LSget('typ',{}),k=tkeyOf(trip.a,trip.b),o=ty[k];
     if(o&&o.n>=1){const d=Math.round((o.avg-dur)/60);if(Math.abs(d)>=2)out=' · '+Math.abs(d)+' min '+(d>0?'szybciej':'wolniej')+' niż zwykle'}
@@ -1398,6 +1421,172 @@ $('logdl').onclick=async()=>{
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));
   a.download='log-jazdy-'+new Date().toISOString().slice(0,16).replace(':','')+'.json';document.body.appendChild(a);a.click();a.remove();
 };
+
+// ================= Wersja 36: strzałki na pasie, cień auta, ostrzeżenia, nawyki, raport, FPS, kopia ustawień =================
+// cień samochodu wg Słońca
+let carShKey='';
+function carShadow(){
+  const el=$('carIcon');let v='';
+  if(vec&&vf&&!night){
+    const sp=sunPos(vf.cam.lat,vf.cam.lon,Date.now());
+    if(sp.el>3){
+      const L=Math.min(9,4/Math.tan(rad(Math.max(sp.el,8)))),e=Math.sin(rad(sp.az+180))*L,n=Math.cos(rad(sp.az+180))*L,la=vf.cam.lat,lo=vf.cam.lon;
+      const q0=proj(la,lo),q1=proj(la+n/111195,lo+e/(111195*Math.cos(rad(la))));
+      if(q0&&q1)v='drop-shadow('+((q1.x-q0.x)*.5).toFixed(0)+'px '+((q1.y-q0.y)*.5).toFixed(0)+'px 3px #0007)';
+    }
+  }
+  if(v!==carShKey){carShKey=v;el.style.filter=v}
+}
+// strzałka skrętu namalowana na jezdni przed skrzyżowaniem (tam, gdzie OSM zna pasy)
+function drawLaneArrow(){
+  if(!(vec&&vf&&route&&nav&&nav.i>0&&!freeCam))return;
+  const st=route.steps&&route.steps[nav.i];if(!st||!st.lanes||!st.lanes.lanes||st.lanes.lanes.length<2)return;
+  if(nav.d<22||nav.d>150)return;
+  const dir=lnDir(st),at=Math.max(route.along+14,route.along+nav.d-34),c=routeAt(route,at),a=routeAt(route,at-6),b2=routeAt(route,at+6);
+  const brg=rad(bear(a[0],a[1],b2[0],b2[1])),Rr=rw('tr',scaleCur),L=st.lanes,n=L.lanes.length;
+  let best=n-1;for(let i=n-1;i>=0;i--)if(L.valid[i]){best=i;break}
+  const pl=Math.min(22,Rr*.6/(n-1)),latPx=Rr/4+(best-(n-1))*pl,lm=latPx/scaleCur;
+  const fE=Math.sin(brg),fN=Math.cos(brg),rE=Math.cos(brg),rN=-Math.sin(brg);
+  const W=(x,y)=>{const e=rE*(x+lm)+fE*y,nn=rN*(x+lm)+fN*y;return proj(c[0]+nn/111195,c[1]+e/(111195*Math.cos(rad(c[0]))))};
+  const sgn=dir==='L'?-1:dir==='R'?1:0,pts=sgn?[[0,-4.5],[0,0],[sgn*2.8,2.8]]:[[0,-4.5],[0,3.2]];
+  const P=pts.map(q=>W(q[0],q[1]));if(P.some(q=>!q))return;
+  const last=pts[pts.length-1],prev=pts[pts.length-2],ang=Math.atan2(last[0]-prev[0],last[1]-prev[1]);
+  const hd=[[0,2.4],[-1.6,-1],[1.6,-1]].map(([x,y])=>W(last[0]+x*Math.cos(ang)+y*Math.sin(ang),last[1]-x*Math.sin(ang)+y*Math.cos(ang)));
+  if(hd.some(q=>!q))return;
+  const k=(P[0].k+P[P.length-1].k)/2,lw=Math.max(3,.55*scaleCur*k);
+  mx.save();mx.lineCap='butt';mx.lineJoin='round';
+  const tr=()=>{mx.beginPath();mx.moveTo(P[0].x,P[0].y);for(let i=1;i<P.length;i++)mx.lineTo(P[i].x,P[i].y)},hh=()=>{mx.beginPath();mx.moveTo(hd[0].x,hd[0].y);mx.lineTo(hd[1].x,hd[1].y);mx.lineTo(hd[2].x,hd[2].y);mx.closePath()};
+  mx.strokeStyle='#111';mx.fillStyle='#111';mx.lineWidth=lw+3;tr();mx.stroke();hh();mx.stroke();   // ciemny kontur, żeby strzałkę było widać na niebieskiej trasie
+  mx.strokeStyle='#fff';mx.fillStyle='#fff';mx.lineWidth=lw;tr();mx.stroke();hh();mx.fill();
+  mx.restore();
+}
+// ostrzeżenie z wyprzedzeniem: według rozkładu pociąg minie przejazd mniej więcej wtedy, gdy tam dojedziemy
+const earlyAt={};
+function earlyTrainWarn(p){
+  if(!route||demo||!gtfs||route.off>100||(p.speed||0)<3)return;
+  const nowS=Date.now()/1000;
+  for(const c of crossings){
+    const rc=routeCross(c);if(!rc||rc.off>35)continue;
+    const d=rc.along-route.along;if(d<500||d>3500)continue;
+    if(earlyAt[c.id]&&Date.now()-earlyAt[c.id]<300000)continue;
+    const carEta=d/Math.max(p.speed,8);
+    for(const t of trains){
+      if(!(t.tr&&t.tr.sh)||dist(t.lat,t.lon,c.lat,c.lon)>15000)continue;
+      const r=gtfsApproach(t,nowS,c);
+      if(r&&r.eta>0&&Math.abs(r.eta-carEta)<50){
+        earlyAt[c.id]=Date.now();
+        say('e'+c.id,'Za '+(d>=1000?(d/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(d/100)*100+' metrów')+' przejazd kolejowy. Według rozkładu pociąg minie go mniej więcej wtedy, gdy Pan tam dojedzie. Proszę rozważyć zwolnienie.',[150,80,150],'Pociąg może być przy przejeździe');
+        return;
+      }
+    }
+  }
+}
+// zmęczenie: po dwóch godzinach jazdy bez dłuższej przerwy
+const drv={s:0,stop:0,last:0,said:0};
+function fatigue(p){
+  if(demo||sim)return;
+  const now=Date.now(),dt=drv.last?Math.min(5,(now-drv.last)/1000):0;drv.last=now;
+  if((p.speed||0)>2){drv.s+=dt;drv.stop=0}else{drv.stop+=dt;if(drv.stop>600)drv.s=0}
+  if(drv.s>7200&&now-drv.said>1800000){
+    drv.said=now;
+    let near=null,nd=1e9;poi.forEach(x=>{const d=dist(p.lat,p.lon,x.lat,x.lon);if(d<nd){nd=d;near=x}});
+    const where=near&&nd<15000?' Najbliżej jest '+(near.kind==='fuel'?'stacja paliw':'parking')+' za około '+(nd>=1000?(nd/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(nd/100)*100+' metrów')+'.':'';
+    say('rest','Jedzie Pan już ponad dwie godziny. Proszę rozważyć krótki postój.'+where,[150,100,150],'Proszę rozważyć postój');
+  }
+}
+// wybór trasy z mniejszą liczbą przejazdów kolejowych (kosztem najwyżej 2,5 min)
+async function xsForCoords(coords){
+  let len=0;for(let i=1;i<coords.length;i++)len+=dist(coords[i-1][1],coords[i-1][0],coords[i][1],coords[i][0]);
+  const step=Math.max(700,len/110),pts=[];let acc=1e9;
+  for(let i=0;i<coords.length;i++){
+    if(i)acc+=dist(coords[i-1][1],coords[i-1][0],coords[i][1],coords[i][0]);
+    if(acc>=step||i===coords.length-1){pts.push(coords[i][1].toFixed(5),coords[i][0].toFixed(5));acc=0}
+  }
+  const q='[out:json][timeout:25];node(around:25,'+pts.join(',')+')["railway"="level_crossing"];out;';
+  const j=await cachedOverpass('rx|'+pts[0]+'|'+pts[pts.length-1]+'|'+Math.round(len/100)+'|'+pts.length,q);
+  return (j.elements||[]).map(e=>{const t=e.tags||{};return {id:e.id,nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled'}});
+}
+async function pickFewerCrossings(r){
+  const cands=r.alts.filter(x=>x.duration<=r.duration+150).slice(0,3);
+  if(cands.length<2)return {r,note:''};
+  const hk=hourKey(),sc=[];
+  for(const c of cands){
+    const xs=await xsForCoords(c.geometry.coordinates);
+    const often=xs.filter(x=>((cstat[x.id]||{})[hk]||0)>=2).length;
+    sc.push({c,xs:xs.length,s:xs.filter(x=>x.nb).length*3+xs.length+often*2});
+  }
+  sc.sort((a,b)=>a.s-b.s||a.c.duration-b.c.duration);
+  const base=sc.find(x=>x.c===cands[0]),best=sc[0];
+  if(best.c===cands[0]||best.s>=base.s)return {r,note:''};
+  best.c.alts=r.alts;
+  return {r:best.c,note:' · wybrano trasę z mniejszą liczbą przejazdów kolejowych ('+best.xs+' zamiast '+base.xs+', +'+Math.max(0,Math.round((best.c.duration-r.duration)/60))+' min)'};
+}
+// nawyki: stałe cele o stałych porach + czas dojazdu z korkami na ekranie startowym
+const habits=LSget('habits',[]);
+const dayType=d=>(d||new Date()).getDay()%6===0?'we':'wd';
+function recHabit(b,label){
+  const h=new Date().getHours(),t=dayType();
+  let o=habits.find(x=>x.t===t&&Math.abs(x.lat-b.lat)<.02&&Math.abs(x.lon-b.lon)<.02);
+  if(!o){o={t,lat:b.lat,lon:b.lon,label,h:{}};habits.push(o)}
+  o.h[h]=(o.h[h]||0)+1;o.label=label;LSput('habits',habits.slice(-20));
+}
+let habitAt=0;
+async function habitChip(){
+  const box=$('habit');if(!box)return;
+  if($('pick').style.display==='none'||Date.now()-habitAt<300000)return;
+  const h=new Date().getHours(),t=dayType();
+  const cand=habits.filter(x=>x.t===t).map(x=>({x,n:(x.h[h]||0)+(x.h[(h+23)%24]||0)+(x.h[(h+1)%24]||0)})).filter(o=>o.n>=3).sort((a,b)=>b.n-a.n)[0];
+  box.innerHTML='';if(!cand)return;
+  habitAt=Date.now();const x=cand.x;
+  const btn=document.createElement('button');btn.className='sec';btn.style.cssText='margin:0 0 8px;width:100%';btn.textContent='⭐ Zwykle o tej porze: '+x.label;
+  btn.onclick=()=>pickDest({label:x.label,lat:x.lat,lon:x.lon});box.appendChild(btn);
+  if(!last)return;
+  try{
+    const r=await fetchRoute({lat:last.lat,lon:last.lon},{lat:x.lat,lon:x.lon},null);
+    const dm=Math.round(r.duration/60),dl=Math.round((r.delay||0)/60);
+    btn.textContent='⭐ '+x.label+' · '+dm+' min'+(dl>=3?' (korki +'+dl+' min)':'');
+    if(dl>=10){btn.style.background='#fde7e5';btn.style.color='#b3261e';$('rinfo').textContent='Uwaga: do „'+x.label+'” są teraz duże korki (+'+dl+' min).'}
+  }catch(e){}
+}
+setInterval(habitChip,60000);setTimeout(habitChip,4000);
+// podsumowanie przejazdu
+function tripTick(p){
+  if(!trip||sim||demo)return;const now=Date.now(),dt=trip.l?Math.min(5,(now-trip.l)/1000):0;trip.l=now;
+  const v=p.speed||0;trip.dist+=v*dt;if(v<1.5)trip.stop+=dt;trip.max=Math.max(trip.max,v);
+}
+function showReport(tr,dur){
+  const b=$('histbox'),mov=Math.max(1,dur-tr.stop);
+  b.innerHTML='<h3>Podsumowanie przejazdu</h3>';
+  [['Cel',tr.to],['Czas',Math.round(dur/60)+' min'],['Dystans',(tr.dist/1000).toFixed(1).replace('.',',')+' km'],
+   ['Średnia prędkość',Math.round(tr.dist/mov*3.6)+' km/h (w ruchu)'],['Maksymalna prędkość',Math.round(tr.max*3.6)+' km/h'],
+   ['Postoje i korki',Math.round(tr.stop/60)+' min'],['Przejazdy kolejowe',String(tr.xs.size)]].forEach(([k,v])=>{
+    const d=document.createElement('div');d.className='it';d.innerHTML='<small></small><br><b></b>';d.querySelector('small').textContent=k;d.querySelector('b').textContent=v;b.appendChild(d)});
+  const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>b.style.display='none';b.appendChild(c);b.style.display='block';
+}
+// licznik klatek
+const fpsS={f:[],p:[],m:[],t:0};let fpsPrev=0;
+function fpsRec(now,mk){if(!$('fpsOn').checked)return;if(fpsPrev)fpsS.f.push(now-fpsPrev);fpsPrev=now;fpsS.m.push(mk);
+  if(now-fpsS.t>1000){fpsS.t=now;const f=fpsS.f,n=f.length||1,avg=f.reduce((a,b)=>a+b,0)/n,mx_=Math.max(0,...f),mk_=fpsS.m.reduce((a,b)=>a+b,0)/(fpsS.m.length||1),pt=fpsS.p;
+    const el=$('fps');el.style.display='block';el.textContent='FPS '+Math.round(1000/(avg||16))+' · najdłuższa klatka '+Math.round(mx_)+' ms\nrysowanie '+mk_.toFixed(1)+' ms · mapa '+(pt.length?Math.round(Math.max(...pt))+' ms ×'+pt.length+'/s':'–')+(ecoOn?'\ntryb oszczędny':'');
+    fpsS.f=[];fpsS.m=[];fpsS.p=[]}}
+function fpsPaint(ms){if($('fpsOn').checked)fpsS.p.push(ms)}
+$('fpsOn').onchange=()=>{if(!$('fpsOn').checked)$('fps').style.display='none';fpsPrev=0};
+// kopia ustawień
+$('expSet').onclick=()=>{
+  $('menu').classList.remove('open');
+  const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!/^(ofm|tile)/.test(k))o[k]=localStorage.getItem(k)}}catch(e){}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'przejazd',v:36,data:o})],{type:'application/json'}));
+  a.download='przejazd-ustawienia.json';document.body.appendChild(a);a.click();a.remove();
+};
+$('impSet').onclick=()=>{$('menu').classList.remove('open');$('impFile').click()};
+$('impFile').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const j=JSON.parse(await f.text());if(j.app!=='przejazd'||!j.data)throw new Error('to nie jest kopia ustawień');
+    for(const k in j.data)localStorage.setItem(k,j.data[k]);alert('Przywrócono ustawienia. Aplikacja się odświeży.');location.reload()}
+  catch(err){alert('Nie udało się wczytać: '+err.message)}
+};
+// aktualizacja pogody w trakcie jazdy (gołoledź, mgła)
+setInterval(()=>{if(route&&!demo&&!sim)loadWeather(route)},1500000);
 
 // ---- Polecenia głosowe (Chrome/Android; wymaga zgody na mikrofon) ----
 (function(){
@@ -2132,7 +2321,7 @@ function drawVec(){
     const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s,dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);
     if(Math.hypot(e,n)*vd.s*k>S*.12||k<.8||k>1.25||dr>25)need=true;
   }
-  if(need&&now-lastVt>100){paintVec(cam);lastVt=now}
+  if(need&&now-lastVt>100){const t0=performance.now();paintVec(cam);lastVt=now;fpsPaint(performance.now()-t0)}
   if(!vd)return;
   const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s;
   $('vmap').style.transform='translate('+(-k*vd.s*e).toFixed(1)+'px,'+(k*vd.s*n).toFixed(1)+'px) scale('+k.toFixed(4)+')';
@@ -2152,13 +2341,13 @@ function drawRouteTop(){
   });
   const lw=singleLane?Math.max(6,Math.min(14,Rr*.5)):Math.max(5,Math.min(12,Rr*.34));
   mx.lineCap='round';mx.lineJoin='round';
-  for(const [w,col] of [[lw*1.2,pal.route]]){   // sama niebieska linia, bez ramki
+  for(const [w,col] of [[lw*1.55,'#0b0b0d'],[lw*1.02,pal.route]]){   // niebieska linia z czarnymi paskami po bokach
     for(let i=0;i<pr.length-1;i++){
       const a=pr[i],b=pr[i+1];if(!a||!b)continue;
       const jl=(route&&route.jam)?route.jam[routeSegI+i]||0:0;   // natężenie ruchu: kolor drogi zależy od korka
-      mx.strokeStyle=jl?JC[jl]:col;
+      mx.strokeStyle=(jl&&w<lw*1.2)?JC[jl]:col;
       mx.beginPath();mx.moveTo(a.x,a.y);mx.lineTo(b.x,b.y);
-      mx.lineWidth=(w+(jl?2:0))*Math.max(.3,Math.min(1.25,(a.k+b.k)/2));mx.stroke();
+      mx.lineWidth=(w+(jl&&w<lw*1.2?2:0))*Math.max(.3,Math.min(1.25,(a.k+b.k)/2));mx.stroke();
     }
   }
 }
@@ -2250,14 +2439,14 @@ function updCarSnap(){
 }
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
 const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
-let wallKey='',wallCol=null,bldCache=null,bldTick=0;
+let wallKey='',wallCol=null,bldCache=null,bldTick=0,wallH=[],shc=null,shx=null;
 function drawBuildings3D(){
   if(ecoOn||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
   const D=vecData,pal=PAL[night?'night':'day'],S=$('rot').clientWidth,s=vf.s;
   const W=window.innerWidth,H=window.innerHeight;
   const ox=(vf.cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(vf.cam.lat-D.lat)*111195;
   const kk=111195,kxx=1;
-  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
+  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
   const R=rad(curRot),sunDir=rad(-35);   // „słońce” z lewej-góry: ściany zwrócone na południowy zachód jaśniejsze
   const hs=Math.min(1.6,.9+tiltDeg/90);
   let lst;
@@ -2276,8 +2465,23 @@ function drawBuildings3D(){
   const cl=Math.cos(rad(D.lat));
   const g=(x,y,h)=>proj(D.lat+y/111195,D.lon+x/(111195*cl),h);
   mx.lineJoin='round';
+  // cienie budynków wg położenia Słońca (rysowane do osobnej warstwy i nakładane półprzezroczyście)
+  const sp=sunPos(D.lat,D.lon,Date.now());
+  if(!night&&sp.el>3&&scaleCur>=.9){
+    if(!shc||shc.width!==mk.width||shc.height!==mk.height){shc=document.createElement('canvas');shc.width=mk.width;shc.height=mk.height;shx=shc.getContext('2d')}
+    shx.setTransform(1,0,0,1,0,0);shx.clearRect(0,0,shc.width,shc.height);shx.setTransform(mk.width/W,0,0,mk.height/H,0,0);shx.fillStyle='#000';
+    const dirE=Math.sin(rad(sp.az+180)),dirN=Math.cos(rad(sp.az+180)),tn=Math.tan(rad(Math.max(sp.el,6)));
+    for(let n=Math.max(start,lst.length-260);n<lst.length;n++){
+      const b=lst[n].b,p=b.p,m=p.length/2,L=Math.min(b.h*hs/(tn*hs),b.h*3.2),ex=dirE*L,ny=dirN*L,G=[],Sd=[];let ok=true;
+      for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],0),c2=g(p[2*i]+ex,p[2*i+1]+ny,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
+      if(!ok)continue;
+      for(let i=0;i<m;i++){const j=(i+1)%m;shx.beginPath();shx.moveTo(G[i].x,G[i].y);shx.lineTo(G[j].x,G[j].y);shx.lineTo(Sd[j].x,Sd[j].y);shx.lineTo(Sd[i].x,Sd[i].y);shx.closePath();shx.fill()}
+    }
+    mx.save();mx.globalAlpha=.2;mx.setTransform(1,0,0,1,0,0);mx.drawImage(shc,0,0);mx.restore();
+  }
   for(let n=start;n<lst.length;n++){
     const b=lst[n].b,p=b.p,m=p.length/2,H3=b.h*hs;
+    const hb=Math.min(6,Math.floor(b.h/14)),wc=wallH[hb]||(wallH[hb]={roof:night?shadeC(PAL.night.bld,1.35-.04*hb):shadeC(PAL.day.bld,1.05-.03*hb),a:night?shadeC(PAL.night.bld,.95-.04*hb):shadeC(PAL.day.bld,.86-.04*hb),b:night?shadeC(PAL.night.bld,.7-.03*hb):shadeC(PAL.day.bld,.7-.04*hb),line:wallCol.line});   // wyższe budynki są ciemniejsze
     const G=[],T=[];let ok=true;
     for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],0),t=g(p[2*i],p[2*i+1],H3);if(!a||!t){ok=false;break}G.push(a);T.push(t)}
     if(!ok)continue;
@@ -2288,19 +2492,19 @@ function drawBuildings3D(){
       const nx=dy,ny=-dx,L=Math.hypot(nx,ny)||1,lit=(nx*Math.cos(sunDir)+ny*Math.sin(sunDir))/L;
       if(Math.abs(cross)<.01)continue;
       mx.beginPath();mx.moveTo(G[i].x,G[i].y);mx.lineTo(G[j].x,G[j].y);mx.lineTo(T[j].x,T[j].y);mx.lineTo(T[i].x,T[i].y);mx.closePath();
-      mx.fillStyle=lit>0?wallCol.a:wallCol.b;mx.fill();mx.strokeStyle=wallCol.line;mx.lineWidth=.8;mx.stroke();
+      mx.fillStyle=lit>0?wc.a:wc.b;mx.fill();mx.strokeStyle=wallCol.line;mx.lineWidth=.8;mx.stroke();
     }
     mx.beginPath();mx.moveTo(T[0].x,T[0].y);for(let i=1;i<m;i++)mx.lineTo(T[i].x,T[i].y);mx.closePath();
-    mx.fillStyle=wallCol.roof;mx.fill();mx.strokeStyle=wallCol.line;mx.lineWidth=1;mx.stroke();
+    mx.fillStyle=wc.roof;mx.fill();mx.strokeStyle=wc.line;mx.lineWidth=1;mx.stroke();
   }
 }
 function drawMarkers(){
   const W=window.innerWidth,H=window.innerHeight;
   mx.clearRect(0,0,W,H);
   if(vec)drawVec();const P=proj;
-  updCarSnap();
+  updCarSnap();carShadow();
   drawBuildings3D();
-  drawRouteTop();
+  drawRouteTop();drawLaneArrow();
   drawRouteSigns();
   drawPoi();
   if(freeCam){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
@@ -2341,7 +2545,7 @@ function frame(){
   const d=((tgtRot-curRot)%360+540)%360-180;
   curRot=Math.abs(d)<.05?tgtRot:curRot+d*fr;
   $('rot').style.transform='rotateX('+tiltDeg+'deg) rotate('+curRot+'deg)';
-  drawMarkers();
+  {const t0=performance.now();drawMarkers();fpsRec(fnow,performance.now()-t0)}
   $('compass').style.transform='rotate('+curRot+'deg)';
   requestAnimationFrame(frame);
 }
