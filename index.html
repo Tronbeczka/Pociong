@@ -24,6 +24,15 @@
 #splash .arm{transform-origin:196px 18px;animation:spArm 4.2s ease-in-out infinite}
 @keyframes spTrain{0%,22%{transform:translateX(-80px)}60%,100%{transform:translateX(280px)}}
 @keyframes spArm{0%,10%{transform:rotate(-70deg)}22%,60%{transform:rotate(0)}74%,100%{transform:rotate(-70deg)}}
+#fuelInfo{font-size:.85rem;margin:4px 0;color:#5f6368}body.night #fuelInfo{color:#a9b0bb}#fuelInfo.warn{color:#b3261e;font-weight:700}body.night #fuelInfo.warn{color:#ff8a80}
+#depcmp{display:flex;flex-direction:column;gap:6px;margin:8px 0}#depcmp button{display:flex;justify-content:space-between;width:100%;text-align:left;padding:10px 12px;border-radius:12px;background:#f1f3f4;color:#202124;font-weight:600}
+body.night #depcmp button{background:#2d3139;color:#e8eaed}#depcmp button.best{outline:2px solid #1a9c55}#depcmp small{opacity:.8}
+#alarm{position:fixed;inset:0;z-index:4500;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;background:rgba(179,38,30,.93);padding:24px;animation:fadeIn .2s ease}
+#alarm .al1{font-size:1.3rem;font-weight:800;letter-spacing:.04em;opacity:.95}
+#alarm .al2{font-size:6.5rem;font-weight:900;line-height:1;margin:10px 0;animation:alPulse .9s ease-in-out infinite}
+#alarm .al3{font-size:1.25rem;font-weight:700}
+#alarm button{margin-top:26px;padding:14px 28px;border-radius:16px;background:#fff;color:#b3261e;font-weight:800;font-size:1.05rem}
+@keyframes alPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -358,7 +367,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <li><b>Nie obsługuj telefonu w czasie jazdy.</b> Ustaw trasę przed ruszeniem albo użyj poleceń głosowych.</li>
 <li>Ograniczenia prędkości i pasy pochodzą z OpenStreetMap i mogą być nieaktualne lub niepełne.</li>
 </ul><button id="introOk">Rozumiem</button></div></div>
-<div id="fps" style="display:none"></div><div id="dim"></div><canvas id="jp" width="240" height="240" style="display:none"></canvas><div id="wait" style="display:none"></div>
+<div id="fps" style="display:none"></div><div id="dim"></div><canvas id="jp" width="240" height="240" style="display:none"></canvas><div id="wait" style="display:none"></div><div id="alarm"><div class="al1">⚠ NADJEŻDŻA POCIĄG</div><div class="al2" id="alT">–</div><div class="al3" id="alD"></div><button id="alOk" type="button">Widzę</button></div>
 <div id="histbox" style="display:none"></div>
 <div id="menu">
   <button id="start">Start</button>
@@ -377,6 +386,8 @@ body.night #intro .card{background:#202228;color:#e8eaed}
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="hist" class="sec">Historia przejazdów</button>
+  <button id="xstat" class="sec">Statystyki przejazdów kolejowych</button>
+  <label style="font-size:.9rem"><input type="checkbox" id="alarmOn" checked> Alarm pełnoekranowy przy pociągu</label>
   <button id="report" class="sec">Zgłoś błąd mapy</button>
   <button id="logdl" class="sec">Pobierz log jazdy</button>
   <label style="font-size:.9rem"><input type="checkbox" id="fpsOn"> Licznik klatek (FPS)</label>
@@ -423,7 +434,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 62</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 63</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -439,8 +450,15 @@ body.night #intro .card{background:#202228;color:#e8eaed}
     <div class="fld"><span>⏱</span><input id="dep" type="datetime-local" title="Wyjazd o (puste = teraz)"></div>
     <small>Wyjazd o wybranej godzinie (puste = teraz): prognoza korków i najlepsza pora wyjazdu.</small>
     <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label><label><input type="checkbox" id="avX"> Mniej przejazdów kolejowych</label></div>
+    <div class="lbl">Paliwo (zasięg i ostrzeżenia o tankowaniu)</div>
+    <div class="fld"><span>⛽</span><input id="fuelCap" type="number" inputmode="decimal" min="0" placeholder="Bak (litry), np. 55"></div>
+    <div class="fld"><span>L</span><input id="fuelCons" type="number" inputmode="decimal" min="0" placeholder="Spalanie (l/100 km), np. 7,5"></div>
+    <div class="fld"><span>%</span><input id="fuelLvl" type="number" inputmode="decimal" min="0" max="100" placeholder="Stan baku (%)"><button id="fuelFull" class="sec" type="button">Zatankowano</button></div>
+    <div class="lbl">Najlepsza godzina wyjazdu</div>
+    <button id="cmpdep" class="sec" type="button" style="width:100%">Porównaj godziny wyjazdu (teraz, +20, +40, +60, +90, +120 min)</button>
+    <div id="depcmp"></div>
     </details>
-    <div id="rinfo"></div><div id="rxinfo"></div><div id="wxinfo"></div>
+    <div id="rinfo"></div><div id="fuelInfo"></div><div id="rxinfo"></div><div id="wxinfo"></div>
     <button id="dlmap" class="sec" style="display:none;margin-top:6px">Pobierz mapę trasy (offline)</button><small id="dlst"></small>
   </div>
   <div class="row"><button id="go">Jedź</button></div>
@@ -596,7 +614,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
-  logSample(p);tripTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
+  logSample(p);tripTick(p);fuelTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -626,10 +644,11 @@ function evaluate(p){
   ahead.sort((a,b)=>a.d-b.d);
   aheadList=ahead.slice(0,6);
   {const n2=ahead[1];$('then').style.display=n2?'flex':'none';if(n2)$('then').textContent='Potem '+fmtD(n2.d)}
-  if(!ahead.length){setDist('');$('then').style.display='none';setBanner('ok','Droga wolna','Brak przejazdów kolejowych na trasie');return}
+  if(!ahead.length){window._nearX=null;setDist('');$('then').style.display='none';setBanner('ok','Droga wolna','Brak przejazdów kolejowych na trasie');return}
 
   const near=ahead[0], n=Math.round(near.d/10)*10;
   if(trip&&near.d<40)trip.xs.add(near.c.id);
+  window._nearX={id:near.c.id,d:near.d,lat:near.c.lat,lon:near.c.lon,t:Date.now()};
   setDist(n>=1000?(n/1000).toFixed(1)+' km':n+' m');
   // train threat for each upcoming crossing
   let threat=null, maybe=null, nearestTd=Infinity;
@@ -663,6 +682,7 @@ function evaluate(p){
     if(nTr>=2)say('u'+threat.a.c.id,'Nadjeżdżają co najmniej dwa pociągi. Po przejechaniu pierwszego proszę sprawdzić drugi tor.',[200,100,200],'Może być drugi pociąg');
     if((p.speed||0)<1&&threat.a.d<120)showWait(threat,s,nTr);
     window._thr={id:threat.a.c.id,eta:s,d:m};
+    if(s<=45&&threat.a.d<400&&!((p.speed||0)<1&&threat.a.d<120))showAlarm(s,m,threat.a.c.id);
     setBanner('bad','Nadjeżdża pociąg',`Przejazd za ${m} m · pociąg za ok. ${s} s${bar}${(p.speed||0)<2&&threat.a.d<250?' · otwarcie ok. '+Math.round((s+200/Math.max(8,(threat.t.speed||60)/3.6)+15)/5)*5+' s':''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}${trainsToward(threat.a.c)>=2?' · drugi pociąg: sprawdź drugi tor':''}`);
     say('t'+threat.a.c.id,`Proszę uważać, nadjeżdża pociąg. Przejazd kolejowy za ${m} metrów. Proszę zwolnić.`,[300,120,300],'Nadjeżdża pociąg, proszę zwolnić');
   }else if(maybe){
@@ -1155,7 +1175,8 @@ async function loadPoi(R){
     const q='[out:json][timeout:25];(nwr(around:450,'+b[0]+','+b[1]+')[amenity=parking][access!~"private|customers|no"];'+(sample.length>=4?'nwr(around:140,'+sample.join(',')+')[amenity=fuel];':'')+');out center tags 80;';
     const j=await fetchOverpass(q);
     if(route!==R)return;
-    poi=(j.elements||[]).map(e=>({id:e.id,kind:e.tags&&e.tags.amenity==='fuel'?'fuel':'parking',lat:e.lat??(e.center&&e.center.lat),lon:e.lon??(e.center&&e.center.lon),name:(e.tags&&(e.tags.name||e.tags.brand))||'',fee:e.tags&&e.tags.fee,cap:e.tags&&e.tags.capacity})).filter(x=>x.lat!=null);
+    window._poiR=R;poi=(j.elements||[]).map(e=>({id:e.id,kind:e.tags&&e.tags.amenity==='fuel'?'fuel':'parking',lat:e.lat??(e.center&&e.center.lat),lon:e.lon??(e.center&&e.center.lon),name:(e.tags&&(e.tags.name||e.tags.brand))||'',fee:e.tags&&e.tags.fee,cap:e.tags&&e.tags.capacity})).filter(x=>x.lat!=null);
+    fuelPlan();
     const np=poi.filter(x=>x.kind==='parking').length;
     if(np){
       const pk=poi.filter(x=>x.kind==='parking').map(x=>({x,d:dist(b[0],b[1],x.lat,x.lon)})).sort((u,v)=>u.d-v.d)[0];
@@ -1404,8 +1425,8 @@ async function planRoute(){
     endPt=b;setRoute(r.geometry.coordinates,r.duration,r.steps,r.jam,r.delay,r.inc);
     places.recent=[{label:F.to.el.value,lat:b.lat,lon:b.lon}].concat(places.recent.filter(x=>x.label!==F.to.el.value)).slice(0,6);savePlaces();
     loadWeather(route);loadPoi(route);renderChips();$('dlmap').style.display='block';
-    startTrip(a,b,r);loadRouteCrossings(route,planRoute.dt);loadZones(route);
-    info((planRoute.dt?'Prognoza na '+planRoute.dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · ':'')+'Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+typicalTxt(a,b,r.duration)+pickNote+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
+    startTrip(a,b,r);loadRouteCrossings(route,planRoute.dt);loadZones(route);fuelPlan();
+    info((planRoute.dt?'Prognoza na '+planRoute.dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · ':'')+'Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+typicalTxt(a,b,r.duration)+pickNote+(()=>{const n=(r.inc||[]).filter(x=>x.kind==='accident').length,w=(r.inc||[]).filter(x=>x.kind==='works').length;return (n?' · wypadki na trasie: '+n:'')+(w?' · roboty drogowe: '+w:'')})()+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
     planRoute.r=r;return true;
   }catch(e){info('Błąd: '+e.message);return false}
 }
@@ -1540,12 +1561,13 @@ function typicalTxt(a,b,dur){
   const diff=Math.round((dur-t.avg)/60);
   return ' · zwykle '+Math.round(t.avg/60)+' min'+(Math.abs(diff)>=2?(diff<0?' (dziś szybciej)':' (dziś wolniej)'):'');
 }
-function startTrip(a,b,r){trip={t0:Date.now(),a:{lat:a.lat,lon:a.lon},b:{lat:b.lat,lon:b.lon},to:F.to.el.value||'cel',km:r.distance/1000,est:r.duration,dist:0,stop:0,max:0,l:0,xs:new Set()};recHabit(b,trip.to)}
+function startTrip(a,b,r){trip={xw:0,xn:0,xwm:{},xwait:false,t0:Date.now(),a:{lat:a.lat,lon:a.lon},b:{lat:b.lat,lon:b.lon},to:F.to.el.value||'cel',km:r.distance/1000,est:r.duration,dist:0,stop:0,max:0,l:0,xs:new Set()};recHabit(b,trip.to)}
 function finishTrip(){
   if(!trip||sim||demo){trip=null;return ''}
   const dur=(Date.now()-trip.t0)/1000;let out='';
   if(dur>180){
     showReport(trip,dur);
+    try{const X=LSget('xwait',{});for(const id in trip.xwm){const o=trip.xwm[id],q=X[id]||(X[id]={n:0,s:0,lat:o.lat,lon:o.lon});if(o.s>=5){q.n++;q.s+=o.s}}LSput('xwait',X)}catch(e){}
     const h=LSget('hist',[]);h.unshift({t:trip.t0,to:trip.to,km:+trip.km.toFixed(1),min:Math.round(dur/60),est:Math.round(trip.est/60)});LSput('hist',h.slice(0,40));
     const ty=LSget('typ',{}),k=tkeyOf(trip.a,trip.b),o=ty[k];
     if(o&&o.n>=1){const d=Math.round((o.avg-dur)/60);if(Math.abs(d)>=2)out=' · '+Math.abs(d)+' min '+(d>0?'szybciej':'wolniej')+' niż zwykle'}
@@ -1692,14 +1714,14 @@ function recHabit(b,label){
   const h=new Date().getHours(),t=dayType();
   let o=habits.find(x=>x.t===t&&Math.abs(x.lat-b.lat)<.02&&Math.abs(x.lon-b.lon)<.02);
   if(!o){o={t,lat:b.lat,lon:b.lon,label,h:{}};habits.push(o)}
-  o.h[h]=(o.h[h]||0)+1;o.label=label;LSput('habits',habits.slice(-20));
+  o.h[h]=(o.h[h]||0)+1;o.w=o.w||{};const dw=new Date().getDay();o.w[dw]=(o.w[dw]||0)+1;o.label=label;LSput('habits',habits.slice(-20));
 }
 let habitAt=0;
 async function habitChip(){
   const box=$('habit');if(!box)return;
   if($('pick').style.display==='none'||Date.now()-habitAt<300000)return;
   const h=new Date().getHours(),t=dayType();
-  const cand=habits.filter(x=>x.t===t).map(x=>({x,n:(x.h[h]||0)+(x.h[(h+23)%24]||0)+(x.h[(h+1)%24]||0)})).filter(o=>o.n>=3).sort((a,b)=>b.n-a.n)[0];
+  const dw=new Date().getDay(),cand=habits.filter(x=>x.t===t).map(x=>({x,n:(x.h[h]||0)+(x.h[(h+23)%24]||0)+(x.h[(h+1)%24]||0)})).filter(o=>o.n>=2).map(o=>(o.sc=o.n+((o.x.w&&o.x.w[dw])||0)*.5,o)).sort((a,b)=>b.sc-a.sc)[0];
   box.innerHTML='';if(!cand)return;
   habitAt=Date.now();const x=cand.x;
   const btn=document.createElement('button');btn.className='sec';btn.style.cssText='margin:0 0 8px;width:100%';btn.textContent='⭐ Zwykle o tej porze: '+x.label;
@@ -1717,13 +1739,16 @@ setInterval(habitChip,60000);setTimeout(habitChip,4000);
 function tripTick(p){
   if(!trip||sim||demo)return;const now=Date.now(),dt=trip.l?Math.min(5,(now-trip.l)/1000):0;trip.l=now;
   const v=p.speed||0;trip.dist+=v*dt;if(v<1.5)trip.stop+=dt;trip.max=Math.max(trip.max,v);
+  const nx=window._nearX,wt=!!(nx&&Date.now()-nx.t<4000&&nx.d<150&&v<1.5);   // czekanie przed przejazdem kolejowym
+  if(wt){trip.xw+=dt;const o=trip.xwm[nx.id]||(trip.xwm[nx.id]={s:0,lat:nx.lat,lon:nx.lon});o.s+=dt;if(!trip.xwait)trip.xn++}
+  trip.xwait=wt;
 }
 function showReport(tr,dur){
   const b=$('histbox'),mov=Math.max(1,dur-tr.stop);
   b.innerHTML='<h3>Podsumowanie przejazdu</h3>';
   [['Cel',tr.to],['Czas',Math.round(dur/60)+' min'],['Dystans',(tr.dist/1000).toFixed(1).replace('.',',')+' km'],
    ['Średnia prędkość',Math.round(tr.dist/mov*3.6)+' km/h (w ruchu)'],['Maksymalna prędkość',Math.round(tr.max*3.6)+' km/h'],
-   ['Postoje i korki',Math.round(tr.stop/60)+' min'],['Przejazdy kolejowe',String(tr.xs.size)]].forEach(([k,v])=>{
+   ['Postoje i korki',Math.round(tr.stop/60)+' min'],['Przejazdy kolejowe',String(tr.xs.size)]].concat(tr.xw>=5?[['Czekanie na przejazdach',Math.round(tr.xw/60*10)/10+' min ('+tr.xn+' '+(tr.xn===1?'raz':'razy')+')']]:[]).forEach(([k,v])=>{
     const d=document.createElement('div');d.className='it';d.innerHTML='<small></small><br><b></b>';d.querySelector('small').textContent=k;d.querySelector('b').textContent=v;b.appendChild(d)});
   const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>b.style.display='none';b.appendChild(c);b.style.display='block';
 }
@@ -1746,6 +1771,7 @@ $('impSet').onclick=()=>{$('menu').classList.remove('open');$('impFile').click()
 $('impFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const j=JSON.parse(await f.text());if(j.app!=='przejazd'||!j.data)throw new Error('to nie jest kopia ustawień');
+    if(!confirm('Wczytać kopię ustawień ('+Object.keys(j.data).length+' wpisów: miejsca, historia, statystyki)? Zastąpi bieżące dane o tych samych nazwach.'))return;
     for(const k in j.data)localStorage.setItem(k,j.data[k]);alert('Przywrócono ustawienia. Aplikacja się odświeży.');location.reload()}
   catch(err){alert('Nie udało się wczytać: '+err.message)}
 };
@@ -1983,6 +2009,120 @@ function snapRoute(R){
 setInterval(()=>{if(route&&vecData&&route.snapFor!==vecData)snapRoute(route)},400);
 
 
+
+// ================= Wersja 63: paliwo, porównanie godzin, statystyki przejazdów, alarm, nawyki =================
+// ---- paliwo: zasięg i ostrzeżenia ----
+const fuel=Object.assign({cap:0,cons:0,lvl:100},LSget('fuel',{}));
+const fuelSave=()=>LSput('fuel',fuel);
+function fuelRange(){return fuel.cap>0&&fuel.cons>0?fuel.cap*Math.max(0,fuel.lvl)/100/fuel.cons*100:null}
+function fuelUI(){$('fuelCap').value=fuel.cap||'';$('fuelCons').value=fuel.cons||'';$('fuelLvl').value=fuel.cap&&fuel.cons?Math.round(fuel.lvl):''}
+fuelUI();
+['fuelCap','fuelCons','fuelLvl'].forEach(id=>$(id).onchange=()=>{
+  const n=v=>{const x=parseFloat(String($(v).value).replace(',','.'));return isFinite(x)&&x>=0?x:0};
+  fuel.cap=n('fuelCap');fuel.cons=n('fuelCons');if($('fuelLvl').value!=='')fuel.lvl=Math.min(100,n('fuelLvl'));
+  fuelSave();fuelPlan();
+});
+$('fuelFull').onclick=()=>{fuel.lvl=100;fuelSave();fuelUI();fuelPlan()};
+const kmTxt=k=>k<1?Math.max(50,Math.round(k*20)*50)+' m':Math.round(k)+' km';
+function fuelStations(){
+  if(!route||!poi||!route.pts||route.pts.length<3)return[];const n=route.pts.length-2;
+  return poi.filter(x=>x.kind==='fuel'&&x.lat!=null&&x.lon!=null).map(x=>{
+    if(x._al==null||x._R!==route){const m=projRoute(route,x.lat,x.lon,0,n);x._al=m.along;x._off=m.off;x._R=route}
+    return {name:x.name,km:(x._al-route.along)/1000,off:x._off}}).filter(x=>x.off<250&&x.km>=0).sort((a,b)=>a.km-b.km);
+}
+function fuelAdvice(){   // {range, rem, short, best}
+  const range=fuelRange();if(range==null)return null;
+  const rem=route?Math.max(0,route.len-route.along)/1000:null,short=rem!=null&&range<rem+15;
+  let best=null;if(route&&(short||range<60)){const st=fuelStations().filter(x=>x.km<=Math.max(0,range-10));best=st[st.length-1]||null}
+  return {range,rem,short,best};
+}
+function fuelPlan(){
+  const el=$('fuelInfo'),a=fuelAdvice();if(!el)return;
+  if(!a){el.textContent='';el.className='';return}
+  let t='⛽ Zasięg ok. '+Math.round(a.range)+' km'+(a.rem!=null?' · do celu '+a.rem.toFixed(0)+' km':'');
+  if(a.short)t+=' — paliwa może nie wystarczyć'+(a.best?'. Zatankuj: '+(a.best.name||'stacja')+' za '+kmTxt(a.best.km):'. Brak znanej stacji w zasięgu na początku trasy');
+  el.textContent=t;el.className=a.short||a.range<50?'warn':'';
+}
+let fuelPrev=null,fuelSaved=0,fuelChk=0,fuelSay=0;
+function fuelTick(p){
+  if(!(fuel.cap>0&&fuel.cons>0)||demo||sim){fuelPrev=null;return}
+  if(fuelPrev){
+    const d=dist(fuelPrev.lat,fuelPrev.lon,p.lat,p.lon);
+    if(d>=3&&d<500){fuelPrev={lat:p.lat,lon:p.lon};
+      if((p.speed||0)>1){fuel.lvl=Math.max(0,fuel.lvl-d/1000*fuel.cons/fuel.cap*100);
+        if(Date.now()-fuelSaved>15000){fuelSaved=Date.now();fuelSave();if($('fuelLvl')!==document.activeElement)$('fuelLvl').value=Math.round(fuel.lvl)}}}
+    else if(d>=500)fuelPrev={lat:p.lat,lon:p.lon};
+  }else fuelPrev={lat:p.lat,lon:p.lon};
+  if(Date.now()-fuelChk>60000){fuelChk=Date.now();fuelPlan();
+    const a=fuelAdvice();
+    if(a&&(a.short||a.range<40)&&Date.now()-fuelSay>600000){fuelSay=Date.now();
+      const txt=a.range<40?'Zostało paliwa na około '+Math.round(a.range)+' kilometrów. Proszę zatankować.':'Paliwa może nie wystarczyć na całą trasę.';
+      say('fuel'+Math.round(Date.now()/600000),txt+(a.best?' Najbliższa stacja na trasie za '+(a.best.km<1?kmTxt(a.best.km).replace(' m',' metrów'):Math.round(a.best.km)+' kilometrów')+'.':''),[150,80,150],'Mało paliwa')}
+  }
+}
+// ---- porównanie godzin wyjazdu ----
+$('cmpdep').onclick=async()=>{
+  const box=$('depcmp'),btn=$('cmpdep');box.innerHTML='';
+  if(!F.to.pt){box.textContent='Najpierw wybierz cel.';return}
+  if(!ttKey){box.textContent='Prognoza ruchu wymaga klucza TomTom (ustawienia).';return}
+  btn.disabled=true;box.textContent='Sprawdzam prognozy ruchu…';
+  try{
+    const a=F.from.pt||await gpsNow(),b=F.to.pt;
+    viaList=['via','via2','via3'].filter(k=>F[k].pt).map(k=>({lat:F[k].pt.lat,lon:F[k].pt.lon}));
+    const base=Date.now(),res=[];
+    for(const o of [0,20,40,60,90,120]){
+      depTime=o?new Date(base+o*60000):null;
+      try{const r=await fetchRoute(a,b);res.push({o,t:new Date(base+o*60000),dur:r.duration,traffic:!!r.traffic})}finally{depTime=null}
+    }
+    if(!res.every(x=>x.traffic)){box.textContent='Brak prognozy ruchu z TomTom – nie da się porównać godzin.';return}
+    const now=res[0],best=res.reduce((m,x)=>x.dur<m.dur?x:m,res[0]),hm=d=>d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+    box.innerHTML='';
+    const h=document.createElement('small');
+    const gain=Math.round((now.dur-best.dur)/60);
+    h.textContent=gain>=2?'Najlepiej wyjechać o '+hm(best.t)+' — '+gain+' min szybciej niż teraz.':'Teraz jest dobra pora na wyjazd – późniejsze godziny nie są szybsze.';
+    box.appendChild(h);
+    res.forEach(x=>{
+      const d=Math.round((x.dur-now.dur)/60),bt=document.createElement('button');bt.type='button';if(x===best&&gain>=2||x===now&&gain<2)bt.classList.add('best');
+      bt.innerHTML='<span></span><small></small>';bt.firstChild.textContent=(x.o?hm(x.t):'Teraz ('+hm(x.t)+')');
+      bt.lastChild.textContent=Math.round(x.dur/60)+' min'+(x.o?(d===0?' (tak samo)':d<0?' ('+d+' min)':' (+'+d+' min)'):'');
+      bt.onclick=()=>{
+        if(x.o){const z=new Date(x.t.getTime()-x.t.getTimezoneOffset()*60000).toISOString().slice(0,16);$('dep').value=z}else $('dep').value='';
+        planRoute()};
+      box.appendChild(bt)});
+  }catch(e){box.textContent='Nie udało się porównać: '+e.message}
+  finally{btn.disabled=false}
+};
+// ---- statystyki przejazdów kolejowych (czekanie) ----
+$('xstat').onclick=()=>{
+  $('menu').classList.remove('open');
+  const b=$('histbox'),X=LSget('xwait',{}),C=LSget('cstat',{});
+  b.innerHTML='<h3>Statystyki przejazdów kolejowych</h3>';
+  const arr=Object.entries(X).map(([id,o])=>Object.assign({id},o)).sort((u,v)=>v.s-u.s);
+  if(!arr.length)b.innerHTML+='<p>Brak danych. Pojawią się po przejazdach, na których musisz zaczekać (zamknięte rogatki).</p>';
+  else{
+    const tot=arr.reduce((t,o)=>({n:t.n+o.n,s:t.s+o.s}),{n:0,s:0});
+    const p=document.createElement('p');p.textContent='Łącznie czekałeś '+tot.n+' '+(tot.n===1?'raz':'razy')+', razem '+Math.round(tot.s/60*10)/10+' min.';b.appendChild(p);
+    const dn=['nd','pn','wt','śr','czw','pt','sob'];
+    arr.slice(0,8).forEach((o,i)=>{
+      const d=document.createElement('div');d.className='it';d.innerHTML='<b></b><br><small></small> <a target="_blank" rel="noopener">na mapie</a>';
+      d.firstChild.textContent=(i===0?'Najgorszy: ':'')+'przejazd '+o.lat.toFixed(4)+', '+o.lon.toFixed(4);
+      let when='';const h=C[o.id];if(h){const k=Object.keys(h).sort((u,v)=>h[v]-h[u])[0];if(k!=null){const kk=+k;when=' · najczęściej zamknięty: '+dn[Math.floor(kk/24)%7]+' ok. '+(kk%24)+':00'}}
+      d.querySelector('small').textContent=o.n+' '+(o.n===1?'postój':'postoje/ów')+' · śr. '+Math.round(o.s/o.n)+' s · razem '+Math.round(o.s/60*10)/10+' min'+when;
+      d.querySelector('a').href='https://www.openstreetmap.org/?mlat='+o.lat+'&mlon='+o.lon+'#map=18/'+o.lat+'/'+o.lon;
+      b.appendChild(d)});
+  }
+  const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>b.style.display='none';b.appendChild(c);b.style.display='block';
+};
+// ---- alarm pełnoekranowy ----
+const alarm={last:0,dis:null,id:null};
+$('alarmOn').checked=LSget('alarmOn',true);$('alarmOn').onchange=()=>LSput('alarmOn',$('alarmOn').checked);
+function showAlarm(s,m,id){
+  if(!$('alarmOn').checked||alarm.dis===id||window.preview)return;
+  const el=$('alarm');if(el.style.display!=='flex'){el.style.display='flex';try{navigator.vibrate&&navigator.vibrate([300,120,300,120,300])}catch(e){}}
+  alarm.last=Date.now();alarm.id=id;$('alT').textContent=s+' s';$('alD').textContent='Przejazd za '+m+' m'+(s<=25?' · rogatki są zamknięte':'');
+}
+$('alOk').onclick=()=>{alarm.dis=alarm.id;$('alarm').style.display='none'};
+setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-alarm.last>2000)el.style.display='none';if(alarm.dis!=null&&Date.now()-alarm.last>8000)alarm.dis=null},500);
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
