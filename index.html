@@ -1875,6 +1875,11 @@ function buildMvt(tiles,lat0,lon0){
           B.push({p:pts,h:Math.min(h,160),cx:mx_,cy:my_});
         }
       }
+      if(f.l==='transportation'){   // linie ruchu: oś jezdni tylko na drogach dwukierunkowych
+        const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';
+        if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr'))gp('cl').addPath(path);
+        if(cls==='mw')gp('cm').addPath(path);
+      }
       gp(cls).addPath(path);if(one)gp('one1').addPath(path);
     }
   }
@@ -2079,8 +2084,19 @@ function paintVec(cam){
       c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
     const order=['sv','rs','tr','sc','pr','mw'];
     for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rw(k,s)+4)/s;c.stroke(P[k])}
+    const lm=night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)',le=night?'rgba(215,225,255,.32)':'rgba(105,95,75,.30)';
     for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=rw(k,s)/s;c.stroke(P[k])
-      if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=rw(k,s)*.45/s;c.stroke(P[k])}}
+      const w=rw(k,s);
+      if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
+      if(w>=13&&k!=='sv'){   // linie krawędziowe: cienki pasek tuż przy brzegu jezdni
+        c.strokeStyle=le;c.lineWidth=(w-3)/s;c.stroke(P[k]);
+        c.strokeStyle=k==='mw'?pal.mw:pal[k];c.lineWidth=(w-5)/s;c.stroke(P[k]);
+        if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
+      }}
+    if(s>=.7){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
+      if(P.cl){c.strokeStyle=lm;c.lineWidth=Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash([9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
+      if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
+    }
     if(P.rail){
       c.strokeStyle=pal.rail;c.lineWidth=4.5/s;c.stroke(P.rail);
       c.strokeStyle=pal.railDash;c.lineWidth=2.2/s;c.setLineDash([9/s,9/s]);c.stroke(P.rail);c.setLineDash([]);
