@@ -414,7 +414,7 @@ if(gmKey)useGoogle();
 
 // ---- Widok jak w nawigacji samochodowej ----
 function setDist(t){$('dist').textContent=t}
-let tiltDeg=50, curRot=0, tgtRot=0, rotInit=true, lastH=0, night=(()=>{const h=new Date().getHours();return h>=19||h<6})();
+let hAnch=null, tiltDeg=50, curRot=0, tgtRot=0, rotInit=true, lastH=0, night=(()=>{const h=new Date().getHours();return h>=19||h<6})();
 function applyNight(){document.body.classList.toggle('night',night);$('night').textContent=night?'Dzień':'Noc'}
 $('night').onclick=()=>{night=!night;applyNight()};
 applyNight();
@@ -425,11 +425,18 @@ function follow(p){
   const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   scaleTgt=kmh>110?.3:kmh>80?.4:kmh>50?.55:kmh>25?.75:1;
   if(vec){
-    camFix(p,p.heading!=null?p.heading:lastH);
+    camFix(p,p.heading!=null&&!isNaN(p.heading)?p.heading:lastH);
     if((!vecData||dist(vecData.lat,vecData.lon,p.lat,p.lon)>600)&&Date.now()>vecNext)loadVec(p.lat,p.lon);
   }else map.setView([p.lat,p.lon],kmh>90?15:kmh>50?16:17,{animate:false});
-  if(p.heading!=null&&(p.speed||0)>1.5)lastH=p.heading;
-  tgtRot=-lastH;if(rotInit){curRot=tgtRot;rotInit=false}
+  // kierunek jazdy: 1) trasa (jeśli jedziemy po niej) 2) kierunek z GPS 3) ruch z ostatnich metrów
+  let h=null;
+  if(route&&route.pts.length>1&&route.off<60&&!demo){const a=routeAt(route,route.along+8),b=routeAt(route,route.along+45);if(dist(a[0],a[1],b[0],b[1])>10)h=bear(a[0],a[1],b[0],b[1])}
+  if(h==null&&p.heading!=null&&!isNaN(p.heading)&&(p.speed||0)>0.8)h=p.heading;
+  if(!hAnch)hAnch={lat:p.lat,lon:p.lon};
+  const mv=dist(hAnch.lat,hAnch.lon,p.lat,p.lon);
+  if(mv>6){const hm=bear(hAnch.lat,hAnch.lon,p.lat,p.lon);hAnch={lat:p.lat,lon:p.lon};if(h==null&&(p.speed||0)>0.8)h=hm}
+  if(h!=null)lastH=h;
+  tgtRot=-lastH;if(rotInit&&h!=null){curRot=tgtRot;rotInit=false}
 }
 
 // ---- Trasa: adresy (Photon/OSM), najszybsza trasa (OSRM), niebieska linia ----
