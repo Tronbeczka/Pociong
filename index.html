@@ -377,7 +377,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 53</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 54</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -2627,8 +2627,8 @@ setInterval(async()=>{
     }else if(cur){setRoute(cur.geometry.coordinates,cur.duration,cur.steps,cur.jam,cur.delay,cur.inc);route.lastRr=Date.now()}
   }catch(e){}
 },20000);
-let vctx=null,vq=1,lastVt=0,vd=null;
-function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(1.1,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0;vd=null}
+let vctx=null,vq=1,lastVt=0,vd=null,vqCap=1.8,slowN=0;   // ostrość mapy: do 1,8× rozdzielczości ekranu, automatycznie niżej na słabszym telefonie
+function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(vqCap,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0;vd=null}
 // Mapa jest rysowana RZADKO (gdy kamera odjedzie o ~12% płótna, zmieni się skala/dane/tryb nocny);
 // między przerysowaniami płótno przesuwa i skaluje karta graficzna (CSS), więc ruch jest płynny.
 var themeK='classic';try{themeK=localStorage.getItem('theme')||'classic'}catch(e){}
@@ -2698,7 +2698,7 @@ function drawVec(){
     const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s,dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);
     if(Math.hypot(e,n)*vd.s*k>S*.12||k<.8||k>1.25||dr>25)need=true;
   }
-  if(need&&now-lastVt>100){const t0=performance.now();paintVec(cam);lastVt=now;fpsPaint(performance.now()-t0)}
+  if(need&&now-lastVt>100){const t0=performance.now();paintVec(cam);lastVt=now;const ms=performance.now()-t0;fpsPaint(ms);if(ms>110&&vq>1.15){if(++slowN>=3){slowN=0;vqCap=Math.max(1.1,vq-.35);sizeV()}}else if(ms<=110)slowN=0}
   if(!vd)return;
   const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s;
   $('vmap').style.transform='translate('+(-k*vd.s*e).toFixed(1)+'px,'+(k*vd.s*n).toFixed(1)+'px) scale('+k.toFixed(4)+')';
