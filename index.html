@@ -495,6 +495,61 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 #pickcars{overflow-x:auto;scrollbar-width:none;justify-content:flex-start}
 #pickcars::-webkit-scrollbar{display:none}
 .pc{flex:0 0 82px;width:82px;max-width:none}
+
+/* ===== Wersja 107: tryb nocny, ucięte teksty, widok poziomy ===== */
+body.night #speed{background:#23262d;color:#f1f3f5}
+body.night #speed small{color:#aab2bf}
+body.night #spd{color:#f1f3f5}
+body.night #speed.over{background:#4a1f1d}
+body.night #speed.over #spd{color:#ff8a80}
+body.night #tilt,body.night #recenter{background:#2d3139;color:#8ab4f8}
+body.night #mic{background:#2d3139;color:#e8eaed}
+body.night #mic.on{background:#d93025;color:#fff}
+body.night #compass{background:#2d3139}
+body.night #then{background:#2d3139;color:#e8eaed}
+#xBoard .xr.hot{background:#fde7e5;color:#7a1410;border-radius:12px;border-bottom:0;margin:2px 0 6px;padding:10px 10px}
+body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
+#settings select,#srchIn{text-overflow:ellipsis}
+#srchIn{min-width:0}
+#wait{left:70px;right:70px;padding:14px 12px;max-width:560px;margin:0 auto}
+body.night #evToast{background:#2b2f36f2;border:1px solid #ffffff1f}
+#evToast{top:calc(env(safe-area-inset-top,0px) + 150px)}
+@media (orientation:landscape) and (max-height:540px){
+  #banner,#strip{width:min(58%,560px)}
+  #banner{border-radius:0 0 20px 20px}
+  #bl{width:78px;padding:calc(env(safe-area-inset-top,0px) + 4px) 6px 4px;gap:0}
+  #bicon{width:30px;height:30px}
+  #dist{font-size:1rem}
+  #bt{padding:calc(env(safe-area-inset-top,0px) + 4px) 12px 4px}
+  #big{font-size:1.1rem}
+  #sub{font-size:.76rem;margin-top:1px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  #strip,body.night #strip{padding:6px 10px 0}
+  #info{font-size:.64rem;padding:2px 9px;max-width:100%}
+  #compass{top:8px;right:10px;width:40px;height:40px}
+  #setfab{top:54px;right:10px;width:40px;height:40px}
+  #repfab{top:100px;right:10px;width:40px;height:40px;font-size:20px}
+  #nextStrip{top:calc(env(safe-area-inset-top,0px) + 98px);right:auto;max-width:58%}
+  #nextStrip span{padding:3px 8px;font-size:.78rem}
+  #bar{right:auto;width:min(58%,560px);left:10px;bottom:8px;padding:5px 8px;border-radius:22px}
+  #bar button{width:38px;height:38px}
+  #bmain{font-size:1.05rem}#bsub{font-size:.74rem}
+  #speed{left:10px;bottom:66px;width:58px;height:58px;border-radius:18px}
+  #spd{font-size:1.35rem}
+  #lim{left:76px;bottom:66px;width:50px;height:50px;border-width:5px}#limv{font-size:1.2rem}
+  #mic{left:10px;bottom:130px;width:42px;height:42px;font-size:19px}
+  #planfab{left:10px;bottom:178px;width:42px;height:42px}
+  #srchfab{left:10px;bottom:226px;width:42px;height:42px}
+  #tilt{right:10px;bottom:10px;width:42px;height:42px}
+  #recenter{right:10px;bottom:58px;width:42px;height:42px}
+  #zoomb{right:10px;bottom:106px;width:42px}#zoomb button{width:42px;height:38px;font-size:24px}
+  #tcard{left:136px;right:62px;bottom:66px}
+  #attr{bottom:2px;left:auto;right:60px;transform:none}
+  #wait{left:62px;right:auto;width:min(52%,520px);top:110px;padding:10px 14px;font-size:.95rem}
+  #wait b{font-size:1.3rem}
+  #evToast{left:14px;right:auto;width:min(58%,520px);top:calc(env(safe-area-inset-top,0px) + 100px);padding:8px 12px}
+  #xBoard,#repSheet{left:auto;right:0;width:min(560px,62%);border-radius:24px 0 0 0;max-height:94vh}
+  #sig{top:calc(env(safe-area-inset-top,0px) + 100px)}
+}
 </style>
 </head>
 <body>
@@ -527,7 +582,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div id="settings" role="dialog" aria-label="Ustawienia"><div class="sHead"><button id="setBack" aria-label="Wróć" type="button">‹</button><h2>Ustawienia</h2><small id="setVer"></small></div>
 <div class="sBody">
 <button id="achOpen" type="button">🏆 Osiągnięcia i nowe samochody <span id="achCnt" style="float:right;color:var(--mut);font-weight:700"></span></button>
-<section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"><label><span>Motyw sezonowy</span><select id="seasonSel"><option value="auto">Automatycznie (Halloween, Święta, urodziny)</option><option value="off">Wyłączony</option><option value="halloween">Halloween (podgląd)</option><option value="xmas">Święta (podgląd)</option><option value="bday">Urodziny Natalki (podgląd)</option></select></label></div></section>
+<section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"><label><span>Motyw sezonowy<small style="display:block;font-weight:400;opacity:.65;font-size:.74rem;margin-top:2px">Halloween, Święta, urodziny</small></span><select id="seasonSel"><option value="auto">Automatycznie</option><option value="off">Wyłączony</option><option value="halloween">Halloween (podgląd)</option><option value="xmas">Święta (podgląd)</option><option value="bday">Urodziny Natalki (podgląd)</option></select></label></div></section>
 <section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
 <section><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
 <section><h3><i>🧭</i>Własne wskazówki nawigacji</h3><div class="sc" id="clipNav"><div class="sInfo">Nagraj lub wgraj własne „Skręć w prawo”, „Zjedź z ronda” itd. Aplikacja powie wtedy „Za 200 metrów”, odtworzy Twoje nagranie, a po nim przeczyta nazwę ulicy. Manewry bez nagrania są czytane głosem lektora.</div></div></section>
@@ -635,7 +690,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div id="repSheet"><h3>Zgłoś zdarzenie dla innych kierowców</h3><p id="repSub">Zgłoszenie dotyczy Twojej obecnej pozycji.</p><div id="repGrid"></div><button id="repCancel" type="button">Anuluj</button></div>
 <div id="evToast"><b id="evT1"></b><span id="evT2"></span><div class="evb" id="evB"></div></div>
 <button id="srchfab" aria-label="Szukaj miejsca" type="button">🔍</button>
-<div id="srchBox"><div id="srchRow"><input id="srchIn" placeholder="Wpisz miejscowość lub ulicę, np. Pszenno" autocomplete="off"><button id="srchX" type="button">✕</button></div><div id="srchSug"></div><div id="srchFavs"></div></div>
+<div id="srchBox"><div id="srchRow"><input id="srchIn" placeholder="Miejscowość lub ulica…" autocomplete="off"><button id="srchX" type="button">✕</button></div><div id="srchSug"></div><div id="srchFavs"></div></div>
 <div id="hud"><div id="hudCtl"><button type="button" id="hudMir">↔ Lustro: wł.</button><button type="button" id="hudX">✕ Zamknij</button></div><div id="hudBody"><div id="hudTop"><svg id="hudIc" viewBox="0 0 40 40"></svg><div id="hudDist"></div></div><div><div id="hudSpd">0</div><div id="hudU">km/h</div></div><div><div id="hudMsg"></div><div id="hudSub"></div></div></div></div>
 <div id="nextStrip"></div>
 <div id="xBoard"></div>
@@ -646,7 +701,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 106</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 107</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -879,6 +934,7 @@ function evaluate(p){
     const isAhead=moving?angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading)<45:d<150;
     if(isAhead&&d<Math.max(warnDist,1200))ahead.push({c,d});
   });
+  const wide=(route&&!demo&&route.off<100)||(p.speed>1.5&&p.heading!=null);   // zasięg sprawdzania: z trasą lub w ruchu – przed nami, w postoju bez trasy – tylko najbliższa okolica
   if(route&&!demo&&route.off<100){ // z trasą: liczą się tylko przejazdy leżące na trasie przed nami
     ahead=[];
     crossings.forEach(c=>{const rc=routeCross(c);
@@ -889,7 +945,7 @@ function evaluate(p){
   {const n2=ahead[1];$('then').style.display=n2?'flex':'none';if(n2)$('then').textContent='Potem '+fmtD(n2.d)}
   if(!ahead.length){window._nearX=null;setDist('');$('then').style.display='none';
     if(!xReady(p))setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych');   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
-    else setBanner('ok','Droga wolna','Brak przejazdów kolejowych w najbliższych '+fmtKm(Math.max(warnDist,1200)));
+    else setBanner('ok','Droga wolna',wide?'Brak przejazdów kolejowych w najbliższych '+fmtKm(Math.max(warnDist,1200)):'Brak przejazdu kolejowego w pobliżu');
     return}
 
   const near=ahead[0], n=Math.round(near.d/10)*10;
@@ -2438,7 +2494,7 @@ const alarm={last:0,dis:null,id:null};
 $('alarmOn').checked=LSget('alarmOn',true);$('alarmOn').onchange=()=>LSput('alarmOn',$('alarmOn').checked);
 function showAlarm(s,m,id){
   if(!$('alarmOn').checked||alarm.dis===id||window.preview)return;
-  const el=$('alarm');if(el.style.display!=='flex'){el.style.display='flex';try{navigator.vibrate&&navigator.vibrate([300,120,300,120,300])}catch(e){}}
+  const el=$('alarm');if(el.style.display!=='flex'){el.style.display='flex';$('evToast').style.display='none';try{navigator.vibrate&&navigator.vibrate([300,120,300,120,300])}catch(e){}}
   alarm.last=Date.now();alarm.id=id;$('alT').textContent=Math.max(0,Math.round(s/5)*5)+' s';$('alD').textContent='Przejazd za '+m+' m'+(s<=25?' · rogatki mogą być już zamknięte':'');
 }
 $('alOk').onclick=()=>{alarm.dis=alarm.id;$('alarm').style.display='none'};
@@ -2637,6 +2693,19 @@ function evToast(t1,t2,btns,ms){
   (btns||[]).forEach(([lab,fn])=>{const x=document.createElement('button');x.type='button';x.textContent=lab;x.onclick=()=>{$('evToast').style.display='none';fn()};b.appendChild(x)});
   $('evToast').style.display='block';clearTimeout(evToast.t);evToast.t=setTimeout(()=>{$('evToast').style.display='none'},ms||6000);
 }
+// czy na ekranie jest coś ważniejszego od podpowiedzi (alarm, karta czekania, tablica, plan trasy, ustawienia, ostrzeżenie)
+function uiBusy(){
+  const on=id=>{const e=$(id);return !!e&&getComputedStyle(e).display!=='none'};
+  if(['alarm','wait','xBoard','repSheet','srchBox','pick','intro'].some(on))return true;
+  if($('settings').classList.contains('open'))return true;
+  return /\b(bad|warn)\b/.test($('banner').className);
+}
+// komunikaty „z własnej inicjatywy” aplikacji (podpowiedzi, wyzwania) czekają, aż ekran będzie wolny (najwyżej ok. 30 s)
+function evToastQ(t1,t2,btns,ms,n){
+  n=n||0;
+  if(uiBusy()&&n<12){setTimeout(()=>evToastQ(t1,t2,btns,ms,n+1),2500);return}
+  evToast(t1,t2,btns,ms);
+}
 // panel zgłaszania
 {
   const g=$('repGrid');
@@ -2791,9 +2860,11 @@ function xDepartures(c){
   out.sort((a,b)=>a.t-b.t);return out.slice(0,8);
 }
 function showBoard(c){
+  if(!xTapped){xTapped=true;try{localStorage.setItem('xtap','1')}catch(e){}}
   const B=$('xBoard'),L=xDepartures(c);
   const hh=t=>new Date(t*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   const kind=c.rem?'dodany przez innego kierowcę':c.user?'dodany przez Ciebie':c.der?'wykryty na mapie (tor przecina drogę), rodzaj nieznany':c.inf&&!c.br&&!c.li&&!c.nb?'rodzaj nieznany (brak opisu w OpenStreetMap)':c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
+  const shown=new Set();
   let h='<h3>🚆 Przejazd kolejowy</h3><div class="xs">'+kind+tracks+' · najbliższe pociągi (wg rozkładu i opóźnień na żywo)</div>';
   {const X=LSget('xwait',{})[c.id],hk=hourKey(),cs=(LSget('cstat',{})[c.id]||{})[hk]||0,own=[];
    if(X&&X.n>0)own.push('Zwykle czekasz tu ok. '+(X.s/X.n>=90?Math.round(X.s/X.n/60)+' min':Math.round(X.s/X.n)+' s')+' ('+X.n+' '+(X.n===1?'raz':'razy')+')');
@@ -2802,12 +2873,13 @@ function showBoard(c){
   {const ls=liveStatus();if(ls)h+='<div class="xs" style="color:#b3261e;font-weight:600">'+ls+'</div>';
    const nowS=Date.now()/1000,ap=(L||[]).filter(x=>x.t<nowS+1200&&x.t>=nowS-5);
    if(ap.length){h+='<div class="xs" style="margin-top:4px"><b>🚨 Nadjeżdża teraz</b></div>';
-     ap.slice(0,3).forEach(x=>{const m=Math.max(0,Math.round((x.t-nowS)/60)),nm=String(x.name).split(' → ');
-       h+='<div class="xr" style="background:#fde7e5;border-radius:10px;color:#7a1410"><span class="xt" style="min-width:76px;font-size:.95rem">'+(m<1?'za chwilę':'za '+m+' min')+'</span><span class="xn">'+nm[0]+'<small>'+(x.along!=null?fmtKm(x.along)+' od przejazdu':'')+(x.sp!=null&&x.sp>3?' · '+Math.round(x.sp)+' km/h':'')+(x.late>=2?' · +'+x.late+' min':'')+(x.live?'':' · wg rozkładu')+'</small></span></div>'})}
+     ap.slice(0,3).forEach(x=>{shown.add(x);const m=Math.max(0,Math.round((x.t-nowS)/60)),nm=String(x.name).split(' → ');
+       h+='<div class="xr hot"><span class="xt" style="min-width:76px;font-size:.95rem">'+(m<1?'za chwilę':'za '+m+' min')+'</span><span class="xn">'+nm[0]+(nm[1]?' → '+nm[1]:'')+'<small>'+hh(x.t)+(x.along!=null?' · '+fmtKm(x.along)+' od przejazdu':'')+(x.sp!=null&&x.sp>3?' · '+Math.round(x.sp)+' km/h':'')+(x.late>=2?' · +'+x.late+' min':'')+(x.live?'':' · wg rozkładu')+'</small></span></div>'})}
    else if(gtfs)h+='<div class="xs">Według danych żaden pociąg nie dojedzie do tego przejazdu w ciągu 20 minut.</div>'}
   if(L===null)h+='<div class="xs">Rozkład jazdy nie jest jeszcze wczytany – poczekaj chwilę lub wczytaj go w ustawieniach.</div>';
   else if(!L.length)h+='<div class="xs">W ciągu 3 godzin nie ma kursów przez ten przejazd.</div>';
   else L.forEach(x=>{
+    if(shown.has(x))return;   // ten pociąg jest już wyżej, w sekcji „Nadjeżdża teraz”
     const m=Math.round((x.t-Date.now()/1000)/60),when=m<=0?'teraz':m<60?'za '+m+' min':'za '+Math.floor(m/60)+' h '+(m%60)+' min';
     const nm=x.name.split(' → ');
     h+='<div class="xr"><span class="xt">'+hh(x.t)+'</span><span class="xn">'+nm[0]+(nm[1]?'<small>→ '+nm[1]+'</small>':'')+'</span><span class="xe">'+when+(x.late>=2?'<div class="late">+'+x.late+' min</div>':'')+'</span></div>';
@@ -3255,7 +3327,7 @@ function drawRadar(){
 // ---- tablica przejazdu: odświeżanie na żywo i jednorazowa podpowiedź ----
 setInterval(()=>{const B=$('xBoard');if(!B||B.style.display!=='block'||!B.dataset.c)return;const c=xAll.get(+B.dataset.c)||xAll.get(B.dataset.c);if(c)showBoard(c)},10000);
 setInterval(()=>{
-  if(LSget('xhint',false)||!vf||!vf.car||!xAll.size||window.__xhintBusy)return;
+  if(LSget('xhint',false)||!vf||!vf.car||!xAll.size||window.__xhintBusy||uiBusy())return;
   const car=vf.car;for(const c of xAll.values()){if(dist(car.lat,car.lon,c.lat,c.lon)<1500){LSput('xhint',true);evToast('💡 Dotknij znaku przejazdu na mapie','Zobaczysz pociągi, które nadjeżdżają, oraz rozkład na najbliższe 3 godziny.',[],9000);break}}
 },4000);
 
@@ -4138,16 +4210,27 @@ function drawRouteTop(){
   const Rr=rw('tr',scaleCur),def=singleLane?0:Rr/4,lc=laneCur==null?def:laneCur;
   const brg=[],dcum=[0];
   for(let i=0;i<pts.length;i++){const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];brg.push(bear(a[0],a[1],b[0],b[1]));if(i)dcum.push(dcum[i-1]+dist(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]))}
-  const pr=pts.map((q,i)=>{
-    const px=dcum[i]<60?lc:dcum[i]>140?def:lc+(def-lc)*(dcum[i]-60)/80,m=px/scaleCur,r=rad(brg[i]+90);
-    return proj(q[0]+Math.cos(r)*m/111195,q[1]+Math.sin(r)*m/(111195*Math.cos(rad(q[0]))));
-  });
+  const offAt=d=>d<60?lc:d>140?def:lc+(def-lc)*(d-60)/80;
+  const pAt=(la,lo,b,d)=>{const m=offAt(d)/scaleCur,r=rad(b+90);return proj(la+Math.cos(r)*m/111195,lo+Math.sin(r)*m/(111195*Math.cos(rad(la))))};
+  const pr=pts.map((q,i)=>pAt(q[0],q[1],brg[i],dcum[i]));
   const lw=singleLane?Math.max(6,Math.min(14,Rr*.5)):Math.max(5,Math.min(12,Rr*.34));
+  // dłuższe odcinki dzielimy na krótsze kawałki, żeby szerokość linii zmieniała się płynnie wraz z perspektywą (bez „schodków” na brzegach)
+  const pieces=[];
+  for(let i=0;i<pr.length-1;i++){
+    const a=pr[i],b=pr[i+1];if(!a||!b)continue;
+    const n=Math.min(10,Math.max(1,Math.ceil(Math.abs(a.k-b.k)/(.03*(a.k+b.k)/2))));
+    let p0=a;
+    for(let j=1;j<=n;j++){
+      let p1=b;
+      if(j<n){const t=j/n,A=pts[i],B=pts[i+1],db=((brg[i+1]-brg[i]+540)%360)-180;p1=pAt(A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,brg[i]+db*t,dcum[i]+(dcum[i+1]-dcum[i])*t);if(!p1)break}
+      pieces.push({a:p0,b:p1,i});p0=p1;
+    }
+  }
   mx.lineCap='round';mx.lineJoin='round';
   for(const [w,col] of [[lw*1.55,'#0b0b0d'],[lw*1.02,pal.route]]){   // niebieska linia z czarnymi paskami po bokach
-    for(let i=0;i<pr.length-1;i++){
-      const a=pr[i],b=pr[i+1];if(!a||!b)continue;
-      const jl=(route&&route.jam)?route.jam[routeSegI+i]||0:0;   // natężenie ruchu: kolor drogi zależy od korka
+    for(const pc of pieces){
+      const a=pc.a,b=pc.b;
+      const jl=(route&&route.jam)?route.jam[routeSegI+pc.i]||0:0;   // natężenie ruchu: kolor drogi zależy od korka
       mx.strokeStyle=(jl&&w<lw*1.2)?JC[jl]:col;
       mx.beginPath();mx.moveTo(a.x,a.y);mx.lineTo(b.x,b.y);
       mx.lineWidth=(w+(jl&&w<lw*1.2?2:0))*Math.max(.3,Math.min(1.25,(a.k+b.k)/2));mx.stroke();
@@ -4332,15 +4415,37 @@ function drawXMark(o,rank){
   mx.beginPath();mx.moveTo(-a,cy-a*.9);mx.lineTo(a,cy+a*.9);mx.moveTo(a,cy-a*.9);mx.lineTo(-a,cy+a*.9);mx.stroke();
   {const ru=u*.46,cx=u*1.12,cy=-u*1.05;mx.beginPath();mx.arc(cx,cy,ru,0,6.2832);mx.fillStyle='#1a73e8';mx.fill();mx.lineWidth=Math.max(1.5,u*.12);mx.strokeStyle='#fff';mx.stroke();
    mx.fillStyle='#fff';mx.font='800 '+Math.round(ru*1.45)+'px Inter,system-ui,sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('i',cx,cy+ru*.06)}   // znaczek: można dotknąć
-  if(rank&&rank.has(c.id)){
-    const m=o.d,txt=(m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m'),y0=u*.78+u*.22;
-    mx.font='800 '+Math.round(Math.max(12,Math.min(16,u*.8)))+'px Inter,system-ui,sans-serif';mx.textAlign='center';mx.textBaseline='top';mx.lineWidth=4;
-    const lab=(t,yy,col)=>{mx.strokeStyle='rgba(255,255,255,.96)';mx.strokeText(t,0,yy);mx.fillStyle=col;mx.fillText(t,0,yy)};
-    lab('Przejazd · '+txt,y0,'#8f1d1d');
-    if(c.nb)lab('bez zapór!',y0+Math.max(14,u*.85),'#c62828');
-    const nx=xNext(c);lab(nx==null?'👆 dotknij: pociągi':nx<0?'🚆 brak kursów (3 h)':nx<=0?'🚆 pociąg teraz':'🚆 pociąg za '+(nx<60?nx+' min':Math.floor(nx/60)+' h '+(nx%60)+' min'),y0+Math.max(14,u*.85)*(c.nb?2:1),nx!=null&&nx>=0&&nx<=5?'#8f1d1d':'#37474f');
+  if(rank&&rank.has(c.id)&&o.d>=35){   // przy samym przejeździe etykieta zasłaniałaby auto
+    const m=o.d,txt=(m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m');
+    const lines=[['Przejazd · '+txt,'#8f1d1d']];
+    if(c.nb)lines.push(['bez zapór!','#c62828']);
+    const nx=xNext(c);
+    if(nx==null){if(!xTapped)lines.push(['👆 dotknij: pociągi','#37474f'])}
+    else lines.push([nx<0?'🚆 brak kursów (3 h)':nx<=0?'🚆 pociąg teraz':'🚆 pociąg za '+(nx<60?nx+' min':Math.floor(nx/60)+' h '+(nx%60)+' min'),nx>=0&&nx<=5?'#8f1d1d':'#37474f']);
+    XLAB.push({x,y:y-u*1.75+u*1.0,d:o.d,fs:Math.round(Math.max(12,Math.min(16,u*.8))),lines});
   }
   mx.restore();
+}
+// etykiety przejazdów rysujemy po wszystkich znakach: najbliższe pierwsze, a etykieta, która nachodziłaby na wcześniejszą, jest pomijana
+const XLAB=[],XNC={'#8f1d1d':'#ff9d94','#c62828':'#ff7a6e','#37474f':'#cfd8dc'};   // XNC: jaśniejsze litery w nocy
+var xTapped=(()=>{try{return localStorage.getItem('xtap')==='1'}catch(e){return false}})();
+function drawXLabels(){
+  if(!XLAB.length)return;
+  XLAB.sort((a,b)=>a.d-b.d);
+  const placed=[];
+  const W=window.innerWidth;
+  mx.save();mx.textAlign='center';mx.textBaseline='top';mx.lineWidth=4;mx.lineJoin='round';
+  for(const L of XLAB){
+    if(L.x<-20||L.x>W+20)continue;   // znak poza ekranem
+    const lh=Math.round(L.fs*1.25);mx.font='800 '+L.fs+'px Inter,system-ui,sans-serif';
+    let w=0;for(const [t] of L.lines)w=Math.max(w,mx.measureText(t).width);
+    const cx=Math.max(w/2+6,Math.min(W-w/2-6,L.x));   // przy brzegu ekranu napis się przesuwa, zamiast być ucięty
+    const bx={x0:cx-w/2-5,x1:cx+w/2+5,y0:L.y-2,y1:L.y+lh*L.lines.length+2};
+    if(placed.some(q=>bx.x0<q.x1&&bx.x1>q.x0&&bx.y0<q.y1&&bx.y1>q.y0))continue;
+    placed.push(bx);
+    L.lines.forEach(([t,col],i)=>{const yy=L.y+i*lh;mx.strokeStyle=night?'rgba(10,13,18,.92)':'rgba(255,255,255,.96)';mx.strokeText(t,cx,yy);mx.fillStyle=night?(XNC[col]||col):col;mx.fillText(t,cx,yy)});
+  }
+  mx.restore();XLAB.length=0;
 }
 function drawMarkers(){
   const W=window.innerWidth,H=window.innerHeight;
@@ -4372,6 +4477,7 @@ function drawMarkers(){
   if(endPt){const p=P(endPt.lat,endPt.lon);if(p)list.push({p,t:2})}
   if(pinPt){const p=P(pinPt.lat,pinPt.lon);if(p)list.push({p,t:3})}
   list.sort((a,b)=>a.p.y-b.p.y); // dalsze najpierw
+  XLAB.length=0;
   const xRank=new Set(list.filter(o=>o.t===0&&o.d<1800).sort((a,b)=>a.d-b.d).slice(0,3).map(o=>o.c.id));   // etykiety z odległością tylko dla trzech najbliższych
   for(const o of list){
     const {x,y,k}=o.p;if(x<-40||x>W+40||y<-40||y>H+40)continue;
@@ -4389,6 +4495,7 @@ function drawMarkers(){
       mx.strokeStyle='rgba(255,255,255,.95)';mx.strokeText(nm,x,y-r-9);mx.fillStyle='#1a56b8';mx.fillText(nm,x,y-r-9);
     }
   }
+  drawXLabels();
 }
 var ecoOn=false,fcnt=0;
 var lastFt=0;
@@ -5544,8 +5651,9 @@ async function routeForecast(R,xs,when){
 }
 
 // --- jednorazowa wskazówka o przytrzymaniu mapy ---
-setTimeout(()=>{
-  if(LSget('hint104',0)||route||celLink||$('evToast').style.display==='block')return;
+setTimeout(function h104(){
+  if(LSget('hint104',0)||route||celLink)return;
+  if($('evToast').style.display==='block'||uiBusy()){setTimeout(h104,10000);return}   // plan trasy otwarty – spróbuj za chwilę
   LSput('hint104',1);evToast('💡 Wskazówka','Przytrzymaj palec na mapie, aby wybrać cel, dodać przejazd albo wysłać miejsce znajomemu.',null,9000);
 },30000);
 
@@ -5619,7 +5727,7 @@ function chCheck(){
     if(C.done.includes(i))continue;const q=CH_POOL[i];
     if(q.f()>=q.v){
       C.done.push(i);ACH_ST.chd=(ACH_ST.chd||0)+1;achSave();
-      try{evToast('🎯 Wyzwanie ukończone','„'+q.t+'” – brawo! +40 pkt'+(C.done.length===3?' · wszystkie wyzwania dnia zaliczone':''),null,7000)}catch(e){}
+      try{evToastQ('🎯 Wyzwanie ukończone','„'+q.t+'” – brawo! +40 pkt'+(C.done.length===3?' · wszystkie wyzwania dnia zaliczone':''),null,7000)}catch(e){}
       try{say('ch'+i+C.day,'Wyzwanie ukończone. Gratuluję.',[100],'Wyzwanie ukończone')}catch(e){}
     }
   }
@@ -5645,7 +5753,7 @@ function chRender(){
 setTimeout(()=>{   // w poniedziałek: krótkie podsumowanie minionego tygodnia
   try{
     const a=wkSum(0);if(new Date().getDay()!==1||LSget('wkShown','')===dayKey()||a.km<.5)return;LSput('wkShown',dayKey());
-    evToast('📅 Podsumowanie tygodnia',a.km.toFixed(1).replace('.',',')+' km · '+a.x+' mijanych przejazdów · '+a.tr+' pociągów',[['Pokaż',()=>$('achOpen').click()],['Zamknij',()=>{}]],14000);
+    evToastQ('📅 Podsumowanie tygodnia',a.km.toFixed(1).replace('.',',')+' km · '+a.x+' mijanych przejazdów · '+a.tr+' pociągów',[['Pokaż',()=>$('achOpen').click()],['Zamknij',()=>{}]],14000);
   }catch(e){}
 },16000);
 </script>
