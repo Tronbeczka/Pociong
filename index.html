@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="dns-prefetch" href="https://api.tomtom.com">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Przejazd – alert kolejowy</title>
@@ -642,7 +644,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 100</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 101</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -952,6 +954,7 @@ function onPos(g){window.gpsErr=false;
     heading=(deg(Math.atan2(w*Math.sin(a)+(1-w)*Math.sin(b),w*Math.cos(a)+(1-w)*Math.cos(b)))+360)%360;
     speed=.75*speed+.25*gpsOk.speed}
   gpsOk={lat:c.latitude,lon:c.longitude,t,h:heading,speed};
+  if(t-(onPos.sv||0)>10000){onPos.sv=t;try{localStorage.setItem('lastpos',JSON.stringify({lat:c.latitude,lon:c.longitude,t:Date.now()}))}catch(e){}}
   last={lat:c.latitude,lon:c.longitude,t};
   evaluate({lat:c.latitude,lon:c.longitude,speed,heading});
 }
@@ -3181,11 +3184,18 @@ setInterval(()=>{
   if(LSget('xhint',false)||!vf||!vf.car||!xAll.size||window.__xhintBusy)return;
   const car=vf.car;for(const c of xAll.values()){if(dist(car.lat,car.lon,c.lat,c.lon)<1500){LSput('xhint',true);evToast('💡 Dotknij znaku przejazdu na mapie','Zobaczysz pociągi, które nadjeżdżają, oraz rozkład na najbliższe 3 godziny.',[],9000);break}}
 },4000);
+
+// ---- szybszy start mapy: kafelki wokół ostatniej znanej pozycji ładują się, zanim złapie GPS ----
+try{
+  const lp=JSON.parse(localStorage.getItem('lastpos')||'null');
+  if(lp&&Date.now()-lp.t<30*864e5&&typeof loadVec==='function')setTimeout(()=>{if(!vecData)loadVec(lp.lat,lp.lon)},0);
+  ofmUrl().catch(()=>{});
+}catch(e){}
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
   const hide=()=>{if(done)return;done=true;sp.classList.add('out');setTimeout(()=>sp.remove(),900)};
-  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>(window.__spMin||2000)&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)))){clearInterval(tick);hide()}},150);
+  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>(window.__spMin||900)&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)))){clearInterval(tick);hide()}},150);
 }
 // ---- Ekran informacyjny (raz) i ostrzeżenie o pracy w tle ----
 {
@@ -3745,6 +3755,10 @@ function buildMvt(tiles,lat0,lon0){
 }
 async function ofmUrl(){
   let c=null;try{c=JSON.parse(localStorage.getItem('ofm')||'null');if(c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
+  if(c&&c.u){   // starszy adres działa dalej – używamy go od razu, a nowy pobieramy w tle
+    if(!ofmUrl.bg){ofmUrl.bg=1;fetch('https://tiles.openfreemap.org/planet').then(r=>r.json()).then(j=>{if(j&&j.tiles&&j.tiles[0])localStorage.setItem('ofm',JSON.stringify({t:Date.now(),u:j.tiles[0]}))}).catch(()=>{}).finally(()=>{ofmUrl.bg=0})}
+    return c.u;
+  }
   try{
     const r=await fetch('https://tiles.openfreemap.org/planet');if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json(),u=j.tiles&&j.tiles[0];if(!u)throw new Error('brak adresu kafelków');
@@ -3796,11 +3810,11 @@ async function loadVec(lat,lon){
       const tpl=await ofmUrl(),z=14,n=Math.pow(2,z);
       const fx=(lon+180)/360*n,fy=(1-Math.log(Math.tan(rad(lat))+1/Math.cos(rad(lat)))/Math.PI)/2*n;
       const tx=Math.floor(fx),ty=Math.floor(fy);
+      const rest=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(dx||dy)rest.push(getTile(tpl,z,tx+dx,ty+dy));   // sąsiednie kafelki ruszają równolegle ze środkowym
       const first=await getTile(tpl,z,tx,ty);
       let dat=buildMvt([first],lat,lon);
       if(!Object.keys(dat.P).length)throw new Error('pusta mapa');
       vecData=dat;xDerAdd(dat.XC);$('attr').textContent='© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap';
-      const rest=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(dx||dy)rest.push(getTile(tpl,z,tx+dx,ty+dy));
       const all=[first,...(await Promise.allSettled(rest)).filter(r=>r.status==='fulfilled').map(r=>r.value)];
       dat=buildMvt(all,lat,lon);dat.tx=tx;dat.ty=ty;dat.z=z;vecData=dat;xDerAdd(dat.XC);
       fetchSpeed(lat,lon,dat);
