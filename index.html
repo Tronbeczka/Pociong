@@ -164,6 +164,20 @@ body.night #cfg input{background:#2a2d33;color:#e6e9ee;border-color:#3b4048}
 #pickcars{flex-wrap:nowrap;gap:8px;margin:22px 0 18px}
 .pc{width:calc(25% - 6px);min-width:0;max-width:130px;padding:10px 4px}
 .pc div{font-size:.78rem}
+#tcard{position:absolute;left:96px;right:74px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:900;min-height:74px;display:none;align-items:center;gap:10px;background:#fff;color:#1f2933;border-radius:20px;border-left:6px solid #9aa0a6;padding:8px 12px 8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+body.night #tcard{background:#202228;color:#e6e9ee}
+#tcard.far{border-left-color:#16a34a}
+#tcard.mid{border-left-color:#f29a2e}
+#tcard.near{border-left-color:#d93025}
+#tarr{flex:none;width:38px;height:38px;border-radius:50%;background:#26303a;display:flex;align-items:center;justify-content:center}
+#tarr svg{width:24px;height:24px;transition:transform .3s}
+#tcard.near #tarr{background:#d93025}
+#tcard.mid #tarr{background:#e0830f}
+#tcard.far #tarr{background:#16a34a}
+#tcard .tx{min-width:0;display:flex;flex-direction:column}
+#tname{font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tdist{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+#tmeta{font-size:.72rem;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #ttstat{font-size:.75rem;opacity:.6;margin-top:12px;min-height:1.2em}
 </style>
 </head>
@@ -228,6 +242,7 @@ body.night #cfg input{background:#2a2d33;color:#e6e9ee;border-color:#3b4048}
   <div id="ttstat"></div>
   <p style="font-size:.7rem;opacity:.55;margin-top:6px">Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
 </div></div>
+<div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small></div></div>
 <div id="lim"><span id="limv"></span></div>
 <div id="speed"><span id="spd">0</span><small>km/h</small></div>
 <div id="attr"></div>
@@ -320,6 +335,7 @@ setInterval(loadTrains,5000);
 function evaluate(p){
   follow(p);
   updInfo(p);
+  updTrainCard(p);
   routeUpdate(p);
   if(!demo&&gtfsCenter&&!ttBusy&&Date.now()-lastRecentre>600000&&dist(gtfsCenter.lat,gtfsCenter.lon,p.lat,p.lon)>100000){lastRecentre=Date.now();loadTimetable(true)}
   if(!demo&&(!lastFetch||dist(lastFetch.lat,lastFetch.lon,p.lat,p.lon)>1500))loadCrossings(p.lat,p.lon);
@@ -760,6 +776,27 @@ $('closeNav').onclick=()=>{
   setBanner('ok','Zakończono','Wybierz samochód i naciśnij Jedź');
   $('pick').style.display='flex';
 };
+let nearTrainId=null;
+const fmtKm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m';
+function updTrainCard(p){
+  const card=$('tcard');
+  const hasSrc=demo||gKey||gtfs||feedUrl;
+  if(!hasSrc){card.style.display='none';nearTrainId=null;return}
+  let best=null,bd=1e12;
+  for(const t of trains){const d=dist(p.lat,p.lon,t.lat,t.lon);if(d<bd){bd=d;best=t}}
+  card.style.display='flex';
+  if(!best||bd>40000){nearTrainId=null;card.className='';$('tname').textContent='Brak pociągów w pobliżu';$('tdist').textContent='> 40 km';$('tmeta').textContent='';$('tarr').style.visibility='hidden';return}
+  nearTrainId=best.id;$('tarr').style.visibility='visible';
+  $('tname').textContent=best.id;
+  $('tdist').textContent=fmtKm(bd);
+  const sp=best.speed!=null?Math.round(best.speed):null;
+  let toward='';
+  if(best.heading!=null&&(sp==null||sp>3)){toward=angDiff(bear(best.lat,best.lon,p.lat,p.lon),best.heading)<50?' · w Twoją stronę':' · w inną stronę'}
+  $('tmeta').textContent=(sp==null?'':sp>3?sp+' km/h':'stoi')+toward+(best.rt===false?' · wg rozkładu':'');
+  card.className=bd<1500?'near':bd<5000?'mid':'far';
+  const rel=(bear(p.lat,p.lon,best.lat,best.lon)-lastH+360)%360;
+  $('tarr').firstElementChild.style.transform='rotate('+rel+'deg)';
+}
 function updInfo(p){
   const nT=trains.filter(t=>dist(p.lat,p.lon,t.lat,t.lon)<10000).length;
   const src=demo?'demo':gKey?'geOps':gtfs?'rozkład PKP':feedUrl?'własne dane':'brak danych o pociągach';
@@ -1109,7 +1146,7 @@ function drawMarkers(){
   if(vec)drawVec();const P=proj;
   const list=[];
   crossings.forEach(c=>{const p=P(c.lat,c.lon);if(p)list.push({p,t:0})});
-  trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt})});
+  trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt,near:t.id===nearTrainId,name:t.id})});
   if(endPt){const p=P(endPt.lat,endPt.lon);if(p)list.push({p,t:2})}
   list.sort((a,b)=>a.p.y-b.p.y); // dalsze najpierw
   for(const o of list){
@@ -1119,6 +1156,12 @@ function drawMarkers(){
     mx.beginPath();mx.arc(x,y,r,0,6.2832);
     if(o.t){mx.fillStyle=o.rt===false?'#fff':'#f6e05e';mx.fill();mx.lineWidth=Math.max(2,r*.28);mx.strokeStyle='#000';mx.stroke()}
     else{mx.fillStyle='#fff';mx.fill();mx.lineWidth=Math.max(3,r*.42);mx.strokeStyle='#e53e3e';mx.stroke()}
+    if(o.near){
+      mx.beginPath();mx.arc(x,y,r+6,0,6.2832);mx.lineWidth=3;mx.strokeStyle='#1a73e8';mx.stroke();
+      const nm=String(o.name||'pociąg').split(' → ')[0].slice(0,26);
+      mx.font='700 13px Inter,system-ui,sans-serif';mx.textAlign='center';mx.textBaseline='bottom';mx.lineWidth=4;mx.lineJoin='round';
+      mx.strokeStyle='rgba(255,255,255,.95)';mx.strokeText(nm,x,y-r-9);mx.fillStyle='#1a56b8';mx.fillText(nm,x,y-r-9);
+    }
   }
 }
 function frame(){
