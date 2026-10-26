@@ -766,6 +766,11 @@ function laneUpdate(st,i,d){
     fetchLanes(R,s).then(x=>{s.lanes=x},()=>{s.lanes=null}).finally(()=>{s.laneBusy=false;if(route===R)navUpdate()});
   }
   lnRender(s.lanes||null);
+  const L=s.lanes;
+  if(L&&d<320&&!s.laneSaid){
+    const n=L.lanes.length;let best=-1;for(let k=n-1;k>=0;k--)if(L.valid[k]){best=k;break}
+    if(best>=0&&best<n-1){s.laneSaid=1;say('lane'+i,best===0&&n>2?'Zjedź na skrajny lewy pas':'Zmień pas na lewy',[100,60,100])}
+  }
 }
 function navUpdate(){
   nav=null;
@@ -1654,7 +1659,23 @@ function proj(lat,lon){
   return {x:Px+(Cx+x1-Px)*k,y:Py+(Cy+y1*Math.cos(T)-Py)*k,k};
 }
 // auto na jezdni: na wyznaczonej trasie ikona jest „przyklejona” do drogi i jedzie prawym pasem
-var carSnap=null;
+var carSnap=null,laneCur=null,laneYaw=0;
+// docelowe położenie auta w poprzek jezdni (px od osi drogi, + = w prawo): domyślnie prawy pas; przed skrętem w lewo / przy zmianie pasa – przesunięcie w lewo
+function laneTarget(Rr){
+  let tgt=Rr/4;
+  if(nav&&nav.i>0&&route&&route.steps){
+    const st=route.steps[nav.i],d=nav.d;
+    if(st&&d<230&&d>6){
+      const L=st.lanes;
+      if(L&&L.lanes&&L.lanes.length>=2){
+        const n=L.lanes.length,pl=Math.min(22,Rr*.6/(n-1));let best=-1;
+        for(let i=n-1;i>=0;i--)if(L.valid[i]){best=i;break}   // najbliższy prawej, ale poprawny pas
+        if(best>=0)tgt=Rr/4+(best-(n-1))*pl;
+      }else if(lnDir(st)==='L'&&['turn','end of road'].includes(st.type))tgt=Rr*.08;   // skręt w lewo: bliżej osi jezdni
+    }
+  }
+  return tgt;
+}
 function updCarSnap(){
   const el=$('carIcon');carSnap=null;
   const Rr=rw('tr',scaleCur),Wc=Math.round(Math.max(40,Math.min(96,vec&&route?Rr*.8:96)));   // rozmiar auta dopasowany do szerokości drogi (tylko na trasie)
@@ -1665,12 +1686,14 @@ function updCarSnap(){
   if(m.off>30){el.style.transform=base;return}
   const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=routeAt(route,m.along),a=routeAt(route,Math.max(0,m.along-6)),b=routeAt(route,Math.min(route.len,m.along+6));
   const brg=dist(a[0],a[1],b[0],b[1])>2?bear(a[0],a[1],b[0],b[1]):lastH;
-  const lanePx=Rr/4,laneM=lanePx/scaleCur;   // prawy pas: środek prawej połowy jezdni
+  const tg=laneTarget(Rr);if(laneCur==null)laneCur=tg;
+  const prev=laneCur;laneCur+=(tg-laneCur)*.07;laneYaw+=(Math.max(-9,Math.min(9,(laneCur-prev)*14))-laneYaw)*.2;   // płynna zmiana pasa + lekkie wychylenie auta
+  const lanePx=laneCur,laneM=lanePx/scaleCur;
   const r=rad(brg+90),lat=c[0]+Math.cos(r)*laneM/111195,lon=c[1]+Math.sin(r)*laneM/(111195*Math.cos(rad(c[0])));
   const q=proj(lat,lon),q0=proj(vf.car.lat,vf.car.lon);
   carSnap={lat:c[0],lon:c[1]};
   if(!q||!q0){el.style.transform=base;return}
-  el.style.transform='translate(calc(-50% + '+((q.x-q0.x)*w).toFixed(1)+'px),calc(-80% + '+((q.y-q0.y)*w).toFixed(1)+'px))';
+  el.style.transform='translate(calc(-50% + '+((q.x-q0.x)*w).toFixed(1)+'px),calc(-80% + '+((q.y-q0.y)*w).toFixed(1)+'px)) rotate('+laneYaw.toFixed(1)+'deg)';
 }
 function drawMarkers(){
   const W=window.innerWidth,H=window.innerHeight;
