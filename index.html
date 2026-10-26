@@ -33,6 +33,49 @@ body.night #depcmp button{background:#2d3139;color:#e8eaed}#depcmp button.best{o
 #alarm .al3{font-size:1.25rem;font-weight:700}
 #alarm button{margin-top:26px;padding:14px 28px;border-radius:16px;background:#fff;color:#b3261e;font-weight:800;font-size:1.05rem}
 @keyframes alPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+/* ===== ekran ustawień ===== */
+#setfab{position:absolute;right:12px;top:calc(100% + 64px);width:46px;height:46px;border-radius:50%;background:#fff;color:#3c4043;box-shadow:0 3px 12px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;padding:0;z-index:900}
+#setfab svg{width:24px;height:24px}
+body.night #setfab{background:#2d3139;color:#e8eaed}
+#pickset{position:absolute;right:54px;top:10px;width:34px;height:34px;padding:0;border-radius:50%;background:#eef1f4;color:#3c4043;display:flex;align-items:center;justify-content:center}
+#pickset svg{width:19px;height:19px}body.night #pickset{background:#2d3139;color:#e8eaed}
+#settings{--bg:#f2f4f7;--card:#fff;--tx:#202124;--mut:#5f6368;--line:#e6e9ed;--acc:#1a73e8;position:fixed;inset:0;z-index:3400;background:var(--bg);color:var(--tx);display:none;flex-direction:column}
+body.night #settings{--bg:#13161b;--card:#1f2228;--tx:#e8eaed;--mut:#a9b0bb;--line:#2e333b;--acc:#6aa9ff}
+#settings.open{display:flex;animation:setIn .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes setIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+#settings .sHead{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
+#settings .sHead h2{margin:0;font-size:1.3rem;font-weight:800;flex:1}
+#settings .sHead small{color:var(--mut);font-weight:600}
+#setBack{width:42px;height:42px;border-radius:50%;padding:0;background:var(--card);color:var(--tx);font-size:1.6rem;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+#settings .sBody{flex:1;overflow:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 30px);-webkit-overflow-scrolling:touch}
+#settings section{max-width:620px;margin:0 auto 18px}
+#settings h3{margin:0 4px 8px;font-size:.8rem;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);font-weight:800;display:flex;align-items:center;gap:8px}
+#settings h3 i{font-style:normal;font-size:1.05rem}
+#settings .sc{background:var(--card);border-radius:20px;padding:2px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+#settings .sc>*{border-bottom:1px solid var(--line)}#settings .sc>*:last-child{border-bottom:0}
+#settings .sc>input[type=file]{display:none}
+#settings label{display:flex!important;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;font-size:1rem!important;color:var(--tx);cursor:pointer}
+#settings label input[type=range]{width:140px!important;accent-color:var(--acc)}
+#settings input[type=checkbox]{order:2;appearance:none;-webkit-appearance:none;flex:0 0 auto;width:48px;height:28px;border-radius:14px;background:#c4cad2;position:relative;transition:background .2s;margin:0;cursor:pointer}
+#settings input[type=checkbox]::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform .2s}
+#settings input[type=checkbox]:checked{background:var(--acc)}#settings input[type=checkbox]:checked::after{transform:translateX(20px)}
+body.night #settings input[type=checkbox]{background:#4a5059}body.night #settings input[type=checkbox]:checked{background:var(--acc)}
+#settings select{width:100%;padding:14px 8px;margin:0;border:0;background:transparent;color:var(--tx);font:inherit;font-size:1rem;font-weight:600;border-radius:0;color-scheme:light dark}
+#settings select option{color:#202124}
+#settings button.sec{display:flex;width:100%;justify-content:space-between;align-items:center;text-align:left;padding:15px 0;margin:0;border-radius:0;background:none;color:var(--tx);font-size:1rem;font-weight:600}
+#settings button.sec::after{content:"›";font-size:1.4rem;color:var(--mut)}
+#settings #cfg{display:block;padding:6px 0 12px}
+#settings #cfg input{width:100%;margin:6px 0}
+#settings #cfg input:not([type=file]){background:var(--bg);color:var(--tx);border:1px solid var(--line)}
+#settings #cfg small{color:var(--mut)}
+#settings #cfg button{display:inline-block;width:auto;padding:10px 16px;margin:6px 0;border-radius:12px;background:var(--acc);color:#fff;font-weight:700}
+#settings #cfg button::after{content:none}
+#settings #cars{margin:10px 0!important;overflow-x:auto}
+#settings #cars button{display:block!important;flex:0 0 92px;width:92px!important;padding:8px 4px;border-radius:14px;text-align:center;background:var(--bg);color:var(--tx);font-size:.8rem;font-weight:700}
+#settings #cars button::after{content:none!important}
+#settings #cars button div{margin-top:4px}
+#settings .sInfo{padding:14px 0;color:var(--mut);font-size:.9rem;line-height:1.4}
+@media (prefers-reduced-motion:reduce){#settings.open{animation:none}}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -358,6 +401,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
  <div id="lanes"></div>
  <div id="strip"><div id="info">Pociągi w pobliżu: –</div><div id="then"></div></div>
  <div id="compass"><svg viewBox="0 0 44 44"><polygon points="22,6 28,22 16,22" fill="#d93025"/><polygon points="22,38 28,22 16,22" fill="#9aa0a6"/></svg></div>
+ <button id="setfab" aria-label="Ustawienia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </div>
 <div id="intro"><div class="card"><h2>Zanim ruszysz</h2><ul>
 <li><b>To wsparcie, nie zabezpieczenie.</b> Aplikacja ostrzega o pociągach, ale nie zastępuje Twojej uwagi. Zawsze rozejrzyj się przy przejeździe.</li>
@@ -369,6 +413,16 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 </ul><button id="introOk">Rozumiem</button></div></div>
 <div id="fps" style="display:none"></div><div id="dim"></div><canvas id="jp" width="240" height="240" style="display:none"></canvas><div id="wait" style="display:none"></div><div id="alarm"><div class="al1">⚠ NADJEŻDŻA POCIĄG</div><div class="al2" id="alT">–</div><div class="al3" id="alD"></div><button id="alOk" type="button">Widzę</button></div>
 <div id="histbox" style="display:none"></div>
+<div id="settings" role="dialog" aria-label="Ustawienia"><div class="sHead"><button id="setBack" aria-label="Wróć" type="button">‹</button><h2>Ustawienia</h2><small id="setVer"></small></div>
+<div class="sBody">
+<section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"></div></section>
+<section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
+<section><h3><i>🚗</i>Samochód</h3><div class="sc" data-g="car"></div></section>
+<section><h3><i>🔋</i>Jazda i bateria</h3><div class="sc" data-g="drive"></div></section>
+<section><h3><i>📊</i>Historia i dane</h3><div class="sc" data-g="data"></div></section>
+<section><h3><i>🔧</i>Źródła danych i klucze</h3><div class="sc" data-g="adv"></div></section>
+<section><h3><i>ℹ️</i>O aplikacji</h3><div class="sc" data-g="about"><div class="sInfo">Przejazd – alert kolejowy. Ostrzeżenia o pociągach na przejazdach kolejowych na Twojej trasie. To wsparcie, nie zabezpieczenie – zawsze rozglądaj się na przejeździe.</div></div></section>
+</div></div>
 <div id="menu">
   <button id="start">Start</button>
   <button id="gear" class="sec">Ustawienia</button>
@@ -432,9 +486,9 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div id="zoomb"><button id="zin" aria-label="Przybliż">+</button><button id="zout" aria-label="Oddal">−</button></div>
 <button id="planfab" aria-label="Wyznacz trasę" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6"/></svg></button>
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
-<div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
+<div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 63</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 64</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -495,7 +549,7 @@ const xLayer=L.layerGroup().addTo(map), tLayer=L.layerGroup().addTo(map);
 let crossings=[], trains=[], last=null, lastFetch=null, feedUrl='', demo=false, watchId=null, spoken={}, audio=null, feedAt=0, trackPrev={};
 try{feedUrl=localStorage.getItem('feed')||'';$('feed').value=feedUrl}catch(e){}
 
-$('gear').onclick=()=>{const c=$('cfg');c.style.display=c.style.display==='block'?'none':'block'};
+$('gear').onclick=()=>openSettings();
 $('save').onclick=()=>{
   feedUrl=$('feed').value.trim();gKey=$('gkey').value.trim();
   gmKey=$('gmkey').value.trim();ttKey=$('ttkey').value.trim();flowAt=0;trChk=0;try{localStorage.setItem('ttkey',ttKey)}catch(e){}
@@ -1914,6 +1968,7 @@ function drawJunction(){
   c.fillStyle='#1a73e8';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(120,Math.min(228,150+nav.d*1.5),8,0,6.3);c.fill();c.stroke();
 }
 // motywy, sygnały, przyciemnienie nocne
+try{themeK=localStorage.getItem('theme')||'classic'}catch(e){themeK='classic'}   // wcześniej motyw nie był stosowany przy starcie (zmienna była jeszcze pusta)
 $('theme').value=themeK;document.body.classList.toggle('big',themeK==='big');document.body.classList.toggle('hc',themeK==='hc');
 $('theme').onchange=()=>{themeK=$('theme').value;try{localStorage.setItem('theme',themeK)}catch(e){}document.body.classList.toggle('big',themeK==='big');document.body.classList.toggle('hc',themeK==='hc');vd=null};
 $('sndsel').value=sndKind;$('sndsel').onchange=()=>{sndKind=$('sndsel').value;try{localStorage.setItem('snd',sndKind)}catch(e){}beep('Train')};
@@ -2123,6 +2178,28 @@ function showAlarm(s,m,id){
 }
 $('alOk').onclick=()=>{alarm.dis=alarm.id;$('alarm').style.display='none'};
 setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-alarm.last>2000)el.style.display='none';if(alarm.dis!=null&&Date.now()-alarm.last>8000)alarm.dis=null},500);
+
+// ================= Ekran ustawień (przenosi istniejące kontrolki w czytelne grupy) =================
+{
+  const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
+  const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
+  mv('look',['theme','autonight','dimOn']);
+  mv('snd',['vsel','vbose','sndsel','volTrain','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
+  document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
+  mv('car',['cars']);
+  mv('drive',['eco','logon','fpsOn','logdl','logan','logFile','report']);
+  mv('data',['hist','xstat','share','expSet','impSet','impFile','about']);
+  G('adv').appendChild($('cfg'));
+  // tytuły nad przełącznikami bez własnego opisu
+  const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
+}
+function openSettings(){
+  $('menu').classList.remove('open');$('setVer').textContent=($('ver')||{}).textContent||'';
+  $('settings').classList.add('open');$('settings').querySelector('.sBody').scrollTop=0;
+}
+function closeSettings(){$('settings').classList.remove('open')}
+$('setfab').onclick=openSettings;$('pickset').onclick=openSettings;$('setBack').onclick=closeSettings;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings()});
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
