@@ -120,6 +120,18 @@ body.night #brwFav{background:#2d3139;color:#e8eaed}
 #nextStrip{position:fixed;left:12px;right:70px;top:calc(env(safe-area-inset-top,0px) + 152px);z-index:880;display:none;gap:6px;flex-wrap:wrap;pointer-events:none}
 #nextStrip span{background:#202124d9;color:#fff;border-radius:14px;padding:5px 10px;font-weight:700;font-size:.85rem;box-shadow:0 3px 10px #0004}
 #nextStrip span.w{background:#b3261eee}
+#hud{position:fixed;inset:0;z-index:6000;background:#000;color:#fff;display:none;font-family:Inter,system-ui,sans-serif;--hc:#4ade80}
+#hud.warn{--hc:#fbbf24}#hud.bad{--hc:#ff5252}#hud.bad #hudMsg{animation:p .6s infinite alternate}
+#hudBody{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;padding:calc(env(safe-area-inset-top,0px) + 56px) 18px calc(env(safe-area-inset-bottom,0px) + 24px);text-align:center}
+#hud.mir #hudBody{transform:scaleX(-1)}
+#hudTop{display:flex;align-items:center;justify-content:center;gap:5vw}#hudIc{width:24vw;max-width:150px;height:24vw;max-height:150px}
+#hudDist{font-size:15vw;font-weight:800;color:var(--hc);line-height:1}
+#hudSpd{font-size:36vw;font-weight:900;line-height:.95;letter-spacing:-.02em}#hudU{font-size:5.5vw;opacity:.65;margin-top:-1vw}
+#hudMsg{font-size:7.2vw;font-weight:800;color:var(--hc);line-height:1.15}#hudSub{font-size:4.6vw;opacity:.75;margin-top:1vw}
+#hudCtl{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;display:flex;justify-content:space-between;gap:10px;opacity:0;pointer-events:none;transition:opacity .3s;z-index:2}
+#hud.ctl #hudCtl{opacity:1;pointer-events:auto}#hudCtl button{padding:11px 16px;border-radius:14px;background:#ffffff26;color:#fff;font-weight:700;font-size:.95rem}
+body.ui1 #banner,body.ui1 #strip,body.ui1 #bar,body.ui1 #speed,body.ui1 #tcard,body.ui1 #nextStrip,body.ui1 #xBoard,body.ui1 #evToast,body.ui1 #repSheet,body.ui1 #srchBox,body.ui1 #brwBack,body.ui1 #brwFav,body.ui1 #brwGo{zoom:1.15}
+body.ui2 #banner,body.ui2 #strip,body.ui2 #bar,body.ui2 #speed,body.ui2 #tcard,body.ui2 #nextStrip,body.ui2 #xBoard,body.ui2 #evToast,body.ui2 #repSheet,body.ui2 #srchBox,body.ui2 #brwBack,body.ui2 #brwFav,body.ui2 #brwGo{zoom:1.3}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -499,6 +511,8 @@ body.night #intro .card{background:#202228;color:#e8eaed}
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
+  <button id="hudBtn" class="sec">🪟 Tryb HUD (odbicie na szybie)</button>
+  <select id="uiSize" class="sec"><option value="0">Rozmiar paska, kart i okien: normalny</option><option value="1">Rozmiar paska, kart i okien: większy</option><option value="2">Rozmiar paska, kart i okien: największy</option></select>
   <button id="parkSave" class="sec">🅿️ Zapamiętaj miejsce parkowania</button>
   <button id="parkShow" class="sec">🅿️ Pokaż zaparkowane auto</button>
   <button id="dlarea" class="sec">Pobierz mapę okolicy (offline)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
@@ -554,6 +568,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div id="evToast"><b id="evT1"></b><span id="evT2"></span><div class="evb" id="evB"></div></div>
 <button id="srchfab" aria-label="Szukaj miejsca" type="button">🔍</button>
 <div id="srchBox"><div id="srchRow"><input id="srchIn" placeholder="Wpisz miejscowość lub ulicę, np. Pszenno" autocomplete="off"><button id="srchX" type="button">✕</button></div><div id="srchSug"></div><div id="srchFavs"></div></div>
+<div id="hud"><div id="hudCtl"><button type="button" id="hudMir">↔ Lustro: wł.</button><button type="button" id="hudX">✕ Zamknij</button></div><div id="hudBody"><div id="hudTop"><svg id="hudIc" viewBox="0 0 40 40"></svg><div id="hudDist"></div></div><div><div id="hudSpd">0</div><div id="hudU">km/h</div></div><div><div id="hudMsg"></div><div id="hudSub"></div></div></div></div>
 <div id="nextStrip"></div>
 <div id="xBoard"></div>
 <button id="brwGo" type="button">🧭 Prowadź tutaj</button>
@@ -563,7 +578,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 88</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 89</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -580,7 +595,8 @@ body.night #intro .card{background:#202228;color:#e8eaed}
     <small>Wyjazd o wybranej godzinie (puste = teraz): prognoza korków i najlepsza pora wyjazdu.</small>
     <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label><label><input type="checkbox" id="avX"> Mniej przejazdów kolejowych</label></div>
     <div class="lbl">Paliwo (zasięg i ostrzeżenia o tankowaniu)</div>
-    <div class="fld"><span>⛽</span><input id="fuelCap" type="number" inputmode="decimal" min="0" placeholder="Bak (litry), np. 55"></div>
+    <div class="fld"><span>🔌</span><select id="fuelType"><option value="0">Silnik spalinowy (paliwo)</option><option value="1">Auto elektryczne (bateria)</option></select></div>
+    <div class="fld"><span id="fuelIc">⛽</span><input id="fuelCap" type="number" inputmode="decimal" min="0" placeholder="Bak (litry), np. 55"></div>
     <div class="fld"><span>L</span><input id="fuelCons" type="number" inputmode="decimal" min="0" placeholder="Spalanie (l/100 km), np. 7,5"></div>
     <div class="fld"><span>%</span><input id="fuelLvl" type="number" inputmode="decimal" min="0" max="100" placeholder="Stan baku (%)"><button id="fuelFull" class="sec" type="button">Zatankowano</button></div>
     <div class="lbl">Najlepsza godzina wyjazdu</div>
@@ -1313,10 +1329,10 @@ async function loadPoi(R){
   try{
     const b=R.pts[R.pts.length-1],sample=[];
     for(let d=R.along;d<=Math.min(R.len,R.along+40000);d+=2500){const q=routeAt(R,d);sample.push(q[0].toFixed(5),q[1].toFixed(5))}
-    const q='[out:json][timeout:25];(nwr(around:450,'+b[0]+','+b[1]+')[amenity=parking][access!~"private|customers|no"];'+(sample.length>=4?'nwr(around:140,'+sample.join(',')+')[amenity=fuel];':'')+');out center tags 80;';
+    const q='[out:json][timeout:25];(nwr(around:450,'+b[0]+','+b[1]+')[amenity=parking][access!~"private|customers|no"];'+(sample.length>=4?'nwr(around:140,'+sample.join(',')+')[amenity~"^(fuel|charging_station)$"];':'')+');out center tags 80;';
     const j=await fetchOverpass(q);
     if(route!==R)return;
-    window._poiR=R;poi=(j.elements||[]).map(e=>({id:e.id,kind:e.tags&&e.tags.amenity==='fuel'?'fuel':'parking',lat:e.lat??(e.center&&e.center.lat),lon:e.lon??(e.center&&e.center.lon),name:(e.tags&&(e.tags.name||e.tags.brand))||'',fee:e.tags&&e.tags.fee,cap:e.tags&&e.tags.capacity})).filter(x=>x.lat!=null);
+    window._poiR=R;poi=(j.elements||[]).map(e=>({id:e.id,kind:e.tags&&e.tags.amenity==='fuel'?'fuel':e.tags&&e.tags.amenity==='charging_station'?'charge':'parking',lat:e.lat??(e.center&&e.center.lat),lon:e.lon??(e.center&&e.center.lon),name:(e.tags&&(e.tags.name||e.tags.brand))||'',fee:e.tags&&e.tags.fee,cap:e.tags&&e.tags.capacity})).filter(x=>x.lat!=null);
     fuelPlan();
     const np=poi.filter(x=>x.kind==='parking').length;
     if(np){
@@ -1825,7 +1841,7 @@ function fatigue(p){
   if(drv.s>7200&&now-drv.said>1800000){
     drv.said=now;
     let near=null,nd=1e9;poi.forEach(x=>{const d=dist(p.lat,p.lon,x.lat,x.lon);if(d<nd){nd=d;near=x}});
-    const where=near&&nd<15000?' Najbliżej jest '+(near.kind==='fuel'?'stacja paliw':'parking')+' za około '+(nd>=1000?(nd/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(nd/100)*100+' metrów')+'.':'';
+    const where=near&&nd<15000?' Najbliżej jest '+(near.kind==='fuel'?'stacja paliw':near.kind==='charge'?'ładowarka':'parking')+' za około '+(nd>=1000?(nd/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(nd/100)*100+' metrów')+'.':'';
     say('rest','Jedzie Pan już ponad dwie godziny. Proszę rozważyć krótki postój.'+where,[150,100,150],'Proszę rozważyć postój');
   }
 }
@@ -2162,7 +2178,7 @@ setInterval(()=>{if(route&&vecData&&route.snapFor!==vecData)snapRoute(route)},40
 
 // ================= Wersja 63: paliwo, porównanie godzin, statystyki przejazdów, alarm, nawyki =================
 // ---- paliwo: zasięg i ostrzeżenia ----
-const fuel=Object.assign({cap:0,cons:0,lvl:100},LSget('fuel',{}));
+const fuel=Object.assign({cap:0,cons:0,lvl:100,ev:false},LSget('fuel',{}));
 const fuelSave=()=>LSput('fuel',fuel);
 function fuelRange(){return fuel.cap>0&&fuel.cons>0?fuel.cap*Math.max(0,fuel.lvl)/100/fuel.cons*100:null}
 function fuelUI(){$('fuelCap').value=fuel.cap||'';$('fuelCons').value=fuel.cons||'';$('fuelLvl').value=fuel.cap&&fuel.cons?Math.round(fuel.lvl):''}
@@ -2176,7 +2192,7 @@ $('fuelFull').onclick=()=>{fuel.lvl=100;fuelSave();fuelUI();fuelPlan()};
 const kmTxt=k=>k<1?Math.max(50,Math.round(k*20)*50)+' m':Math.round(k)+' km';
 function fuelStations(){
   if(!route||!poi||!route.pts||route.pts.length<3)return[];const n=route.pts.length-2;
-  return poi.filter(x=>x.kind==='fuel'&&x.lat!=null&&x.lon!=null).map(x=>{
+  return poi.filter(x=>x.kind===(fuel.ev?'charge':'fuel')&&x.lat!=null&&x.lon!=null).map(x=>{
     if(x._al==null||x._R!==route){const m=projRoute(route,x.lat,x.lon,0,n);x._al=m.along;x._off=m.off;x._R=route}
     return {name:x.name,km:(x._al-route.along)/1000,off:x._off}}).filter(x=>x.off<250&&x.km>=0).sort((a,b)=>a.km-b.km);
 }
@@ -2189,8 +2205,8 @@ function fuelAdvice(){   // {range, rem, short, best}
 function fuelPlan(){
   const el=$('fuelInfo'),a=fuelAdvice();if(!el)return;
   if(!a){el.textContent='';el.className='';return}
-  let t='⛽ Zasięg ok. '+Math.round(a.range)+' km'+(a.rem!=null?' · do celu '+a.rem.toFixed(0)+' km':'');
-  if(a.short)t+=' — paliwa może nie wystarczyć'+(a.best?'. Zatankuj: '+(a.best.name||'stacja')+' za '+kmTxt(a.best.km):'. Brak znanej stacji w zasięgu na początku trasy');
+  const ev=!!fuel.ev;let t=(ev?'🔋':'⛽')+' Zasięg ok. '+Math.round(a.range)+' km'+(a.rem!=null?' · do celu '+a.rem.toFixed(0)+' km':'');
+  if(a.short)t+=(ev?' — energii może nie wystarczyć':' — paliwa może nie wystarczyć')+(a.best?'. '+(ev?'Naładuj: ':'Zatankuj: ')+(a.best.name||(ev?'ładowarka':'stacja'))+' za '+kmTxt(a.best.km):(ev?'. Brak znanej ładowarki w zasięgu na początku trasy':'. Brak znanej stacji w zasięgu na początku trasy'));
   el.textContent=t;el.className=a.short||a.range<50?'warn':'';
 }
 let fuelPrev=null,fuelSaved=0,fuelChk=0,fuelSay=0;
@@ -2206,8 +2222,8 @@ function fuelTick(p){
   if(Date.now()-fuelChk>60000){fuelChk=Date.now();fuelPlan();
     const a=fuelAdvice();
     if(a&&(a.short||a.range<40)&&Date.now()-fuelSay>600000){fuelSay=Date.now();
-      const txt=a.range<40?'Zostało paliwa na około '+Math.round(a.range)+' kilometrów. Proszę zatankować.':'Paliwa może nie wystarczyć na całą trasę.';
-      say('fuel'+Math.round(Date.now()/600000),txt+(a.best?' Najbliższa stacja na trasie za '+(a.best.km<1?kmTxt(a.best.km).replace(' m',' metrów'):Math.round(a.best.km)+' kilometrów')+'.':''),[150,80,150],'Mało paliwa')}
+      const ev=!!fuel.ev,txt=a.range<40?(ev?'Zostało energii na około '+Math.round(a.range)+' kilometrów. Proszę naładować samochód.':'Zostało paliwa na około '+Math.round(a.range)+' kilometrów. Proszę zatankować.'):(ev?'Energii może nie wystarczyć na całą trasę.':'Paliwa może nie wystarczyć na całą trasę.');
+      say('fuel'+Math.round(Date.now()/600000),txt+(a.best?(fuel.ev?' Najbliższa ładowarka na trasie za ':' Najbliższa stacja na trasie za ')+(a.best.km<1?kmTxt(a.best.km).replace(' m',' metrów'):Math.round(a.best.km)+' kilometrów')+'.':''),[150,80,150],fuel.ev?'Mało energii':'Mało paliwa')}
   }
 }
 // ---- porównanie godzin wyjazdu ----
@@ -2278,13 +2294,13 @@ setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-al
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['night','mapmode','theme','autonight','dimOn']);
+  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
   mv('snd',['vsel','vbose','sndsel','volTrain','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
-  mv('drive',['eco','logon','fpsOn','logdl','logan','logFile','report']);
+  mv('drive',['hudBtn','eco','logon','fpsOn','logdl','logan','logFile','report']);
   mv('data',['hist','xstat','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow','expSet','impSet','impFile','about']);
   G('adv').appendChild($('cfg'));
   // tytuły nad przełącznikami bez własnego opisu
@@ -2752,7 +2768,7 @@ setInterval(()=>{
     (typeof aheadList!=='undefined'?aheadList:[]).slice(0,2).forEach(a=>it.push([a.d,'🚆 '+fm(a.d)]));
     const near=(arr,max,off)=>{let b=null;for(const o of arr){const m=projRoute(route,o.lat,o.lon,0,route.pts.length-2);const d=m.along-route.along;if(m.off<off&&d>20&&d<max&&(!b||d<b))b=d}return b};
     if($('camShow').checked){const d=near(cams,8000,25);if(d!=null)it.push([d,'📷 '+fm(d)])}
-    const df=near(poi.filter(x=>x.kind==='fuel'),30000,200);if(df!=null)it.push([df,'⛽ '+fm(df)]);
+    const df=near(poi.filter(x=>x.kind===(fuel.ev?'charge':'fuel')),30000,200);if(df!=null)it.push([df,(fuel.ev?'⚡ ':'⛽ ')+fm(df)]);
     it.sort((a,b)=>a[0]-b[0]);it.slice(0,4).forEach(x=>chips.push('<span>'+x[1]+'</span>'));
   }
   el.innerHTML=chips.join('');el.style.display=chips.length?'flex':'none';
@@ -2950,6 +2966,34 @@ $('brwGo').onclick=()=>{
     d.appendChild(sp);b.insertBefore(d,b.firstChild);
   };
 }
+
+// ================= Tryb HUD (lustrzane odbicie na szybie) i rozmiar interfejsu =================
+{
+  const H=$('hud');let ctlT=null,tm=null,mir=LSget('hudMir',true);
+  const showCtl=()=>{H.classList.add('ctl');clearTimeout(ctlT);ctlT=setTimeout(()=>H.classList.remove('ctl'),4000)};
+  const upd=()=>{
+    $('hudSpd').textContent=$('spd').textContent;$('hudDist').textContent=$('dist').textContent;
+    $('hudIc').innerHTML=$('bicon').innerHTML;$('hudMsg').textContent=$('big').textContent;$('hudSub').textContent=$('sub').textContent;
+    const c=$('banner').className;H.classList.toggle('warn',/warn/.test(c));H.classList.toggle('bad',/bad/.test(c));
+  };
+  const setMir=v=>{mir=v;LSput('hudMir',v);H.classList.toggle('mir',v);$('hudMir').textContent='↔ Lustro: '+(v?'wł.':'wył.')};
+  $('hudBtn').onclick=()=>{closeSettings();H.style.display='block';setMir(mir);upd();showCtl();clearInterval(tm);tm=setInterval(upd,250);try{if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}};
+  $('hudX').onclick=e=>{e.stopPropagation();H.style.display='none';clearInterval(tm)};
+  $('hudMir').onclick=e=>{e.stopPropagation();setMir(!mir);showCtl()};
+  H.addEventListener('pointerdown',showCtl);
+  const ui=LSget('uiSize',0);$('uiSize').value=String(ui);
+  const apply=v=>{document.body.classList.toggle('ui1',v===1);document.body.classList.toggle('ui2',v===2)};apply(+ui);
+  $('uiSize').onchange=()=>{const v=+$('uiSize').value;LSput('uiSize',v);apply(v)};
+}
+// ================= Auto elektryczne: ładowarki i zasięg =================
+function evUI(){
+  const ev=!!fuel.ev;$('fuelType').value=ev?'1':'0';$('fuelIc').textContent=ev?'🔋':'⛽';
+  $('fuelCap').placeholder=ev?'Bateria (kWh), np. 60':'Bak (litry), np. 55';
+  $('fuelCons').placeholder=ev?'Zużycie (kWh/100 km), np. 18':'Spalanie (l/100 km), np. 7,5';
+  $('fuelLvl').placeholder=ev?'Stan baterii (%)':'Stan baku (%)';$('fuelFull').textContent=ev?'Naładowano':'Zatankowano';
+}
+$('fuelType').onchange=()=>{fuel.ev=$('fuelType').value==='1';fuelSave();evUI();fuelPlan()};
+evUI();
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
@@ -3141,14 +3185,14 @@ function drawPoi(){
   for(const o of poi){
     const d=dist(car.lat,car.lon,o.lat,o.lon);
     if(o.kind==='parking'&&d>1100)continue;
-    if(o.kind==='fuel'&&d>1500)continue;
+    if((o.kind==='fuel'||o.kind==='charge')&&d>1500)continue;
     const q=proj(o.lat,o.lon);if(!q||q.x<-20||q.x>W+20||q.y<-20||q.y>H+20)continue;
     const u=Math.max(7,Math.min(10.5,8.5*q.k));
     mx.save();mx.translate(q.x,q.y);
     mx.beginPath();mx.roundRect?mx.roundRect(-u,-u,u*2,u*2,u*.4):mx.rect(-u,-u,u*2,u*2);
-    mx.fillStyle=o.kind==='parking'?'#1a73e8':'#e65100';mx.fill();mx.lineWidth=Math.max(1.4,u*.18);mx.strokeStyle='#fff';mx.stroke();
+    mx.fillStyle=o.kind==='parking'?'#1a73e8':o.kind==='charge'?'#188038':'#e65100';mx.fill();mx.lineWidth=Math.max(1.4,u*.18);mx.strokeStyle='#fff';mx.stroke();
     mx.fillStyle='#fff';mx.font='800 '+Math.round(u*1.35)+'px system-ui,sans-serif';mx.textAlign='center';mx.textBaseline='middle';
-    mx.fillText(o.kind==='parking'?'P':'⛽',0,u*.06);
+    mx.fillText(o.kind==='parking'?'P':o.kind==='charge'?'⚡':'⛽',0,u*.06);
     mx.restore();
   }
 }
