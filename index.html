@@ -470,7 +470,7 @@ function routeCross(c){
   return r;
 }
 function routeUpdate(p){
-  if(!route||demo||route.pts.length<2)return;
+  if(!route||demo||route.pts.length<2||!(route.len>0))return;
   const n=route.pts.length-2;
   let r=projRoute(route,p.lat,p.lon,Math.max(0,route.idx-3),Math.min(n,route.idx+400));
   if(r.off>120)r=projRoute(route,p.lat,p.lon,0,n);
@@ -552,6 +552,7 @@ async function planRoute(){
     const a=F.from.pt||await gpsNow(), b=F.to.pt;
     info('Wyznaczanie najszybszej trasy…');
     const r=await fetchRoute(a,b);
+    if(!(r.distance>30)||!r.geometry||r.geometry.coordinates.length<2)throw new Error('start i cel są w tym samym miejscu – wybierz inny start (pole A) lub cel');
     endPt=b;setRoute(r.geometry.coordinates,r.duration);
     info('Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km');
     return true;
@@ -599,11 +600,11 @@ $('closeNav').onclick=()=>{
 function updInfo(p){
   const nT=trains.filter(t=>dist(p.lat,p.lon,t.lat,t.lon)<10000).length;
   const src=demo?'demo':gKey?'geOps':gtfs?'rozkład PKP':feedUrl?'własne dane':'brak danych o pociągach';
-  $('info').textContent='Pociągi w promieniu 10 km: '+nT+' · '+src;
+  $('info').textContent='Pociągi w promieniu 10 km: '+nT+' · '+src+(vec?(vecErr?' · '+vecErr:vecData?'':' · ładowanie mapy…'):'');
 }
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
-let vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
+let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
 const VC={sv:{w:2},rs:{w:3.5},tr:{w:5},sc:{w:6},pr:{w:7},mw:{w:8}};
 const PAL={
  day:{bg:'#f1f2f4',water:'#c4d7ee',park:'#cfe9d0',casing:'#d9dce0',sv:'#fff',rs:'#fff',tr:'#fff',sc:'#fff',pr:'#fff',mw:'#fff',rail:'#c7cacf',railDash:'#f1f2f4',lbl:'#6f757c',halo:'#ffffffe6',route:'#1a73e8',routeEdge:'#1558b8'},
@@ -663,10 +664,13 @@ async function loadVec(lat,lon){
   const q='[out:json][timeout:30];(way'+a+'["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$"];'
    +'way'+a+'["railway"~"^(rail|light_rail|tram|narrow_gauge)$"];way'+a+'["natural"="water"];way'+a+'["waterway"~"^(river|canal)$"];way'+a+'["leisure"~"^(park|garden)$"];);out geom;';
   try{
-    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    vecData=buildVec(await r.json(),lat,lon);
-  }catch(e){vecNext=Date.now()+20000}   // przy błędzie następna próba za 20 s
+    let j=null,err='';
+    for(const u of ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+      try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q)});if(!r.ok)throw new Error('HTTP '+r.status);j=await r.json();break}
+      catch(e){err=e.message}}
+    if(!j)throw new Error(err);
+    vecData=buildVec(j,lat,lon);vecErr='';
+  }catch(e){vecNext=Date.now()+20000;vecErr='błąd mapy: '+e.message}   // przy błędzie następna próba za 20 s
   finally{vecBusy=false}
 }
 function drawVec(W,H){
@@ -731,11 +735,11 @@ $('mapmode').onclick=()=>setVec(!vec);
 
 // ---- Markery rysowane pionowo nad pochyloną mapą (okręgi nie spłaszczają się) ----
 const mk=$('mk'), mx=mk.getContext('2d');
-function sizeMk(){const r=window.devicePixelRatio||1,V=$('view');mk.width=V.clientWidth*r;mk.height=V.clientHeight*r;mk.style.width=V.clientWidth+'px';mk.style.height=V.clientHeight+'px';mx.setTransform(r,0,0,r,0,0)}
+function sizeMk(){const r=window.devicePixelRatio||1,w=window.innerWidth,h=window.innerHeight;mk.width=w*r;mk.height=h*r;mk.style.width=w+'px';mk.style.height=h+'px';mx.setTransform(r,0,0,r,0,0)}
 window.addEventListener('resize',sizeMk);sizeMk();
 // ten sam rachunek co CSS: obrót, nachylenie, perspektywa 900 px (sprawdzone z macierzami 4x4)
 function proj(lat,lon){
-  const V=$('view'),W=V.clientWidth,H=V.clientHeight,S=$('map').clientWidth,q=map.latLngToContainerPoint([lat,lon]);
+  const W=window.innerWidth,H=window.innerHeight,S=$('map').clientWidth,q=map.latLngToContainerPoint([lat,lon]);
   const u=q.x-S/2,v=q.y-S/2,R=rad(curRot),T=rad(tiltDeg),D=900;
   const x1=u*Math.cos(R)-v*Math.sin(R),y1=u*Math.sin(R)+v*Math.cos(R),z=y1*Math.sin(T);
   if(z>=D-50)return null;
@@ -743,7 +747,7 @@ function proj(lat,lon){
   return {x:Px+(Cx+x1-Px)*k,y:Py+(Cy+y1*Math.cos(T)-Py)*k,k};
 }
 function drawMarkers(){
-  const V=$('view'),W=V.clientWidth,H=V.clientHeight;
+  const W=window.innerWidth,H=window.innerHeight;
   mx.clearRect(0,0,W,H);
   const P=vec?(drawVec(W,H),proj2d):proj;
   const list=[];
