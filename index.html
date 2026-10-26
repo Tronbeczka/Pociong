@@ -494,6 +494,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
   <button id="dlarea" class="sec">Pobierz mapę okolicy (offline)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
+  <label style="font-size:.9rem"><input type="checkbox" id="wxMap" checked> Pokazuj pogodę na mapie</label>
   <label style="font-size:.9rem"><input type="checkbox" id="camShow" checked> Pokazuj fotoradary na mapie i ostrzegaj</label>
   <button id="hist" class="sec">Historia przejazdów</button>
   <button id="xstat" class="sec">Statystyki przejazdów kolejowych</button>
@@ -553,7 +554,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 83</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 84</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1274,7 +1275,7 @@ function wxKind(code,mm,t,vis){
 async function loadWeather(R){
   wxTxt='';$('wxinfo').textContent='';
   try{
-    const fr=[0,.33,.66,1],pts=fr.map(f=>routeAt(R,R.len*f));
+    const fr=[0,.17,.33,.5,.66,.83,1],pts=fr.map(f=>routeAt(R,R.len*f));R.wx=[];
     const url='https://api.open-meteo.com/v1/forecast?latitude='+pts.map(q=>q[0].toFixed(3)).join(',')+'&longitude='+pts.map(q=>q[1].toFixed(3)).join(',')+'&hourly=temperature_2m,precipitation,weather_code,visibility&forecast_days=2&timezone=auto';
     const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json(),arr=Array.isArray(j)?j:[j];
@@ -1284,7 +1285,7 @@ async function loadWeather(R){
       const eta=Date.now()+R.dur*1000*fr[k],loc=eta+(w.utc_offset_seconds||0)*1000;
       let i=Math.floor((loc-Date.parse(h.time[0]+'Z'))/3600000);i=Math.max(0,Math.min(h.time.length-1,i));
       const kd=wxKind(h.weather_code[i],h.precipitation[i],h.temperature_2m[i],h.visibility&&h.visibility[i]);
-      const km=Math.round(R.len*fr[k]/1000);
+      const km=Math.round(R.len*fr[k]/1000);R.wx.push({lat:pts[k][0],lon:pts[k][1],kd:kd[0],code:h.weather_code[i],t:Math.round(h.temperature_2m[i])});
       if(k===arr.length-1)end={t:Math.round(h.temperature_2m[i]),kd:kd[0]};
       if(kd[1]>0&&(!worst||kd[1]>worst.s))worst={kind:kd[0],s:kd[1],km,when:new Date(eta).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})};
     });
@@ -2264,7 +2265,7 @@ setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-al
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['eco','logon','fpsOn','logdl','logan','logFile','report']);
-  mv('data',['hist','xstat','share','sharePos','dlarea','dlast','camShow','expSet','impSet','impFile','about']);
+  mv('data',['hist','xstat','share','sharePos','dlarea','dlast','wxMap','camShow','expSet','impSet','impFile','about']);
   G('adv').appendChild($('cfg'));
   // tytuły nad przełącznikami bez własnego opisu
   const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
@@ -2669,7 +2670,8 @@ function drawCams(){
 // ================= Pasek „co dalej na trasie” =================
 setInterval(()=>{
   const el=$('nextStrip');
-  if(!route||window.preview||!last||route.off>120||!route.pts||route.pts.length<3){el.style.display='none';return}
+  const wc=($('wxMap').checked&&wxNow&&!window.preview)?'<span>'+wxIcon(wxNow.code,wxNow.kd)+' '+wxNow.t+'°C</span>':'';
+  if(!route||window.preview||!last||route.off>120||!route.pts||route.pts.length<3){el.innerHTML=wc;el.style.display=wc?'flex':'none';return}
   const fm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m',it=[];
   const aheadX=(typeof aheadList!=='undefined'?aheadList:[]).slice(0,2);
   aheadX.forEach(a=>it.push([a.d,'🚆 '+fm(a.d)]));
@@ -2677,7 +2679,7 @@ setInterval(()=>{
   if($('camShow').checked){const d=near(cams,8000,25);if(d!=null)it.push([d,'📷 '+fm(d)])}
   const df=near(poi.filter(x=>x.kind==='fuel'),30000,200);if(df!=null)it.push([df,'⛽ '+fm(df)]);
   it.sort((a,b)=>a[0]-b[0]);
-  el.innerHTML=it.slice(0,4).map(x=>'<span>'+x[1]+'</span>').join('');el.style.display=it.length?'flex':'none';
+  el.innerHTML=wc+it.slice(0,4).map(x=>'<span>'+x[1]+'</span>').join('');el.style.display=(it.length||wc)?'flex':'none';
 },3000);
 // ================= Pobieranie mapy okolicy (offline) =================
 $('dlarea').onclick=async()=>{
@@ -2702,6 +2704,54 @@ $('sharePos').onclick=async()=>{
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
   try{await navigator.clipboard.writeText(txt);alert('Skopiowano do schowka:\n'+txt)}catch(e){prompt('Skopiuj wiadomość:',txt)}
 };
+
+// ================= Pogoda rysowana na mapie =================
+$('wxMap').checked=LSget('wxMap',true);$('wxMap').onchange=()=>LSput('wxMap',$('wxMap').checked);
+let wxNow=null,wxBusy=false;
+function wxIcon(code,kd){
+  if(kd==='burza')return '⛈️';if(kd==='gołoledź')return '🧊';if(kd==='śnieg')return '❄️';if(kd==='mgła')return '🌫️';if(kd==='deszcz')return '🌧️';
+  if(code===0)return '☀️';if(code===1||code===2)return '⛅';return '☁️';
+}
+async function wxHere(){
+  const c=(vf&&vf.cam)||last;if(!c||wxBusy||!$('wxMap').checked)return;
+  if(wxNow&&Date.now()-wxNow.at<600000&&dist(wxNow.lat,wxNow.lon,c.lat,c.lon)<15000)return;
+  wxBusy=true;
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+c.lat.toFixed(3)+'&longitude='+c.lon.toFixed(3)+'&current=temperature_2m,precipitation,weather_code&timezone=auto');
+    if(!r.ok)throw 0;const j=(await r.json()).current;
+    const kd=wxKind(j.weather_code,j.precipitation,j.temperature_2m,null);
+    wxNow={lat:c.lat,lon:c.lon,at:Date.now(),kd:kd[0],code:j.weather_code,t:Math.round(j.temperature_2m)};
+  }catch(e){if(wxNow)wxNow.at=Date.now()-540000}
+  wxBusy=false;
+}
+setInterval(wxHere,15000);setTimeout(wxHere,3000);
+const wxP=[];
+function drawWx(){
+  if(!$('wxMap').checked)return;
+  const W=window.innerWidth,H=window.innerHeight;
+  // prognoza w punktach wzdłuż trasy
+  if(route&&route.wx&&vec&&!window.preview){
+    for(const w of route.wx){
+      const q=proj(w.lat,w.lon);if(!q||q.x<-30||q.x>W+30||q.y<60||q.y>H+30)continue;
+      const u=Math.max(15,Math.min(24,17*q.k)),txt=wxIcon(w.code,w.kd)+' '+w.t+'°';
+      mx.save();mx.font='700 '+Math.round(u*.78)+'px system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif';
+      const tw=mx.measureText(txt).width+14;mx.translate(q.x,q.y-u*1.4);
+      mx.beginPath();mx.roundRect(-tw/2,-u*.7,tw,u*1.4,u*.7);mx.fillStyle='rgba(32,33,36,.82)';mx.fill();mx.lineWidth=1.5;mx.strokeStyle='rgba(255,255,255,.7)';mx.stroke();
+      mx.fillStyle='#fff';mx.textAlign='center';mx.textBaseline='middle';mx.fillText(txt,0,1);mx.restore();
+    }
+  }
+  // opady przy aktualnym położeniu
+  const kd=wxNow&&wxNow.kd;if(!kd||kd==='bez opadów')return;
+  const rain=kd==='deszcz'||kd==='burza',snow=kd==='śnieg'||kd==='gołoledź',N=rain?(kd==='burza'?130:90):snow?70:0;
+  if(kd==='mgła'){const g=mx.createLinearGradient(0,0,0,H*.55);g.addColorStop(0,'rgba(210,216,224,.55)');g.addColorStop(1,'rgba(210,216,224,0)');mx.fillStyle=g;mx.fillRect(0,0,W,H*.55);return}
+  while(wxP.length<N)wxP.push({x:Math.random()*W,y:Math.random()*H,v:rain?9+Math.random()*7:1.2+Math.random()*1.6,s:Math.random()});
+  wxP.length=N;mx.save();
+  if(rain){mx.strokeStyle='rgba(170,200,255,.55)';mx.lineWidth=1.3;mx.beginPath();
+    for(const p of wxP){p.y+=p.v;p.x-=p.v*.18;if(p.y>H){p.y=-12;p.x=Math.random()*W+30}if(p.x<-10)p.x=W+10;mx.moveTo(p.x,p.y);mx.lineTo(p.x+p.v*.18*1.8,p.y-p.v*1.8)}mx.stroke()}
+  else{mx.fillStyle='rgba(255,255,255,.85)';
+    for(const p of wxP){p.y+=p.v;p.x+=Math.sin((p.y+p.s*50)/28)*.7;if(p.y>H){p.y=-6;p.x=Math.random()*W}mx.beginPath();mx.arc(p.x,p.y,1.4+p.s*1.6,0,6.2832);mx.fill()}}
+  mx.restore();
+}
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
@@ -3693,7 +3743,7 @@ function drawMarkers(){
   drawBuildings3D();
   drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
-  drawPoi();drawEvents();drawCams();
+  drawPoi();drawEvents();drawCams();drawWx();
   if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
     if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
