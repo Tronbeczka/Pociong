@@ -672,7 +672,8 @@ $('recenter').onclick=recenter;
 $('zin').onclick=()=>setZoom(zoomMul*1.35);
 $('zout').onclick=()=>setZoom(zoomMul/1.35);
 $('compass').onclick=()=>{rotOff=0;tgtRot=freeCam?0:-lastH;updRecenter()};   // kompas: powrót do kierunku jazdy (przy przesuniętej mapie – północ u góry)
-$('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg?0:50;$('tilt').textContent=tiltDeg?'2D':'3D';applyRot()};
+const tiltLbl=()=>{$('tilt').textContent=tiltDeg>=60?'2D':tiltDeg?'3D+':'3D'};
+$('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot()};
 {
   const vw=$('view'),ptrs=new Map();let pan=null,g0=null;
   const pair=()=>{const a=[...ptrs.values()];return {d:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y)||1,ang:Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)*180/Math.PI}};
@@ -1654,7 +1655,7 @@ function mvtDecode(buf){
 const MV_ROAD={motorway:'mw',trunk:'mw',primary:'pr',secondary:'sc',tertiary:'tr',minor:'rs',service:'sv'};
 function buildMvt(tiles,lat0,lon0){
   const W=40075016.686,cl=Math.cos(rad(lat0)),cx=lon0/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(lat0)/2));
-  const P={},LB=[];
+  const P={},LB=[],B=[];
   const gp=k=>P[k]||(P[k]=new Path2D());
   for(const t of tiles){
     const T=W/Math.pow(2,t.z),ox=-W/2+t.x*T,oy=W/2-t.y*T;
@@ -1694,10 +1695,23 @@ function buildMvt(tiles,lat0,lon0){
         }
         if(fill)path.closePath();
       }
+      if(cls==='bld'&&B.length<2200&&!(pr.render_min_height>0)){   // bryły 3D: obrysy budynków z wysokością
+        let sg=0;
+        for(const rg of f.r){
+          if(rg.length<8)continue;let a=0;
+          for(let i=0,n=rg.length;i<n;i+=2){const j=(i+2)%n;a+=rg[i]*rg[j+1]-rg[j]*rg[i+1]}
+          if(!a)continue;if(!sg)sg=Math.sign(a);if(Math.sign(a)!==sg)continue;
+          const pts=[];let sx=0,sy=0;
+          for(let i=0;i+1<rg.length;i+=2){const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;pts.push(x,y);sx+=x;sy+=y}
+          const m=pts.length/2,mx_=sx/m,my_=sy/m;if(mx_*mx_+my_*my_>520*520)continue;
+          const h=pr.render_height>0?pr.render_height:5+Math.abs(Math.round(mx_*3+my_*5))%9;
+          B.push({p:pts,h:Math.min(h,160),cx:mx_,cy:my_});
+        }
+      }
       gp(cls).addPath(path);if(one)gp('one1').addPath(path);
     }
   }
-  return {lat:lat0,lon:lon0,P,LB,SP:[]};
+  return {lat:lat0,lon:lon0,P,LB,B,SP:[]};
 }
 async function ofmUrl(){
   let c=null;try{c=JSON.parse(localStorage.getItem('ofm')||'null');if(c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
@@ -1977,14 +1991,14 @@ const mk=$('mk'), mx=mk.getContext('2d');
 function sizeMk(){const r=window.devicePixelRatio||1,w=window.innerWidth,h=window.innerHeight;mk.width=w*r;mk.height=h*r;mk.style.width=w+'px';mk.style.height=h+'px';mx.setTransform(r,0,0,r,0,0)}
 window.addEventListener('resize',()=>{sizeMk();if(typeof sizeV==='function')sizeV()});sizeMk();
 // ten sam rachunek co CSS: obrót, nachylenie, perspektywa 900 px (sprawdzone z macierzami 4x4)
-function proj(lat,lon){
+function proj(lat,lon,hm){
   if(vec&&!vf)return null;
   const W=window.innerWidth,H=window.innerHeight,S=$('rot').clientWidth,q=vec?{x:S/2+vf.s*(lon-vf.cam.lon)*vf.kx,y:S/2-vf.s*(lat-vf.cam.lat)*111195}:map.latLngToContainerPoint([lat,lon]);
   const u=q.x-S/2,v=q.y-S/2,R=rad(curRot),T=rad(tiltDeg),D=900;
-  const x1=u*Math.cos(R)-v*Math.sin(R),y1=u*Math.sin(R)+v*Math.cos(R),z=y1*Math.sin(T);
+  const h=hm||0,x1=u*Math.cos(R)-v*Math.sin(R),y1=u*Math.sin(R)+v*Math.cos(R),z=y1*Math.sin(T)+h*Math.cos(T);
   if(z>=D-50)return null;
   const k=D/(D-z),Px=W*.5,Py=H*.45,Cx=W*.5,Cy=H*.68;
-  return {x:Px+(Cx+x1-Px)*k,y:Py+(Cy+y1*Math.cos(T)-Py)*k,k};
+  return {x:Px+(Cx+x1-Px)*k,y:Py+(Cy+y1*Math.cos(T)-h*Math.sin(T)-Py)*k,k};
 }
 // auto na jezdni: na wyznaczonej trasie ikona jest „przyklejona” do drogi i jedzie prawym pasem
 var carSnap=null,laneCur=null,laneYaw=0;
@@ -2043,11 +2057,53 @@ function updCarSnap(){
   if(!q||!q0){el.style.transform=base;return}
   el.style.transform='translate(calc(-50% + '+((q.x-q0.x)*w).toFixed(1)+'px),calc(-80% + '+((q.y-q0.y)*w).toFixed(1)+'px)) rotate('+laneYaw.toFixed(1)+'deg)';
 }
+// budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
+const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
+let wallKey='',wallCol=null;
+function drawBuildings3D(){
+  if(!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
+  const D=vecData,pal=PAL[night?'night':'day'],S=$('rot').clientWidth,s=vf.s;
+  const W=window.innerWidth,H=window.innerHeight;
+  const ox=(vf.cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(vf.cam.lat-D.lat)*111195;
+  const kk=111195,kxx=1;
+  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
+  const R=rad(curRot),sunDir=rad(-35);   // „słońce” z lewej-góry: ściany zwrócone na południowy zachód jaśniejsze
+  const lst=[];
+  const hs=Math.min(1.6,.9+tiltDeg/90);
+  for(const b of D.B){
+    const q=proj(D.lat+b.cy/111195,D.lon+b.cx/(111195*Math.cos(rad(D.lat))));
+    if(!q||q.x<-120||q.x>W+120||q.y<-160||q.y>H+120)continue;
+    lst.push({b,y:q.y,k:q.k});
+  }
+  lst.sort((a,b)=>a.y-b.y);
+  const cap=Math.min(lst.length,900),start=lst.length-cap;   // przy nadmiarze pomijamy najdalsze
+  const cl=Math.cos(rad(D.lat));
+  const g=(x,y,h)=>proj(D.lat+y/111195,D.lon+x/(111195*cl),h);
+  mx.lineJoin='round';
+  for(let n=start;n<lst.length;n++){
+    const b=lst[n].b,p=b.p,m=p.length/2,H3=b.h*hs;
+    const G=[],T=[];let ok=true;
+    for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],0),t=g(p[2*i],p[2*i+1],H3);if(!a||!t){ok=false;break}G.push(a);T.push(t)}
+    if(!ok)continue;
+    for(let i=0;i<m;i++){
+      const j=(i+1)%m,dx=p[2*j]-p[2*i],dy=p[2*j+1]-p[2*i+1];
+      // ściana widoczna, gdy jej dolna krawędź leży „bliżej” kamery niż górna (rzut dachu leży wyżej na ekranie)
+      const cross=(G[j].x-G[i].x)*(T[i].y-G[i].y)-(G[j].y-G[i].y)*(T[i].x-G[i].x);
+      const nx=dy,ny=-dx,L=Math.hypot(nx,ny)||1,lit=(nx*Math.cos(sunDir)+ny*Math.sin(sunDir))/L;
+      if(Math.abs(cross)<.01)continue;
+      mx.beginPath();mx.moveTo(G[i].x,G[i].y);mx.lineTo(G[j].x,G[j].y);mx.lineTo(T[j].x,T[j].y);mx.lineTo(T[i].x,T[i].y);mx.closePath();
+      mx.fillStyle=lit>0?wallCol.a:wallCol.b;mx.fill();mx.strokeStyle=wallCol.line;mx.lineWidth=.8;mx.stroke();
+    }
+    mx.beginPath();mx.moveTo(T[0].x,T[0].y);for(let i=1;i<m;i++)mx.lineTo(T[i].x,T[i].y);mx.closePath();
+    mx.fillStyle=wallCol.roof;mx.fill();mx.strokeStyle=wallCol.line;mx.lineWidth=1;mx.stroke();
+  }
+}
 function drawMarkers(){
   const W=window.innerWidth,H=window.innerHeight;
   mx.clearRect(0,0,W,H);
   if(vec)drawVec();const P=proj;
   updCarSnap();
+  drawBuildings3D();
   drawRouteTop();
   drawRouteSigns();
   drawPoi();
