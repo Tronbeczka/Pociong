@@ -50,6 +50,17 @@ body.night #achv{--bg:#13161b;--card:#1f2228;--tx:#e8eaed;--mut:#a9b0bb;--line:#
 #achv .sBody{flex:1;overflow:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 30px)}
 #achBack{width:42px;height:42px;border-radius:50%;padding:0;background:var(--card);color:var(--tx);font-size:1.6rem;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 button.lockd{opacity:.6}button.lockd svg{filter:grayscale(1) brightness(.4)}
+#splash.s-hal{background:radial-gradient(900px 600px at 50% 30%,#4a1d6b 0%,#14061f 72%);overflow:hidden}
+#splash.s-xmas{background:radial-gradient(900px 600px at 50% 30%,#1d4a3a 0%,#071a14 72%);overflow:hidden}
+#splash .sx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#splash .sx span{position:absolute;top:-12%;animation:sxFall linear infinite;filter:drop-shadow(0 2px 4px #0006)}
+@keyframes sxFall{from{transform:translateY(0) rotate(0)}to{transform:translateY(125vh) rotate(360deg)}}
+#splash .sg{font-size:1.05rem;font-weight:700;margin-top:-4px;animation:spUp .6s .35s ease both;text-align:center}
+#splash .cake svg{width:150px;height:125px;animation:none;filter:drop-shadow(0 8px 18px #0008)}
+#splash .cake .fl{transform-box:fill-box;transform-origin:50% 100%;animation:spFlame .5s ease-in-out infinite alternate}
+#splash .bd{font-size:1.9rem;font-weight:800;text-align:center;line-height:1.15;animation:spUp .6s .2s ease both;text-shadow:0 2px 14px #000a}
+@keyframes spFlame{from{transform:scale(1,.85) rotate(-6deg)}to{transform:scale(.9,1.12) rotate(6deg)}}
+#carAcc{position:absolute;left:50%;top:-10px;transform:translateX(-50%);font-size:19px;line-height:1;filter:drop-shadow(0 2px 2px #0007);pointer-events:none}
 #carPlate{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);background:#f6f6f2;color:#111;border:1.5px solid #222;border-radius:3px;font:800 9px/1.15 'Courier New',monospace;padding:1px 4px 1px 10px;letter-spacing:.06em;white-space:nowrap;box-shadow:0 1px 3px #0008;display:none}
 #carPlate::before{content:"PL";position:absolute;left:0;top:0;bottom:0;width:7px;background:#0b4ea2;color:#fff;font-size:4.5px;line-height:12px;text-align:center}
 .achTabs{display:flex;gap:6px;overflow-x:auto;max-width:620px;margin:0 auto 12px;padding-bottom:2px}
@@ -513,7 +524,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div id="settings" role="dialog" aria-label="Ustawienia"><div class="sHead"><button id="setBack" aria-label="Wróć" type="button">‹</button><h2>Ustawienia</h2><small id="setVer"></small></div>
 <div class="sBody">
 <button id="achOpen" type="button">🏆 Osiągnięcia i nowe samochody <span id="achCnt" style="float:right;color:var(--mut);font-weight:700"></span></button>
-<section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"></div></section>
+<section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"><label><span>Motyw sezonowy</span><select id="seasonSel"><option value="auto">Automatycznie (Halloween, Święta, urodziny)</option><option value="off">Wyłączony</option><option value="halloween">Halloween (podgląd)</option><option value="xmas">Święta (podgląd)</option><option value="bday">Urodziny Natalki (podgląd)</option></select></label></div></section>
 <section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
 <section><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
 <section><h3><i>🧭</i>Własne wskazówki nawigacji</h3><div class="sc" id="clipNav"><div class="sInfo">Nagraj lub wgraj własne „Skręć w prawo”, „Zjedź z ronda” itd. Aplikacja powie wtedy „Za 200 metrów”, odtworzy Twoje nagranie, a po nim przeczyta nazwę ulicy. Manewry bez nagrania są czytane głosem lektora.</div></div></section>
@@ -631,7 +642,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 94</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 95</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -3137,7 +3148,7 @@ function drawRadar(){
 {
   const sp=$('splash'),t0=Date.now();let done=false;
   const hide=()=>{if(done)return;done=true;sp.classList.add('out');setTimeout(()=>sp.remove(),900)};
-  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>2000&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)))){clearInterval(tick);hide()}},150);
+  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>(window.__spMin||2000)&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)))){clearInterval(tick);hide()}},150);
 }
 // ---- Ekran informacyjny (raz) i ostrzeżenie o pracy w tle ----
 {
@@ -4169,7 +4180,7 @@ function drawMarkers(){
   drawAlts();drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
   drawTrail();
-  drawPoi();drawEvents();drawCams();drawFriends();drawWx();
+  drawPoi();drawEvents();drawCams();drawFriends();drawWx();drawSeasonFx();
   if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
     if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
@@ -4445,8 +4456,18 @@ const RANKS=[[0,'Nowicjusz'],[300,'Kierowca'],[1000,'Doświadczony kierowca'],[3
 function achCount(){let n=ACHS.filter(achDone).length;for(const k in LOCKS.col)if(lkOk(LOCKS.col[k]))n++;for(const k in LOCKS.trail)if(lkOk(LOCKS.trail[k]))n++;for(const k in LOCKS.train)if(lkOk(LOCKS.train[k]))n++;BADGES.forEach(b=>{if(lkOk(b.l))n++});return n}
 function achXp(){return Math.round(ACH_ST.km*10+ACH_ST.x*20+ACH_ST.tr*15+ACH_ST.rep*30+ACH_ST.days.length*50+achCount()*150)}
 function rankInfo(){const xp=achXp();let i=0;for(let k=0;k<RANKS.length;k++)if(xp>=RANKS[k][0])i=k;const nx=RANKS[i+1];return {xp,name:RANKS[i][1],next:nx?nx[1]:null,pct:nx?Math.round(100*(xp-RANKS[i][0])/(nx[0]-RANKS[i][0])):100,need:nx?nx[0]-xp:0}}
+function seasonNow(){
+  const o=LSget('season','auto');if(o==='off')return {s:null,b:false};
+  const d=new Date(),m=d.getMonth()+1,dd=d.getDate();let s=null;
+  if((m===10&&dd>=24)||(m===11&&dd===1))s='halloween';else if(m===12||(m===1&&dd<=6))s='xmas';
+  let b=m===12&&dd===6;
+  if(o==='halloween')s='halloween';else if(o==='xmas')s='xmas';else if(o==='bday'){s='xmas';b=true}
+  return {s,b};
+}
+let seasonCur=seasonNow();
 let plate=LSget('plate','');
-function plateEl(){let e=$('carPlate');if(!e){e=document.createElement('div');e.id='carPlate'}if(e.parentNode!==$('carIcon'))$('carIcon').appendChild(e);e.textContent=plate;e.style.display=plate?'block':'none'}
+function plateEl(){let ac=$('carAcc');if(!ac){ac=document.createElement('div');ac.id='carAcc'}if(ac.parentNode!==$('carIcon'))$('carIcon').appendChild(ac);ac.textContent=seasonCur.s==='halloween'?'🎃':seasonCur.s==='xmas'?'🎄':'';
+  let e=$('carPlate');if(!e){e=document.createElement('div');e.id='carPlate'}if(e.parentNode!==$('carIcon'))$('carIcon').appendChild(e);e.textContent=plate;e.style.display=plate?'block':'none'}
 const CCOLS={default:null,blue:['#2b6cb0','#3d82cc'],red:['#d62828','#e04a4a'],green:['#2f6f4f','#3d8b64'],yellow:['#f2c200','#ffd740'],orange:['#e8710a','#ff9a3d'],black:['#23262b','#3a3f47'],white:['#e6e9ee','#ffffff'],purple:['#6d3fb8','#8a5fd6'],pink:['#e91e8c','#ff5fb0'],teal:['#0f9d9a','#2fc4c0'],lime:['#7cb518','#9fd83a'],chrome:['#8b95a3','#cfd6df'],gold:['#d4a017','#f5cf57'],neon:['#00b8d4','#00e5ff']};
 let carCol='default';try{carCol=localStorage.getItem('carcol')||'default'}catch(e){}if(!(carCol in CCOLS)||(LOCKS.col[carCol]&&!lkOk(LOCKS.col[carCol])))carCol='default';
 function carSvg(k){const c=CARS[k],cc=CCOLS[carCol];if(!c.c||!cc)return c.svg;return c.svg.split(c.c[0]).join(cc[0]).split(c.c[1]).join(cc[1])}
@@ -4558,6 +4579,44 @@ function drawTrainSkin(x,y,r,o){
   if(o.rt!==false){mx.beginPath();mx.arc(0,Lh*.2,Math.max(2.5,r*.28),0,6.2832);mx.fillStyle='#f6e05e';mx.fill();mx.lineWidth=1.2;mx.strokeStyle='#111';mx.stroke()}   // żółta kropka: pozycja na żywo
   mx.restore();
 }
+
+// ---- motyw sezonowy: Halloween (24.10–1.11), Święta (1.12–6.01), urodziny Natalki (6.12) ----
+const sFx=[];
+function drawSeasonFx(){
+  if(!seasonCur.s||ecoOn||window.__rm)return;
+  const W=window.innerWidth,H=window.innerHeight,hal=seasonCur.s==='halloween';
+  while(sFx.length<(hal?14:26))sFx.push({x:Math.random()*W,y:Math.random()*H,v:hal?.5+Math.random()*.9:.6+Math.random()*1.1,p:Math.random()*6.28,s:hal?13+Math.random()*9:1.6+Math.random()*2.6,e:['🍂','🦇','🍂','🎃','🍁'][Math.floor(Math.random()*5)]});
+  mx.save();
+  if(hal){mx.font='16px "Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.globalAlpha=.8}
+  else mx.fillStyle='rgba(255,255,255,.82)';
+  const t=Date.now()/1000;
+  for(const p of sFx){
+    p.y+=p.v;p.x+=Math.sin(t+p.p)*.5;if(p.y>H+20){p.y=-20;p.x=Math.random()*W}
+    if(hal){mx.font=Math.round(p.s)+'px "Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.fillText(p.e,p.x,p.y)}
+    else{mx.beginPath();mx.arc(p.x,p.y,p.s,0,6.2832);mx.fill()}
+  }
+  mx.restore();
+}
+window.__rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+$('seasonSel').value=LSget('season','auto');
+$('seasonSel').onchange=()=>{LSput('season',$('seasonSel').value);seasonCur=seasonNow();sFx.length=0;showCar();evToast('Motyw sezonowy zmieniony','Mapa i auto już się zmieniły; ekran ładowania zobaczysz po ponownym uruchomieniu aplikacji.')};
+(function decorateSplash(){
+  const sp=$('splash');if(!sp||!(seasonCur.s||seasonCur.b))return;
+  const hal=seasonCur.s==='halloween';
+  if(seasonCur.s)sp.classList.add(hal?'s-hal':'s-xmas');
+  const fx=document.createElement('div');fx.className='sx';
+  const em=seasonCur.b?['🎉','✨','🎈','❄️','🎊']:hal?['🎃','🦇','👻','🕸️','🍂']:['❄️','✨','🎄','❄️','⭐'];
+  for(let i=0;i<24;i++){const e=document.createElement('span');e.textContent=em[i%em.length];e.style.cssText='left:'+Math.round(Math.random()*96)+'%;font-size:'+(14+Math.round(Math.random()*16))+'px;animation-duration:'+(5+Math.random()*6).toFixed(1)+'s;animation-delay:-'+(Math.random()*9).toFixed(1)+'s';fx.appendChild(e)}
+  sp.insertBefore(fx,sp.firstChild);
+  const sb=sp.querySelector('.sb');
+  if(seasonCur.b){
+    const c=document.createElement('div');c.className='cake';
+    c.innerHTML='<svg viewBox="0 0 120 100" aria-hidden="true"><ellipse cx="60" cy="92" rx="54" ry="6" fill="#0006"/><rect x="8" y="62" width="104" height="28" rx="7" fill="#f6a5c0"/><path d="M8 68 q6 10 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t8 0 V62 H8Z" fill="#fff"/><rect x="22" y="40" width="76" height="24" rx="6" fill="#ffe29a"/><path d="M22 46 q6 9 12 0 t12 0 t12 0 t12 0 t12 0 t6 0 V40 H22Z" fill="#fff"/><rect x="36" y="20" width="48" height="22" rx="6" fill="#f6a5c0"/><path d="M36 26 q6 8 12 0 t12 0 t12 0 t12 0 V20 H36Z" fill="#fff"/><g><rect x="44" y="6" width="6" height="15" rx="2" fill="#4da3ff"/><rect x="57" y="6" width="6" height="15" rx="2" fill="#ffd23f"/><rect x="70" y="6" width="6" height="15" rx="2" fill="#4cd964"/><ellipse class="fl" cx="47" cy="3" rx="3" ry="5" fill="#ff9f1a"/><ellipse class="fl" cx="60" cy="3" rx="3" ry="5" fill="#ff9f1a" style="animation-delay:.15s"/><ellipse class="fl" cx="73" cy="3" rx="3" ry="5" fill="#ff9f1a" style="animation-delay:.3s"/></g></svg>';
+    sp.insertBefore(c,sp.querySelector('svg'));
+    const t=document.createElement('div');t.className='bd';t.textContent='Sto lat, Natalko! 🎂';sp.insertBefore(t,sb.nextSibling);
+    window.__spMin=4800;
+  }else if(sb){const g=document.createElement('div');g.className='sg';g.textContent=hal?'Wesołego Halloween! 🎃':'Wesołych Świąt! 🎄';sb.after(g)}
+})();
 // ---- zapis przejazdów (GPX) i pól przejechanych ulic ----
 const tracks=[];let trk=null;const vis=new Set();let visDirty=false,trkDirty=false;
 idbGet('tracks').then(a=>{if(Array.isArray(a))a.forEach(x=>{if(x&&x.pts&&!tracks.some(t=>t.t0===x.t0))tracks.push(x)});tracks.sort((a,b)=>b.t0-a.t0);if(tracks.length>12)tracks.length=12}).catch(()=>{});
