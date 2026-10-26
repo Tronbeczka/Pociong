@@ -116,6 +116,9 @@ body.night #xBoard{background:#202228;color:#e8eaed}
 body.night #brwFav{background:#2d3139;color:#e8eaed}
 #srchFavs b.h{display:block;font-size:.8rem;opacity:.65;margin:10px 0 2px}
 #srchFavs div{display:flex;align-items:center;gap:8px}#srchFavs div span{flex:1}#srchFavs div button{background:transparent;color:inherit;opacity:.6;font-size:1rem;padding:6px 10px}
+#nextStrip{position:fixed;left:12px;right:70px;top:calc(env(safe-area-inset-top,0px) + 152px);z-index:880;display:none;gap:6px;flex-wrap:wrap;pointer-events:none}
+#nextStrip span{background:#202124d9;color:#fff;border-radius:14px;padding:5px 10px;font-weight:700;font-size:.85rem;box-shadow:0 3px 10px #0004}
+body.preview #nextStrip{display:none!important}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -481,7 +484,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
   <label style="font-size:.9rem"><input type="checkbox" id="voice" checked> Głos</label>
   <label style="font-size:.9rem"><input type="checkbox" id="autonight" checked> Dzień/noc wg słońca</label>
   <select id="vsel" class="sec" style="max-width:100%"></select>
-  <select id="vbose" class="sec"><option value="full">Komunikaty: szczegółowe</option><option value="short">Komunikaty: krótkie</option></select>
+  <select id="vbose" class="sec"><option value="full">Komunikaty: szczegółowe</option><option value="short">Komunikaty: krótkie</option><option value="beep">Tylko dźwięki (bez mowy)</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="sigsnd" checked> Znaki STOP / ustąp</label>
   <label style="font-size:.9rem"><input type="checkbox" id="vcTrain" checked> Głos: pociągi</label>
   <label style="font-size:.9rem"><input type="checkbox" id="vcNav" checked> Głos: skręty i pasy</label>
@@ -489,6 +492,9 @@ body.night #intro .card{background:#202228;color:#e8eaed}
   <label style="font-size:.9rem"><input type="checkbox" id="eco"> Tryb oszczędny baterii</label>
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
+  <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
+  <button id="dlarea" class="sec">Pobierz mapę okolicy (offline)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
+  <label style="font-size:.9rem"><input type="checkbox" id="camShow" checked> Pokazuj fotoradary na mapie i ostrzegaj</label>
   <button id="hist" class="sec">Historia przejazdów</button>
   <button id="xstat" class="sec">Statystyki przejazdów kolejowych</button>
   <label style="font-size:.9rem"><input type="checkbox" id="alarmOn" checked> Alarm pełnoekranowy przy pociągu</label>
@@ -539,6 +545,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div id="evToast"><b id="evT1"></b><span id="evT2"></span><div class="evb" id="evB"></div></div>
 <button id="srchfab" aria-label="Szukaj miejsca" type="button">🔍</button>
 <div id="srchBox"><div id="srchRow"><input id="srchIn" placeholder="Wpisz miejscowość lub ulicę, np. Pszenno" autocomplete="off"><button id="srchX" type="button">✕</button></div><div id="srchSug"></div><div id="srchFavs"></div></div>
+<div id="nextStrip"></div>
 <div id="xBoard"></div>
 <button id="brwFav" type="button">⭐ Zapisz to miejsce</button>
 <button id="brwBack" type="button">📍 Wróć do mojej pozycji (GPS)</button>
@@ -546,7 +553,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 82</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 83</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -664,6 +671,7 @@ function pickVoice(){
 }
 let voiceMuted=false;
 function speak(text,vol,done){if(voiceMuted&&text!==undefined&&!speak.force){if(done)done();return}
+  if(vbose==='beep'&&text!==undefined&&!speak.force&&$('voice').checked){try{chime('go')}catch(e){}if(done)setTimeout(done,500);return}
   if(!$('voice').checked||!window.speechSynthesis){if(done)done();return}
   try{
     const u=new SpeechSynthesisUtterance(text),v=pickVoice();u.lang='pl-PL';if(v)u.voice=v;
@@ -728,7 +736,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
-  logSample(p);tripTick(p);fuelTick(p);evCheck(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
+  logSample(p);tripTick(p);fuelTick(p);evCheck(p);camTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -2256,7 +2264,7 @@ setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-al
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['eco','logon','fpsOn','logdl','logan','logFile','report']);
-  mv('data',['hist','xstat','share','expSet','impSet','impFile','about']);
+  mv('data',['hist','xstat','share','sharePos','dlarea','dlast','camShow','expSet','impSet','impFile','about']);
   G('adv').appendChild($('cfg'));
   // tytuły nad przełącznikami bez własnego opisu
   const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
@@ -2621,6 +2629,78 @@ $('brwFav').onclick=()=>{
   const it=window.browseIt;if(!it)return;
   if(!favs.some(f=>Math.abs(f.lat-it.lat)<1e-4&&Math.abs(f.lon-it.lon)<1e-4)){favs.unshift({title:it.title,sub:it.sub||'',label:it.label,lat:it.lat,lon:it.lon});favs=favs.slice(0,20);LSput('favs',favs)}
   $('brwFav').textContent='⭐ Zapisano';setTimeout(()=>{$('brwFav').textContent='⭐ Zapisz to miejsce'},1500);
+};
+
+// ================= Fotoradary na mapie (także bez trasy) =================
+let cams=[],camAt=null,camAl={};
+$('camShow').checked=LSget('camShow',true);$('camShow').onchange=()=>LSput('camShow',$('camShow').checked);
+async function loadCams(lat,lon){
+  camAt={lat,lon};
+  try{
+    const R=4000,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
+    const j=await cachedOverpass('cam|'+Math.round(lat*25)+'|'+Math.round(lon*16),'[out:json][timeout:20];(node["highway"="speed_camera"]'+bb+';node["enforcement"="maxspeed"]'+bb+';);out;');
+    cams=(j.elements||[]).filter(e=>e.lat!=null).map(e=>({id:e.id,lat:e.lat,lon:e.lon,dir:e.tags&&e.tags.direction!=null&&!isNaN(+e.tags.direction)?+e.tags.direction:null,ms:e.tags&&e.tags.maxspeed||''}));
+  }catch(e){camAt=null}
+}
+function camTick(p){
+  if(!$('camShow').checked)return;
+  if(!camAt||dist(camAt.lat,camAt.lon,p.lat,p.lon)>2200)loadCams(p.lat,p.lon);
+  if(route||window.preview||(p.speed||0)<5||p.heading==null)return;   // z trasą ostrzega istniejący mechanizm
+  for(const c of cams){
+    if(camAl[c.id])continue;const d=dist(p.lat,p.lon,c.lat,c.lon);if(d>500||d<40)continue;
+    if(angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading)>35)continue;
+    if(c.dir!=null&&angDiff(c.dir,p.heading)>70)continue;
+    camAl[c.id]=1;const dm=Math.round(d/50)*50;
+    say('cam'+c.id,'Za '+dm+' metrów fotoradar. Proszę zachować dozwoloną prędkość.',[150,80,150],'Fotoradar');
+    break;
+  }
+}
+function drawCams(){
+  if(!cams.length||!$('camShow').checked||!last)return;
+  const W=window.innerWidth,H=window.innerHeight,car=vf&&vf.car?vf.car:last;
+  for(const c of cams){
+    if(dist(car.lat,car.lon,c.lat,c.lon)>2500)continue;
+    const q=proj(c.lat,c.lon);if(!q||q.x<-30||q.x>W+30||q.y<-30||q.y>H+30)continue;
+    const u=Math.max(10,Math.min(16,12*q.k));
+    mx.save();mx.translate(q.x,q.y);mx.beginPath();mx.arc(0,0,u,0,6.2832);mx.fillStyle='#c62828';mx.fill();mx.lineWidth=Math.max(2,u*.2);mx.strokeStyle='#fff';mx.stroke();
+    mx.font=Math.round(u*1.1)+'px system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillStyle='#fff';mx.fillText('📷',0,u*.06);mx.restore();
+  }
+}
+// ================= Pasek „co dalej na trasie” =================
+setInterval(()=>{
+  const el=$('nextStrip');
+  if(!route||window.preview||!last||route.off>120||!route.pts||route.pts.length<3){el.style.display='none';return}
+  const fm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m',it=[];
+  const aheadX=(typeof aheadList!=='undefined'?aheadList:[]).slice(0,2);
+  aheadX.forEach(a=>it.push([a.d,'🚆 '+fm(a.d)]));
+  const near=(arr,max,off)=>{let b=null;for(const o of arr){const m=projRoute(route,o.lat,o.lon,0,route.pts.length-2);const d=m.along-route.along;if(m.off<off&&d>20&&d<max&&(!b||d<b))b=d}return b};
+  if($('camShow').checked){const d=near(cams,8000,25);if(d!=null)it.push([d,'📷 '+fm(d)])}
+  const df=near(poi.filter(x=>x.kind==='fuel'),30000,200);if(df!=null)it.push([df,'⛽ '+fm(df)]);
+  it.sort((a,b)=>a[0]-b[0]);
+  el.innerHTML=it.slice(0,4).map(x=>'<span>'+x[1]+'</span>').join('');el.style.display=it.length?'flex':'none';
+},3000);
+// ================= Pobieranie mapy okolicy (offline) =================
+$('dlarea').onclick=async()=>{
+  const b=$('dlarea'),st=t=>{$('dlast').textContent=t};
+  if(b.disabled)return;const c=(vf&&vf.cam)||last;if(!c){st('Brak pozycji – poczekaj na GPS albo wybierz miejsce lupką.');return}
+  b.disabled=true;
+  try{
+    const tpl=await ofmUrl(),z=14,n=Math.pow(2,z),fx=(c.lon+180)/360*n,fy=(1-Math.log(Math.tan(rad(c.lat))+1/Math.cos(rad(c.lat)))/Math.PI)/2*n,tx=Math.floor(fx),ty=Math.floor(fy),list=[];
+    for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++)list.push([tx+dx,ty+dy]);
+    let ok=0;
+    for(let k=0;k<list.length;k+=6){await Promise.allSettled(list.slice(k,k+6).map(([x,y])=>tileBuf(tpl,z,x,y).then(()=>ok++)));st('Mapa okolicy: '+ok+' / '+list.length+' kafelków')}
+    st(ok?'Gotowe: mapa okolicy (ok. 20 × 20 km) zapisana na telefonie na 30 dni.':'Nie udało się pobrać mapy.');
+  }catch(e){st('Błąd: '+e.message)}
+  b.disabled=false;
+};
+// ================= Udostępnianie pozycji =================
+$('sharePos').onclick=async()=>{
+  const c=last;if(!c){alert('Brak pozycji.');return}
+  let txt='Jestem tutaj: https://www.google.com/maps?q='+c.lat.toFixed(6)+','+c.lon.toFixed(6);
+  if(route&&endPt){const rem=Math.max(0,route.len-route.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
+    txt+='\nJadę do: '+(F.to.el.value||'celu')+', przyjazd ok. '+new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' (za '+mins+' min).'}
+  try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(txt);alert('Skopiowano do schowka:\n'+txt)}catch(e){prompt('Skopiuj wiadomość:',txt)}
 };
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
@@ -3613,7 +3693,7 @@ function drawMarkers(){
   drawBuildings3D();
   drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
-  drawPoi();drawEvents();
+  drawPoi();drawEvents();drawCams();
   if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
     if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
