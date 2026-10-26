@@ -849,15 +849,167 @@ function fetchOverpass(q){
     });
   });
 }
+// ---- Szybka ścieżka: kafelki wektorowe MVT z CDN (OpenFreeMap, dane OpenMapTiles/OSM) ----
+function mvtDecode(buf){
+  const u=new Uint8Array(buf),td=new TextDecoder();let p=0;
+  const rv=()=>{let r=0,m=1,b;do{b=u[p++];r+=(b&127)*m;m*=128}while(b&128);return r};
+  const skip=wt=>{if(wt===0)rv();else if(wt===1)p+=8;else if(wt===2){const l=rv();p+=l}else if(wt===5)p+=4;else throw new Error('pbf')};
+  const KEEP={transportation:1,transportation_name:1,water:1,waterway:1,park:1,building:1};
+  const out=[];
+  while(p<u.length){
+    const tag=rv(),f=tag>>>3,wt=tag&7;
+    if(f!==3||wt!==2){skip(wt);continue}
+    const len=rv(),end=p+len;
+    let name='',ext=4096;const keys=[],vals=[],fr=[];
+    while(p<end){
+      const t=rv(),ff=t>>>3,w=t&7;
+      if(ff===1&&w===2){const l=rv();name=td.decode(u.subarray(p,p+l));p+=l}
+      else if(ff===2&&w===2){const l=rv();fr.push([p,p+l]);p+=l}
+      else if(ff===3&&w===2){const l=rv();keys.push(td.decode(u.subarray(p,p+l)));p+=l}
+      else if(ff===4&&w===2){const l=rv(),e2=p+l;let v=null;
+        while(p<e2){const t2=rv(),f2=t2>>>3,w2=t2&7;
+          if(f2===1&&w2===2){const l2=rv();v=td.decode(u.subarray(p,p+l2));p+=l2}
+          else if(f2===2&&w2===5){v=new DataView(u.buffer,u.byteOffset+p,4).getFloat32(0,true);p+=4}
+          else if(f2===3&&w2===1){v=new DataView(u.buffer,u.byteOffset+p,8).getFloat64(0,true);p+=8}
+          else if(w2===0){const x=rv();v=f2===7?!!x:f2===6?((x%2)?-(x+1)/2:x/2):x}
+          else skip(w2)}
+        vals.push(v);p=e2}
+      else if(ff===5&&w===0)ext=rv();
+      else skip(w);
+    }
+    p=end;
+    if(!KEEP[name])continue;
+    for(const [s,e] of fr){
+      p=s;let type=0;const tags=[],g=[];
+      while(p<e){
+        const t=rv(),ff=t>>>3,w=t&7;
+        if(ff===2&&w===2){const l=rv(),e2=p+l;while(p<e2)tags.push(rv())}
+        else if(ff===2&&w===0)tags.push(rv());
+        else if(ff===3&&w===0)type=rv();
+        else if(ff===4&&w===2){const l=rv(),e2=p+l;while(p<e2)g.push(rv())}
+        else if(ff===4&&w===0)g.push(rv());
+        else skip(w);
+      }
+      const props={};for(let i=0;i+1<tags.length;i+=2)props[keys[tags[i]]]=vals[tags[i+1]];
+      if(type===1)continue;
+      const rings=[];let cur=null,x=0,y=0,i=0;
+      while(i<g.length){
+        const c=g[i++],id=c&7,n=c>>>3;
+        if(id===1){for(let k=0;k<n;k++){const dx=g[i++],dy=g[i++];x+=(dx>>>1)^-(dx&1);y+=(dy>>>1)^-(dy&1);cur=[x,y];rings.push(cur)}}
+        else if(id===2){for(let k=0;k<n;k++){const dx=g[i++],dy=g[i++];x+=(dx>>>1)^-(dx&1);y+=(dy>>>1)^-(dy&1);if(cur)cur.push(x,y)}}
+      }
+      out.push({l:name,e:ext,t:type,p:props,r:rings});
+    }
+    p=end;
+  }
+  return out;
+}
+const MV_ROAD={motorway:'mw',trunk:'mw',primary:'pr',secondary:'sc',tertiary:'tr',minor:'rs',service:'sv'};
+function buildMvt(tiles,lat0,lon0){
+  const W=40075016.686,cl=Math.cos(rad(lat0)),cx=lon0/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(lat0)/2));
+  const P={},LB=[];
+  const gp=k=>P[k]||(P[k]=new Path2D());
+  for(const t of tiles){
+    const T=W/Math.pow(2,t.z),ox=-W/2+t.x*T,oy=W/2-t.y*T;
+    for(const f of t.feats){
+      const pr=f.p,k=T/f.e;let cls=null,fill=false,cut=3000;
+      switch(f.l){
+        case 'transportation':
+          if(f.t!==2||pr.brunnel==='tunnel')continue;
+          if(pr.class==='rail'||(pr.class==='transit'&&(pr.subclass==='tram'||pr.subclass==='light_rail')))cls=(pr.subclass==='subway'||pr.subclass==='funicular')?null:'rail';
+          else{cls=MV_ROAD[pr.class]||null;if(cls==='sv'&&(pr.service==='parking_aisle'||pr.service==='driveway'||pr.service==='drive-through'))cls=null}
+          break;
+        case 'waterway':if(f.t===2&&(pr.class==='river'||pr.class==='canal'))cls='wline';break;
+        case 'water':if(f.t===3){cls='water';fill=true;cut=1e9}break;
+        case 'park':if(f.t===3){cls='park';fill=true;cut=1e9}break;
+        case 'building':if(f.t===3){cls='bld';fill=true;cut=1100}break;
+        case 'transportation_name':
+          if(f.t===2&&pr.name&&(pr.class in MV_ROAD)&&pr.class!=='service'&&f.r.length){
+            const rg=f.r[0],pts=[];
+            for(let i=0;i+1<rg.length;i+=2)pts.push([(ox+rg[i]*k-cx)*cl,(oy-rg[i+1]*k-cy)*cl]);
+            let tot=0;for(let i=1;i<pts.length;i++)tot+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+            if(tot>140){let acc=0,i=1;for(;i<pts.length-1;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);if(acc+d>=tot/2)break;acc+=d}
+              const a=pts[i-1],b=pts[i];LB.push({x:(a[0]+b[0])/2,y:(a[1]+b[1])/2,ex:b[0]-a[0],ny:b[1]-a[1],n:pr.name,c:MV_ROAD[pr.class]})}
+          }
+          continue;
+      }
+      if(!cls)continue;
+      const path=gp(cls);
+      for(const rg of f.r){
+        if(rg.length<4)continue;
+        const x0=(ox+rg[0]*k-cx)*cl,y0=(oy-rg[1]*k-cy)*cl;
+        if(cut<1e8&&x0*x0+y0*y0>cut*cut)continue;
+        path.moveTo(x0,y0);let px=x0,py=y0;
+        for(let i=2;i+1<rg.length;i+=2){
+          const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;
+          if(Math.abs(x-px)+Math.abs(y-py)<2.5&&i+3<rg.length)continue;
+          path.lineTo(x,y);px=x;py=y;
+        }
+        if(fill)path.closePath();
+      }
+    }
+  }
+  return {lat:lat0,lon:lon0,P,LB,SP:[]};
+}
+async function ofmUrl(){
+  try{const c=JSON.parse(localStorage.getItem('ofm')||'null');if(c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
+  const r=await fetch('https://tiles.openfreemap.org/planet');if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json(),u=j.tiles&&j.tiles[0];if(!u)throw new Error('brak adresu kafelków');
+  try{localStorage.setItem('ofm',JSON.stringify({t:Date.now(),u}))}catch(e){}
+  return u;
+}
+const tileMem=new Map();
+function getTile(tpl,z,x,y){
+  const key=z+'/'+x+'/'+y;if(tileMem.has(key))return tileMem.get(key);
+  const pr=fetch(tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y)).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(b=>({z,x,y,feats:mvtDecode(b)}));
+  tileMem.set(key,pr);pr.catch(()=>tileMem.delete(key));
+  if(tileMem.size>40)tileMem.delete(tileMem.keys().next().value);
+  return pr;
+}
+function buildSP(j,lat,lon){
+  const kx=111195*Math.cos(rad(lat)),SP=[];
+  for(const w of j.elements||[]){
+    if(!w.geometry||w.geometry.length<2)continue;const t=w.tags||{};
+    const mv=t.maxspeed?parseMax(t.maxspeed):(t.highway==='motorway'?140:null);if(!mv)continue;
+    SP.push({p:w.geometry.map(g=>[(g.lon-lon)*kx,(g.lat-lat)*111195]),v:mv});
+  }
+  return SP;
+}
+async function fetchSpeed(lat,lon,dat){   // ograniczenia prędkości: małe zapytanie w tle
+  try{
+    const R=1500,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
+    const j=await fetchOverpass('[out:json][timeout:20];(way["highway"]["maxspeed"]'+bb+';way["highway"="motorway"]'+bb+';);out tags geom qt;');
+    if(vecData===dat)dat.SP=buildSP(j,lat,lon);
+  }catch(e){}
+}
+
 async function loadVec(lat,lon){
   if(vecBusy)return;vecBusy=true;vecErr='';
-  const key='v2|'+Math.round(lat*200)+'|'+Math.round(lon*130);   // komórki ok. 550 m
   try{
+    // 1) kafelki wektorowe z CDN: środkowy od razu, reszta zaraz po nim
+    try{
+      const tpl=await ofmUrl(),z=14,n=Math.pow(2,z);
+      const fx=(lon+180)/360*n,fy=(1-Math.log(Math.tan(rad(lat))+1/Math.cos(rad(lat)))/Math.PI)/2*n;
+      const tx=Math.floor(fx),ty=Math.floor(fy);
+      const first=await getTile(tpl,z,tx,ty);
+      let dat=buildMvt([first],lat,lon);
+      if(!Object.keys(dat.P).length)throw new Error('pusta mapa');
+      vecData=dat;$('attr').textContent='© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap';
+      const rest=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(dx||dy)rest.push(getTile(tpl,z,tx+dx,ty+dy));
+      const all=[first,...(await Promise.allSettled(rest)).filter(r=>r.status==='fulfilled').map(r=>r.value)];
+      dat=buildMvt(all,lat,lon);vecData=dat;
+      fetchSpeed(lat,lon,dat);
+      return;
+    }catch(e){tileMem.clear()}
+    // 2) zapas: Overpass, etapami (mały obszar → większy → szeroki)
+    const key='v2|'+Math.round(lat*200)+'|'+Math.round(lon*130);
     let c=null;try{c=await idbGet(key)}catch(e){}
-    if(c&&Date.now()-c.t<14*864e5&&dist(c.lat,c.lon,lat,lon)<500){vecData=buildVec({elements:c.el},c.lat,c.lon);return}  // z pamięci: od razu
-    const near=await fetchOverpass(ovQuery(lat,lon,900,true));      // 1) bliski obszar – szybko
+    if(c&&Date.now()-c.t<14*864e5&&dist(c.lat,c.lon,lat,lon)<500){vecData=buildVec({elements:c.el},c.lat,c.lon);return}
+    const tiny=await fetchOverpass(ovQuery(lat,lon,350,false));
+    vecData=buildVec(tiny,lat,lon);
+    const near=await fetchOverpass(ovQuery(lat,lon,900,true));
     vecData=buildVec(near,lat,lon);
-    try{                                                              // 2) szerszy obszar w tle
+    try{
       const far=await fetchOverpass(ovQuery(lat,lon,2500,false));
       const m=new Map(),kk=e=>e.id!=null?e.id:Math.random();near.elements.forEach(e=>m.set(kk(e),e));far.elements.forEach(e=>{if(e.id==null||!m.has(e.id))m.set(kk(e),e)});
       const el=[...m.values()];
@@ -889,7 +1041,7 @@ function drawVec(){
     c.lineCap='round';c.lineJoin='round';
     if(P.park){c.fillStyle=pal.park;c.fill(P.park)}
     if(P.water){c.fillStyle=pal.water;c.fill(P.water)}
-    if(P.bld){c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
+    if(P.bld&&s>=.5){c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
     if(P.wline){c.strokeStyle=pal.water;c.lineWidth=8/s;c.stroke(P.wline)}
     const order=['sv','rs','tr','sc','pr','mw'];
     for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:pal.casing;c.lineWidth=(VC[k].w+2.5)/s;c.stroke(P[k])}
