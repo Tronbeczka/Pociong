@@ -423,7 +423,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 61</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 62</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -837,7 +837,7 @@ const clampS=v=>Math.max(.35,Math.min(5,v));
 function updRecenter(){$('recenter').style.display=(freeCam||Math.abs(rotOff)>3)?'flex':'none'}
 function enterFree(){
   if(freeCam)return;freeCam=true;tgtRot=curRot;   // przesuwanie nie zmienia widoku: nachylenie i obrót zostają
-  $('carIcon').style.display='none';updRecenter();
+  updRecenter();
 }
 function recenter(){
   rotOff=0;tgtRot=-lastH;
@@ -2860,6 +2860,12 @@ function updCarSnap(){
   const el=$('carIcon');carSnap=null;
   const Rr=rw('tr',scaleCur),Wc=Math.round(Math.max(40,Math.min(96,vec&&route?Rr*.8:96)));   // rozmiar auta dopasowany do szerokości drogi (tylko na trasie)
   const base='translate(-50%,-80%)';
+  if(freeCam&&!window.preview&&vec&&vf&&vf.car){   // mapa przesunięta ręcznie: to samo auto (ten sam model) jedzie po swoim miejscu na mapie
+    const q=proj(vf.car.lat,vf.car.lon),pr=el.offsetParent||document.body,rc=pr.getBoundingClientRect();
+    if(q){const Wf=Math.round(Math.max(40,Math.min(96,route?Rr*.8:70)));el.style.width=Wf+'px';el.style.height=Math.round(Wf*.8)+'px';
+      el.style.display=(q.x>-60&&q.x<window.innerWidth+60&&q.y>-60&&q.y<window.innerHeight+60)?'':'none';
+      el.style.transform='translate(calc(-50% + '+(q.x-(rc.left+rc.width*.5)).toFixed(1)+'px),calc(-80% + '+(q.y-(rc.top+rc.height*.68)).toFixed(1)+'px)) rotate('+(lastH+curRot).toFixed(1)+'deg)';return}
+  }
   if(!(vec&&route&&vf&&vf.car&&!freeCam&&!demo&&route.pts.length>1&&route.len>0)){el.style.width='';el.style.height='';el.style.transform='';return}
   el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px';
   const n=route.pts.length-2,m=projRoute(route,vf.car.lat,vf.car.lon,Math.max(0,route.idx-2),Math.min(n,route.idx+12));
@@ -2945,7 +2951,7 @@ function drawMarkers(){
   drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
   drawPoi();
-  if(freeCam&&!window.preview){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
+  if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
     if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
       mx.save();mx.translate(q.x,q.y);mx.rotate(rad(lastH+curRot));
