@@ -301,7 +301,7 @@ body.night #zoomb{background:#2b3140}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick"><div class="box">
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 39</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 40</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -2001,54 +2001,39 @@ function updTrainCard(p){
   const card=$('tcard'),nowS=Date.now()/1000;
   const hasSrc=demo||gKey||gtfs||feedUrl;
   if(!hasSrc){card.style.display='none';nearTrainId=null;return}
-  card.style.display='flex';
   let best=null;
-  // 1) odległość PO TORZE od pociągu do przejazdów leżących przed nami
+  // tylko pociągi, które dojadą do przejazdu leżącego na naszej trasie (albo przed nami, gdy trasy nie ma)
+  let cand=aheadList;
+  if(route&&!demo&&route.off<100){
+    cand=[];crossings.forEach(c=>{const rc=routeCross(c);if(rc&&rc.off<35){const d=rc.along-route.along;if(d>-15&&d<8000)cand.push({c,d:Math.max(0,d)})}});
+  }
   for(const t of trains){
     if(!t.tr||!t.tr.sh||t.sd==null||dist(p.lat,p.lon,t.lat,t.lon)>40000)continue;
-    for(const a of aheadList){
+    for(const a of cand){
       const r=gtfsApproach(t,nowS,a.c);
-      if(r&&r.along<80000&&(!best||r.along<best.along))best={t,along:r.along,eta:r.eta,a,kind:'x'};
+      if(r&&r.along<80000&&r.eta>-10&&(!best||r.eta<best.eta))best={t,along:r.along,eta:r.eta,a,kind:'x'};
     }
   }
-  // 2) brak przejazdu przed nami: najbliższy punkt toru przy samochodzie (do 3 km)
-  if(!best){
-    const car={id:'car',lat:p.lat,lon:p.lon,nc:true,maxOff:3000};
-    for(const t of trains){
-      if(!t.tr||!t.tr.sh||t.sd==null||dist(p.lat,p.lon,t.lat,t.lon)>40000)continue;
-      const r=gtfsApproach(t,nowS,car);
-      if(r&&r.along<80000&&(!best||r.along<best.along))best={t,along:r.along,eta:r.eta,off:r.off,kind:'c'};
-    }
-  }
-  if(best){
+  if(!best){card.style.display='none';nearTrainId=null;return}
+  card.style.display='flex';
+  {
     const t=best.t,sp=t.speed!=null?Math.round(t.speed):null;
     nearTrainId=t.id;$('tarr').style.visibility='visible';
     $('tname').textContent=t.id;
     $('tdist').textContent=fmtKm(best.along);
-    $('tmeta').textContent=best.kind==='x'?'po torze do przejazdu (za '+fmtKm(best.a.d)+')':'po torze do punktu '+fmtKm(best.off)+' od Ciebie';
+    $('tmeta').textContent='po torze do przejazdu (za '+fmtKm(best.a.d)+')';
     $('tmeta2').textContent=(sp!=null?(sp>3?sp+' km/h':'stoi')+' · ':'')+fmtEta(best.eta)+(t.late!=null?(t.late>=1?' · opóźnienie '+t.late+' min':t.late<=-1?' · przed czasem':' · punktualnie'):' · wg rozkładu');
     card.className=best.along<1500?'near':best.along<5000?'mid':'far';
     $('tarr').firstElementChild.style.transform='rotate('+((bear(p.lat,p.lon,t.lat,t.lon)-lastH+360)%360)+'deg)';
-    return;
   }
-  // 3) zapas: brak toru w danych – odległość w linii prostej
-  let nb=null,bd=1e12;
-  for(const t of trains){const d=dist(p.lat,p.lon,t.lat,t.lon);if(d<bd){bd=d;nb=t}}
-  if(!nb||bd>40000){nearTrainId=null;card.className='';$('tname').textContent='Brak pociągów w pobliżu';$('tdist').textContent='> 40 km';$('tmeta').textContent='';$('tmeta2').textContent='';$('tarr').style.visibility='hidden';return}
-  nearTrainId=nb.id;$('tarr').style.visibility='visible';
-  const sp=nb.speed!=null?Math.round(nb.speed):null;
-  $('tname').textContent=nb.id;$('tdist').textContent=fmtKm(bd);
-  $('tmeta').textContent='w linii prostej (brak toru w danych)';
-  $('tmeta2').textContent=(sp==null?'':sp>3?sp+' km/h':'stoi')+(nb.rt===false?' · wg rozkładu':'');
-  card.className=bd<1500?'near':bd<5000?'mid':'far';
-  $('tarr').firstElementChild.style.transform='rotate('+((bear(p.lat,p.lon,nb.lat,nb.lon)-lastH+360)%360)+'deg)';
 }
 function updInfo(p){
   $('wait').style.display='none';
   const nT=trains.filter(t=>dist(p.lat,p.lon,t.lat,t.lon)<10000).length;
-  const src=demo?'demo':gKey?'geOps':gtfs?(liveOk?'rozkład PKP + opóźnienia na żywo':'rozkład PKP'):feedUrl?'własne dane':'brak danych o pociągach';
+  const src=demo?'demo':gKey?'':gtfs?'':feedUrl?'':'brak danych o pociągach';
   const bad=(t)=>t&&/błąd|brak danych|HTTP/i.test(t);
-  $('info').textContent=src.replace('rozkład PKP + opóźnienia na żywo','rozkład + opóźnienia')+(vec&&vecErr?' · '+vecErr:'')+(route&&ttKey&&bad(ttSt)?' · ruch: '+ttSt:'')+(route&&ttKey&&bad(flSt)?' · '+flSt:'')+(route&&wxTxt&&!/bez opadów/.test(wxTxt)?' · '+wxTxt.replace(/^na trasie /,''):'');
+  const parts=[src,vec&&vecErr?vecErr:'',route&&ttKey&&bad(ttSt)?'ruch: '+ttSt:'',route&&ttKey&&bad(flSt)?flSt:'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
+  $('info').textContent=parts.join(' · ');$('info').style.display=parts.length?'':'none';
 }
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
