@@ -49,6 +49,7 @@ body.night #achv{--bg:#13161b;--card:#1f2228;--tx:#e8eaed;--mut:#a9b0bb;--line:#
 #achv .sHead h2{margin:0;font-size:1.3rem;font-weight:800;flex:1}
 #achv .sBody{flex:1;overflow:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 30px)}
 #achBack{width:42px;height:42px;border-radius:50%;padding:0;background:var(--card);color:var(--tx);font-size:1.6rem;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+button.lockd{opacity:.6}button.lockd svg{filter:grayscale(1) brightness(.4)}
 #achOpen{width:100%;margin:0 0 14px;padding:14px;border-radius:16px;font-weight:800;font-size:1rem;background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.08);text-align:left}
 .achStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:620px;margin:0 auto 16px}
 .achStats div{background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;font-size:.72rem;color:var(--mut)}
@@ -612,7 +613,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 91</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 92</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -4312,8 +4313,9 @@ function buildCars(){
     const b=document.createElement('button');b.dataset.k=k;
     if(id==='cars'){b.className='sec';b.style.padding='4px 8px';b.innerHTML='<div style="width:64px">'+carSvg(k)+'</div><div style="font-size:.7rem">'+CARS[k].n+'</div>'}
     else{b.className='pc';b.innerHTML=carSvg(k)+'<div>'+CARS[k].n+'</div>'}
-    if(!carOpen(k)){b.style.display='none'}
-    b.onclick=()=>{if(!carOpen(k))return;carKind=k;try{localStorage.setItem('car',k)}catch(e){}showCar()};
+    if(!carOpen(k)){const a=ACHS.find(x=>x.car===k);b.classList.add('lockd');b.title=a.d;
+      b.innerHTML+='<div style="font-size:.62rem;opacity:.9;margin-top:2px">🔒 '+a.d.replace(/^Przejedź /,'').replace(/ z aplikacją/,'')+'</div>'}
+    b.onclick=()=>{if(!carOpen(k)){const a=ACHS.find(x=>x.car===k);try{evToast('🔒 '+CARS[k].n,a.d+' ('+(a.k==='km'||a.k==='night'?achVal(a).toFixed(1):Math.floor(achVal(a)))+' / '+a.v+a.u+')')}catch(e){}return}carKind=k;try{localStorage.setItem('car',k)}catch(e){}showCar()};
     $(id).appendChild(b);
   }}
   const row=$('carCols');row.innerHTML='';
