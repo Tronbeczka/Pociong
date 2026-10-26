@@ -266,7 +266,7 @@ body.night #pick small,body.night #rxinfo,body.night #wxinfo,body.night #dlst{co
 #pick .opts{opacity:1}
 #chips button{background:#eef1f4;color:#202124}
 body.night #chips button{background:#2d3139;color:#e8eaed}
-#planfab{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 160px);z-index:900;width:52px;height:52px;padding:0;border-radius:16px;background:#1a73e8;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center}
+#planfab{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 330px);z-index:900;width:52px;height:52px;padding:0;border-radius:16px;background:#1a73e8;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center}
 #planfab svg{width:26px;height:26px}
 #more{margin:8px 0}
 #more summary{cursor:pointer;font-size:.88rem;font-weight:700;color:#1a73e8;padding:6px 2px;list-style:none}
@@ -357,7 +357,7 @@ body.night #more summary{color:#8ab4f8}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 41</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 42</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -770,13 +770,13 @@ var freeCam=false,panE=0,panN=0,savedTilt=50,zoomMul=1,rotOff=0,scaleBase=1,zoom
 const clampS=v=>Math.max(.35,Math.min(5,v));
 function updRecenter(){$('recenter').style.display=(freeCam||Math.abs(rotOff)>3)?'flex':'none'}
 function enterFree(){
-  if(freeCam)return;freeCam=true;savedTilt=tiltDeg||50;tiltDeg=0;applyRot();tgtRot=curRot;
-  $('carIcon').style.display='none';$('tilt').style.display='none';updRecenter();
+  if(freeCam)return;freeCam=true;tgtRot=curRot;   // przesuwanie nie zmienia widoku: nachylenie i obrót zostają
+  $('carIcon').style.display='none';updRecenter();
 }
 function recenter(){
   rotOff=0;tgtRot=-lastH;
   if(freeCam){
-    freeCam=false;panE=panN=0;tiltDeg=savedTilt;applyRot();$('tilt').textContent=tiltDeg?'2D':'3D';
+    freeCam=false;panE=panN=0;applyRot();tiltLbl();
     $('carIcon').style.display='';$('tilt').style.display='block';
     if(!vec&&last)map.setView([last.lat,last.lon],map.getZoom(),{animate:false});
     vd=null;
@@ -793,7 +793,7 @@ $('zin').onclick=()=>setZoom(zoomMul*1.35);
 $('zout').onclick=()=>setZoom(zoomMul/1.35);
 $('compass').onclick=()=>{rotOff=0;tgtRot=freeCam?0:-lastH;updRecenter()};   // kompas: powrót do kierunku jazdy (przy przesuniętej mapie – północ u góry)
 const tiltLbl=()=>{$('tilt').textContent=tiltDeg>=60?'2D':tiltDeg?'3D+':'3D'};
-$('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot()};
+$('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot()};
 {
   const vw=$('view'),ptrs=new Map();let pan=null,g0=null;
   const pair=()=>{const a=[...ptrs.values()];return {d:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y)||1,ang:Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)*180/Math.PI}};
@@ -811,7 +811,7 @@ $('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg===0?50:tilt
     }
     if(!pan)return;
     if(!pan.moved){if(Math.hypot(e.clientX-pan.x0,e.clientY-pan.y0)<8)return;pan.moved=true;enterFree()}
-    const R=rad(curRot),cx=dx*Math.cos(R)+dy*Math.sin(R),cy=-dx*Math.sin(R)+dy*Math.cos(R);   // przesunięcie palca w układzie mapy
+    const R=rad(curRot),dyv=dy/Math.max(.35,Math.cos(rad(tiltDeg))),cx=dx*Math.cos(R)+dyv*Math.sin(R),cy=-dx*Math.sin(R)+dyv*Math.cos(R);   // przesunięcie palca w układzie mapy
     if(vec){panE-=cx/scaleCur;panN+=cy/scaleCur}else map.panBy([-cx,-cy],{animate:false});
   });
   ['pointerup','pointercancel'].forEach(t=>vw.addEventListener(t,e=>{ptrs.delete(e.pointerId);g0=null;pan=null;if(ptrs.size===2)g0=pair()}));
