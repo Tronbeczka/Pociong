@@ -76,12 +76,13 @@ body.night #settings input[type=checkbox]{background:#4a5059}body.night #setting
 #settings #cars button div{margin-top:4px}
 #settings .sInfo{padding:14px 0;color:var(--mut);font-size:.9rem;line-height:1.4}
 @media (prefers-reduced-motion:reduce){#settings.open{animation:none}}
-.clipRow{display:flex;align-items:center;gap:6px;padding:12px 0}
-.clipRow .ct{flex:1;min-width:0}.clipRow .ct b{display:block;font-size:.98rem;font-weight:700}
+.clipRow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:12px 0}
+.clipRow .ct{flex:1 0 100%;min-width:0}.clipRow .ct b{display:block;font-size:.98rem;font-weight:700}
 .clipRow .ct small{display:block;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem}
 .clipRow .ct small.on{color:#1a9c55;font-weight:700}
 .clipRow button{padding:8px 11px;border-radius:10px;background:var(--bg);color:var(--tx);font-size:.85rem;font-weight:700;margin:0}
 .clipRow button.del{color:#d93025}
+.clipRow button.rc{color:#d93025}.clipRow button.rc.rec{background:#d93025;color:#fff;animation:alPulse 1s ease-in-out infinite}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -495,7 +496,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 73</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 74</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -2242,13 +2243,48 @@ async function loadClips(){
   }
   renderClips();
 }
+async function saveClip(id,name,type,buf){
+  const url=URL.createObjectURL(new Blob([buf],{type}));
+  await new Promise((ok,no)=>{const a=new Audio();a.oncanplaythrough=ok;a.onloadedmetadata=ok;a.onerror=()=>no(new Error('nie da się odtworzyć tego pliku'));a.src=url});
+  await idbSet('clip|'+id,{name,type,buf,t:Date.now()});
+  if(clips[id])try{URL.revokeObjectURL(clips[id].url)}catch(e){}
+  clips[id]={url,name};renderClips();
+  try{clipAudio.src=url;clipAudio.volume=1;clipAudio.play()}catch(e){}
+}
+// nagrywanie mikrofonem w aplikacji (do 15 s)
+const recSt={id:null,mr:null,stream:null,tm:null,t0:0};
+function recStop(){try{if(recSt.mr&&recSt.mr.state!=='inactive')recSt.mr.stop()}catch(e){}}
+async function recStart(id,btn){
+  if(recSt.id){const was=recSt.id;recStop();if(was===id)return;await new Promise(r=>setTimeout(r,300))}
+  if(!navigator.mediaDevices||!window.MediaRecorder){alert('Ta przeglądarka nie obsługuje nagrywania. Wgraj gotowy plik.');return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mt=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+    const mr=new MediaRecorder(stream,mt?{mimeType:mt}:{}),chunks=[];
+    recSt.id=id;recSt.mr=mr;recSt.stream=stream;recSt.t0=Date.now();
+    mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    mr.onstop=async()=>{
+      clearInterval(recSt.tm);stream.getTracks().forEach(t=>t.stop());recSt.id=null;recSt.mr=null;
+      const type=(mr.mimeType||mt||'audio/webm').split(';')[0],ext=type.includes('mp4')?'m4a':type.includes('ogg')?'ogg':'webm';
+      try{
+        const blob=new Blob(chunks,{type});
+        if(blob.size<800){renderClips();alert('Nagranie jest puste lub zbyt krótkie. Spróbuj ponownie.');return}
+        if(blob.size>3*1024*1024){renderClips();alert('Nagranie jest za duże.');return}
+        await saveClip(id,'nagranie '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+'.'+ext,type,await blob.arrayBuffer());
+      }catch(e){renderClips();alert('Nie udało się zapisać nagrania: '+e.message)}
+    };
+    mr.start();
+    btn.textContent='■ Stop 0:00';btn.classList.add('rec');
+    recSt.tm=setInterval(()=>{const sec=Math.floor((Date.now()-recSt.t0)/1000);btn.textContent='■ Stop 0:'+String(sec).padStart(2,'0');if(sec>=15)recStop()},250);
+  }catch(e){alert(e.name==='NotAllowedError'?'Brak zgody na mikrofon. Włącz ją w ustawieniach przeglądarki.':'Nie można uruchomić mikrofonu: '+e.message)}
+}
 function renderClips(){
   const box=$('clipList');if(!box)return;
   box.querySelectorAll('.clipRow').forEach(e=>e.remove());
   for(const [id,label,sample] of CLIP_SLOTS){
     const row=document.createElement('div');row.className='clipRow';
     const has=!!clips[id];
-    row.innerHTML='<div class="ct"><b></b><small></small></div><button class="pl" type="button" aria-label="Odtwórz">▶</button><button class="up" type="button">'+(has?'Zmień':'Wgraj')+'</button>'+(has?'<button class="del" type="button" aria-label="Usuń">✕</button>':'');
+    row.innerHTML='<div class="ct"><b></b><small></small></div><button class="pl" type="button" aria-label="Odtwórz">▶</button><button class="rc" type="button" aria-label="Nagraj">⏺ Nagraj</button><button class="up" type="button">'+(has?'Zmień':'Wgraj')+'</button>'+(has?'<button class="del" type="button" aria-label="Usuń">✕</button>':'');
     row.querySelector('b').textContent=label;
     const sm=row.querySelector('small');sm.textContent=has?'Własne nagranie: '+clips[id].name:'Głos lektora';if(has)sm.className='on';
     row.querySelector('.pl').onclick=()=>{
@@ -2257,17 +2293,11 @@ function renderClips(){
     };
     const inp=document.createElement('input');inp.type='file';inp.accept='audio/*';inp.style.display='none';
     row.querySelector('.up').onclick=()=>inp.click();
+    row.querySelector('.rc').onclick=e=>recStart(id,e.currentTarget);
     inp.onchange=async()=>{
       const f=inp.files[0];if(!f)return;
       if(f.size>3*1024*1024){alert('Plik jest za duży (limit 3 MB).');return}
-      try{
-        const buf=await f.arrayBuffer(),type=f.type||'audio/mpeg',url=URL.createObjectURL(new Blob([buf],{type}));
-        await new Promise((ok,no)=>{const a=new Audio();a.oncanplaythrough=ok;a.onloadedmetadata=ok;a.onerror=()=>no(new Error('nie da się odtworzyć tego pliku'));a.src=url});
-        await idbSet('clip|'+id,{name:f.name,type,buf,t:Date.now()});
-        if(clips[id])try{URL.revokeObjectURL(clips[id].url)}catch(e){}
-        clips[id]={url,name:f.name};renderClips();
-        try{clipAudio.src=url;clipAudio.volume=1;clipAudio.play()}catch(e){}
-      }catch(e){alert('Nie udało się wczytać: '+e.message)}
+      try{await saveClip(id,f.name,f.type||'audio/mpeg',await f.arrayBuffer())}catch(e){alert('Nie udało się wczytać: '+e.message)}
     };
     const del=row.querySelector('.del');if(del)del.onclick=async()=>{try{await idbSet('clip|'+id,null)}catch(e){}try{URL.revokeObjectURL(clips[id].url)}catch(e){}delete clips[id];renderClips()};
     row.appendChild(inp);box.appendChild(row);
