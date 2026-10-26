@@ -525,14 +525,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div class="sBody">
 <button id="achOpen" type="button">🏆 Osiągnięcia i nowe samochody <span id="achCnt" style="float:right;color:var(--mut);font-weight:700"></span></button>
 <section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"><label><span>Motyw sezonowy</span><select id="seasonSel"><option value="auto">Automatycznie (Halloween, Święta, urodziny)</option><option value="off">Wyłączony</option><option value="halloween">Halloween (podgląd)</option><option value="xmas">Święta (podgląd)</option><option value="bday">Urodziny Natalki (podgląd)</option></select></label></div></section>
-<section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd">
-<label><span>Silnik głosu</span><select id="vEngine"><option value="system">Systemowy (domyślny, działa offline)</option><option value="google">Google (online, bez klucza, głos żeński)</option><option value="polly">Amazon Polly (online, bez klucza, eksperymentalny)</option><option value="voicerss">VoiceRSS (online, darmowy klucz)</option></select></label>
-<label id="vPollyRow"><span>Głos Polly</span><select id="vPolly"><option value="Jacek">Jacek (męski)</option><option value="Jan">Jan (męski)</option><option value="Ewa">Ewa (żeński)</option><option value="Maja">Maja (żeński)</option></select></label>
-<div id="vrRow"><label><span>Głos VoiceRSS</span><select id="vrVoice"><option value="Jan">Jan (męski)</option><option value="Julia">Julia (żeński)</option></select></label>
-<div style="padding:4px 0 10px"><input id="vrKey" placeholder="Klucz API VoiceRSS (voicerss.org → darmowa rejestracja)" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;font-size:.85rem"></div></div>
-<div class="sInfo" id="vEngInfo">Głosy online brzmią naturalniej, ale potrzebują internetu, a tekst komunikatów jest wysyłany do usługi głosowej. Pilne ostrzeżenia o pociągach mówi najpierw głos systemowy, a głos online jest używany, gdy komunikat był już wcześniej zapisany. Gdy usługa zawiedzie, aplikacja sama wraca do głosu systemowego.</div>
-<button id="vTest" class="sec" type="button">Przetestuj wybrany głos</button>
-<small id="vEngStat" style="display:block;color:var(--mut);padding:4px 0 10px"></small></div></section>
+<section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
 <section><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
 <section><h3><i>🧭</i>Własne wskazówki nawigacji</h3><div class="sc" id="clipNav"><div class="sInfo">Nagraj lub wgraj własne „Skręć w prawo”, „Zjedź z ronda” itd. Aplikacja powie wtedy „Za 200 metrów”, odtworzy Twoje nagranie, a po nim przeczyta nazwę ulicy. Manewry bez nagrania są czytane głosem lektora.</div></div></section>
 <section><h3><i>📣</i>Zgłoszenia kierowców</h3><div class="sc" id="evSet">
@@ -649,7 +642,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 99</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 100</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -750,7 +743,7 @@ function setBanner(level,big,sub){const b=$('banner');b.className=level==='ok'?'
 var nav=null,navSaid={},rerouting=false;
 function fillVoices(){
   const sel=$('vsel'),vs=plVoices();if(!sel)return;
-  sel.innerHTML='<option value="">Głos: automatycznie (męski)</option>'+vs.map(v=>'<option value="'+v.name.replace(/"/g,'&quot;')+'">'+v.name+(v.localService?' · offline':' · online')+'</option>').join('');
+  sel.innerHTML='<option value="">Głos: automatycznie (męski)</option>'+vs.map(v=>'<option value="'+v.name.replace(/"/g,'&quot;')+'">'+v.name+'</option>').join('');
   sel.value=voiceName&&vs.some(v=>v.name===voiceName)?voiceName:'';
 }
 // zdania mówione przy manewrach (grzecznie, w pierwszej osobie liczby mnogiej)
@@ -789,14 +782,9 @@ function pickVoice(){
   return vs.find(x=>x.name===voiceName)||vs.find(x=>V_MALE.test(x.name)&&!V_FEMALE.test(x.name))||vs.find(x=>!V_FEMALE.test(x.name))||vs[0];
 }
 let voiceMuted=false;
-function speak(text,vol,done,urgent){if(voiceMuted&&text!==undefined&&!speak.force){if(done)done();return}
+function speak(text,vol,done){if(voiceMuted&&text!==undefined&&!speak.force){if(done)done();return}
   if(vbose==='beep'&&text!==undefined&&!speak.force&&$('voice').checked){try{chime('go')}catch(e){}if(done)setTimeout(done,500);return}
-  if(!$('voice').checked){if(done)done();return}
-  if(text!==undefined&&typeof ttsReady==='function'&&ttsReady()){speakOnline(text,vol,done,urgent);return}
-  sysSpeak(text,vol,done);
-}
-function sysSpeak(text,vol,done){
-  if(!window.speechSynthesis){if(done)done();return}
+  if(!$('voice').checked||!window.speechSynthesis){if(done)done();return}
   try{
     const u=new SpeechSynthesisUtterance(text),v=pickVoice();u.lang='pl-PL';if(v)u.voice=v;
     const male=v&&V_MALE.test(v.name)&&!V_FEMALE.test(v.name);
@@ -815,7 +803,7 @@ function say(key,text,vib,short){if(window.preview)return;const now=Date.now();i
   if(vcOff[cat])return;
   {const sl=clipSlot(key);if(sl&&clips[sl]&&$('voice').checked&&!voiceMuted){if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}if(playClip(sl,cat==='Train'?volTrain:.9))return}}
   beep(cat);if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
-  speak(vbose==='short'&&short?short:text,cat==='Train'?volTrain:.9,null,cat==='Train')}
+  speak(vbose==='short'&&short?short:text,cat==='Train'?volTrain:.9)}
 
 // zapytanie Overpass z pamięcią podręczną: bez internetu użyjemy ostatniego wyniku dla tego obszaru
 async function cachedOverpass(key,q){
@@ -4698,80 +4686,6 @@ $('seasonSel').onchange=()=>{LSput('season',$('seasonSel').value);seasonCur=seas
     window.__spMin=4800;
   }else if(sb){const g=document.createElement('div');g.className='sg';g.textContent=hal?'Wesołego Halloween! 🎃':'Wesołych Świąt! 🎄';sb.after(g)}
 })();
-
-// ================= Silniki głosu: Google / Amazon Polly / VoiceRSS (online, z pamięcią podręczną) =================
-var vEngine=LSget('vengine','system'),vrKey=LSget('vrkey',''),vrVoice=LSget('vrvoice','Jan'),vpVoice=LSget('vpvoice','Jacek');
-const TTSC=new Map(),ttsAud=new Audio();let ttsBusy=0;
-const ttsStat=t=>{const e=$('vEngStat');if(e)e.textContent=t};
-function ttsReady(){return vEngine!=='system'&&navigator.onLine!==false&&(vEngine!=='voicerss'||!!vrKey)}
-const ttsKey=t=>'tts|'+vEngine+'|'+(vEngine==='voicerss'?vrVoice:vEngine==='polly'?vpVoice:'g')+'|'+t;
-function ttsUrl(t){
-  if(vEngine==='google')return 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pl&q='+encodeURIComponent(t);
-  if(vEngine==='polly')return 'https://api.streamelements.com/kappa/v2/speech?voice='+encodeURIComponent(vpVoice)+'&text='+encodeURIComponent(t);
-  return 'https://api.voicerss.org/?key='+encodeURIComponent(vrKey)+'&hl=pl-pl&v='+encodeURIComponent(vrVoice)+'&c=MP3&f=44khz_16bit_mono&r=-1&src='+encodeURIComponent(t);
-}
-async function ttsCached(t){const k=ttsKey(t);if(TTSC.has(k))return TTSC.get(k);let c=null;try{c=await idbGet(k)}catch(e){}if(c&&c.b){TTSC.set(k,c.b);return c.b}return null}
-async function ttsFetch(t){
-  const k=ttsKey(t),c=await ttsCached(t);if(c)return c;
-  const r=await fetch(ttsUrl(t));if(!r.ok)throw new Error('HTTP '+r.status);
-  const b=await r.blob();
-  if(b.size<600){let tx='';try{tx=await b.text()}catch(e){}if(/^ERROR/i.test(tx))throw new Error(tx.slice(0,120));if(b.size<100)throw new Error('odpowiedź nie jest dźwiękiem')}
-  TTSC.set(k,b);if(TTSC.size>200)TTSC.delete(TTSC.keys().next().value);
-  try{await idbSet(k,{b,t:Date.now()})}catch(e){}
-  return b;
-}
-function ttsPlay(src,vol,fin,fail){
-  let ok=false;const a=ttsAud;a.onended=()=>fin();a.onerror=()=>{if(!ok)fail();else fin()};
-  a.onplaying=()=>{ok=true};a.src=src;a.volume=Math.max(.1,Math.min(1,vol||.9));a.playbackRate=.95;
-  const p=a.play();if(p&&p.catch)p.catch(()=>fail());
-  return ()=>{a.pause();a.removeAttribute('src')};
-}
-async function speakOnline(text,vol,done,urgent){
-  let end=false,fb=false,stop=null;
-  const fin=()=>{if(end)return;end=true;if(done)done()};
-  const fall=()=>{if(end||fb)return;fb=true;if(stop)stop();sysSpeak(text,vol,fin)};
-  try{
-    if(vEngine==='google'){   // bez CORS: odtwarzamy bezpośrednio z adresu; pilne komunikaty mówi od razu głos systemowy
-      if(urgent){fall();return}
-      const t=setTimeout(fall,2200);stop=ttsPlay(ttsUrl(text),vol,()=>{clearTimeout(t);fin()},()=>{clearTimeout(t);ttsStat('Google: błąd odtwarzania – używam głosu systemowego');fall()});
-      ttsAud.addEventListener('playing',()=>clearTimeout(t),{once:true});return;
-    }
-    let b=await ttsCached(text);
-    if(!b){
-      if(urgent){ttsFetch(text).catch(()=>{});fall();return}   // pilne: teraz głos systemowy, wersja online zapisze się na następny raz
-      const t=setTimeout(fall,1600);
-      try{b=await ttsFetch(text)}catch(e){clearTimeout(t);ttsStat('Błąd: '+e.message+' – używam głosu systemowego');fall();return}
-      clearTimeout(t);if(fb)return;
-    }
-    stop=ttsPlay(URL.createObjectURL(b),vol,fin,()=>{ttsStat('Nie udało się odtworzyć – głos systemowy');fall()});
-  }catch(e){fall()}
-}
-function fillEngUI(){
-  $('vEngine').value=vEngine;$('vPolly').value=vpVoice;$('vrVoice').value=vrVoice;$('vrKey').value=vrKey;
-  if(vEngine==='polly')$('vPollyRow').style.removeProperty('display');else $('vPollyRow').style.setProperty('display','none','important');$('vrRow').style.display=vEngine==='voicerss'?'':'none';
-  {const vl=$('vsel').closest('label')||$('vsel');vl.style.opacity=vEngine==='system'?'':'.5'}
-}
-$('vEngine').onchange=()=>{vEngine=$('vEngine').value;LSput('vengine',vEngine);fillEngUI();ttsStat(vEngine==='system'?'':'Dotknij „Przetestuj”, aby sprawdzić, czy ten głos działa u Ciebie.')};
-$('vPolly').onchange=()=>{vpVoice=$('vPolly').value;LSput('vpvoice',vpVoice)};
-$('vrVoice').onchange=()=>{vrVoice=$('vrVoice').value;LSput('vrvoice',vrVoice)};
-$('vrKey').onchange=()=>{vrKey=$('vrKey').value.trim();LSput('vrkey',vrKey)};
-$('vTest').onclick=async()=>{
-  const txt='Dzień dobry. Za dwieście metrów przejazd kolejowy.';
-  if(vEngine==='system'){speak.force=true;sysSpeak(txt,.9);speak.force=false;ttsStat('Głos systemowy.');return}
-  if(vEngine==='voicerss'&&!vrKey){ttsStat('Wpisz najpierw klucz API VoiceRSS.');return}
-  ttsStat('Łączenie…');
-  try{
-    if(vEngine==='google'){
-      await new Promise((ok,no)=>{const t=setTimeout(()=>no(new Error('brak odpowiedzi')),6000);ttsPlay(ttsUrl(txt),.9,()=>{clearTimeout(t);ok()},()=>{clearTimeout(t);no(new Error('serwis zablokował odtwarzanie'))});ttsAud.addEventListener('playing',()=>{clearTimeout(t);ttsStat('Google działa ✓ (odtwarzam…)')},{once:true})});
-    }else{
-      const b=await ttsFetch(txt);ttsStat('Działa ✓ – odtwarzam…');
-      await new Promise(ok=>ttsPlay(URL.createObjectURL(b),.9,ok,ok));
-    }
-    ttsStat('Działa ✓ Ten głos będzie używany w komunikatach.');
-  }catch(e){ttsStat('Nie działa: '+(e.message||e)+'. Aplikacja zostanie przy głosie systemowym.')}
-};
-fillEngUI();
-document.addEventListener('pointerdown',()=>{try{ttsAud.src=CLIP_SILENCE;ttsAud.volume=0;const p=ttsAud.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}},{once:true});
 // ---- zapis przejazdów (GPX) i pól przejechanych ulic ----
 const tracks=[];let trk=null;const vis=new Set();let visDirty=false,trkDirty=false;
 idbGet('tracks').then(a=>{if(Array.isArray(a))a.forEach(x=>{if(x&&x.pts&&!tracks.some(t=>t.t0===x.t0))tracks.push(x)});tracks.sort((a,b)=>b.t0-a.t0);if(tracks.length>12)tracks.length=12}).catch(()=>{});
