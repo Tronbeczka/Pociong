@@ -382,7 +382,9 @@ function evaluate(p){
       if(a===near&&td<nearestTd)nearestTd=td;
       if(t.tr&&t.tr.sh){ // pociąg z rozkładu i torem: liczy się tylko, jeśli jego tor przechodzi przez ten przejazd
         const r=td<12000?gtfsApproach(t,Date.now()/1000,a.c):null;
-        if(r&&r.eta<240&&r.eta>-5&&(!threat||r.eta<threat.eta))threat={eta:Math.max(0,r.eta),a,t,td:r.along};
+        // auto dojedzie dopiero >70 s po przejechaniu pociągu (rogatki otwarte) – bez alarmu
+        const carEta=p.speed>2?a.d/p.speed:0, passedFirst=p.speed>2&&r&&carEta>r.eta+70;
+        if(r&&!passedFirst&&r.eta<240&&r.eta>-5&&(!threat||r.eta<threat.eta))threat={eta:Math.max(0,r.eta),a,t,td:r.along};
         continue;
       }
       if(td>5000)continue;
@@ -410,11 +412,26 @@ function evaluate(p){
   }else setBanner('ok','Przejazd w oddali',`za ${n} m`);
 }
 
+let gpsOk=null; // ostatni przyjęty odczyt (do filtrowania skoków i słabych fixów)
 function onPos(g){
   const c=g.coords, t=g.timestamp;
-  let heading=(c.heading!=null&&!isNaN(c.heading))?c.heading:null, speed=c.speed||0;
-  if(last&&heading==null){const d=dist(last.lat,last.lon,c.latitude,c.longitude);
-    if(d>5){heading=bear(last.lat,last.lon,c.latitude,c.longitude);if(!c.speed)speed=d/Math.max(1,(t-last.t)/1000)}}
+  const acc=c.accuracy||0;
+  // odrzuć słaby odczyt (>60 m) i nierealny skok (>70 m/s = 250 km/h), chyba że trwa to już kilka sekund
+  if(gpsOk){const dt=Math.max(.2,(t-gpsOk.t)/1000),jump=dist(gpsOk.lat,gpsOk.lon,c.latitude,c.longitude);
+    if((acc>60||jump/dt>70)&&dt<6)return}
+  let heading=(c.heading!=null&&!isNaN(c.heading))?c.heading:null, speed=(c.speed!=null&&!isNaN(c.speed))?c.speed:null;
+  if(gpsOk&&(heading==null||speed==null)){const dt=Math.max(.2,(t-gpsOk.t)/1000),d=dist(gpsOk.lat,gpsOk.lon,c.latitude,c.longitude);
+    // prędkość z przemieszczenia; przy postoju (szum GPS < 1,5× dokładność) zakładamy 0
+    if(speed==null)speed=d>Math.max(3,acc*.7)?d/dt:0;
+    if(heading==null&&d>Math.max(6,acc*.8))heading=bear(gpsOk.lat,gpsOk.lon,c.latitude,c.longitude)}
+  if(speed==null)speed=0;
+  if(speed<.6)speed=0;                       // dryf GPS na postoju
+  if(speed<1&&gpsOk&&gpsOk.h!=null)heading=gpsOk.h;   // na postoju zachowaj ostatni kierunek
+  if(gpsOk&&speed>=1&&heading!=null&&gpsOk.h!=null&&gpsOk.speed>=1){ // wygładź kierunek (okrężnie) i prędkość
+    const a=rad(heading),b=rad(gpsOk.h),w=.7;
+    heading=(deg(Math.atan2(w*Math.sin(a)+(1-w)*Math.sin(b),w*Math.cos(a)+(1-w)*Math.cos(b)))+360)%360;
+    speed=.75*speed+.25*gpsOk.speed}
+  gpsOk={lat:c.latitude,lon:c.longitude,t,h:heading,speed};
   last={lat:c.latitude,lon:c.longitude,t};
   evaluate({lat:c.latitude,lon:c.longitude,speed,heading});
 }
@@ -1357,6 +1374,19 @@ function eachRow(text,fn){
 }
 const tsec=s=>{if(!s)return NaN;const a=s.trim().split(':');return +a[0]*3600+ +a[1]*60+ +a[2]};
 const ymd=d=>d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+// doba rozkładu liczona wg czasu polskiego (Europe/Warsaw), niezależnie od strefy urządzenia; t0 = północ w Polsce (s UTC)
+const WF=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+function wParts(ms){const o={};WF.formatToParts(ms).forEach(x=>o[x.type]=+x.value);return o}
+function warsawDay(now,off){
+  const q=wParts(now.getTime()),u=Date.UTC(q.year,q.month-1,q.day+(off||0));
+  let t=u;                                                  // północ „naiwna” (UTC)
+  let o=Date.UTC(...(()=>{const w=wParts(t);return [w.year,w.month-1,w.day,w.hour,w.minute,w.second]})())-t; // przesunięcie strefy
+  t=u-o;
+  o=Date.UTC(...(()=>{const w=wParts(t);return [w.year,w.month-1,w.day,w.hour,w.minute,w.second]})())-t;  // poprawka na zmianę czasu
+  t=u-o;
+  const d=new Date(u);return {ymd:d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate(),dow:d.getUTCDay(),t0:t/1000};
+}
+const wToday=()=>warsawDay(new Date(),0).ymd;
 const nearC=(c,lat,lon)=>{const dy=(lat-c.lat)*KM,dx=(lon-c.lon)*KM*Math.cos(rad(c.lat));return dx*dx+dy*dy<c.r*c.r};
 
 // --- tory (kształty): suma długości, rzut stacji na tor, punkt na torze ---
@@ -1430,8 +1460,7 @@ function shapePt(o,d){
 async function buildGtfs(f,now,center,say){
   say=say||(()=>{});
   const dn=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-  const days=[0,-1].map(o=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+o);
-    return {ymd:ymd(d),dow:d.getDay(),t0:d.getTime()/1000}});
+  const days=[0,-1].map(o=>warsawDay(now,o));
   const active=days.map(()=>new Set());
   say('Czytanie kalendarza…');await pause();
   if(f['calendar.txt'])eachRow(f['calendar.txt'],(c,ix)=>days.forEach((D,k)=>{
@@ -1558,7 +1587,7 @@ async function loadTimetable(force){
   if(ttBusy)return;ttBusy=true;
   const st=t=>{$('gstat').textContent=t;const e=$('ttstat');if(e)e.textContent='Rozkład jazdy: '+t;if(!last)setBanner('warn','Import rozkładu',t)};
   try{
-    const today=ymd(new Date()), file=$('gfile').files[0];
+    const today=wToday(), file=$('gfile').files[0];
     let c=null;try{c=await idbGet('gtfs')}catch(e){}
     if(!file&&!force&&c&&c.ymd===today){setTimetable(c);gtfsCenter=c.center||null;st('gotowy, '+c.trips.length+' kursów dziś');return}
     let buf=null;
@@ -1582,7 +1611,7 @@ async function loadTimetable(force){
   finally{ttBusy=false}
 }
 $('gload').onclick=()=>loadTimetable(!!$('gfile').files[0]);
-idbGet('gtfs').then(c=>{if(c&&c.ymd===ymd(new Date())){setTimetable(c);gtfsCenter=c.center||null;$('gstat').textContent='Rozkład z pamięci: '+c.trips.length+' kursów dziś';$('ttstat').textContent='Rozkład jazdy: gotowy, '+c.trips.length+' kursów dziś'}}).catch(()=>{});
+idbGet('gtfs').then(c=>{if(c&&c.ymd===wToday()){setTimetable(c);gtfsCenter=c.center||null;$('gstat').textContent='Rozkład z pamięci: '+c.trips.length+' kursów dziś';$('ttstat').textContent='Rozkład jazdy: gotowy, '+c.trips.length+' kursów dziś'}}).catch(()=>{});
 setTimeout(()=>{if(!gtfs&&!gKey&&!ttBusy)loadTimetable(false)},1200);
 setInterval(()=>{
   if(gKey||demo||!gtfs)return;
