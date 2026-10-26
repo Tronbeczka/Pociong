@@ -377,7 +377,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 52</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 53</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -838,7 +838,7 @@ $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot
   vw.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoomMul*Math.exp(-e.deltaY*.0015))},{passive:false});
 }
 function follow(p){
-  const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+  const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=window.preview?(window.pvTxt||''):kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   updLimit(p);
   scaleBase=kmh>110?.85:kmh>80?1.1:kmh>50?1.5:kmh>25?2.05:2.8;if(nav&&nav.i>0&&nav.d<170&&nav.d>5)scaleBase*=1.25;   // przed skrętem kamera zbliża się do skrzyżowania
   scaleTgt=clampS(scaleBase*zoomMul);   // px na metr: im wolniej, tym bliżej ulicy (× ręczne zbliżenie)
@@ -1368,6 +1368,7 @@ function enterPreview(r){
   zoomMul=Math.max(.3,Math.min(1,830/(route.len*1.15)));if(vec)scaleTgt=clampS(scaleBase*zoomMul);
   const p={lat:a[0],lon:a[1],speed:0,heading:h};last={lat:p.lat,lon:p.lon,t:Date.now()};
   try{follow(p);routeUpdate(p)}catch(e){}
+  window.pvTxt=(r.distance/1000).toFixed(1).replace('.',',')+' km · odjazd teraz → '+new Date(Date.now()+r.duration*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});$('bsub').textContent=window.pvTxt;
   clearInterval(window.pvT);vecNext=0;   // mapa wokół startu: ponawiamy ładowanie, aż się wczyta
   window.pvT=setInterval(()=>{if(!window.preview){clearInterval(window.pvT);return}if(!vecData||dist(vecData.lat,vecData.lon,p.lat,p.lon)>600){vecNext=0;try{follow(p)}catch(e){}}else clearInterval(window.pvT)},800);
   const mn=Math.round(r.duration/60),t=mn>=60?Math.floor(mn/60)+' godz. '+(mn%60)+' min':mn+' min';
