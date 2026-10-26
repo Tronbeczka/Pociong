@@ -50,6 +50,20 @@ body.night #achv{--bg:#13161b;--card:#1f2228;--tx:#e8eaed;--mut:#a9b0bb;--line:#
 #achv .sBody{flex:1;overflow:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 30px)}
 #achBack{width:42px;height:42px;border-radius:50%;padding:0;background:var(--card);color:var(--tx);font-size:1.6rem;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 button.lockd{opacity:.6}button.lockd svg{filter:grayscale(1) brightness(.4)}
+#carPlate{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);background:#f6f6f2;color:#111;border:1.5px solid #222;border-radius:3px;font:800 9px/1.15 'Courier New',monospace;padding:1px 4px 1px 10px;letter-spacing:.06em;white-space:nowrap;box-shadow:0 1px 3px #0008;display:none}
+#carPlate::before{content:"PL";position:absolute;left:0;top:0;bottom:0;width:7px;background:#0b4ea2;color:#fff;font-size:4.5px;line-height:12px;text-align:center}
+.achTabs{display:flex;gap:6px;overflow-x:auto;max-width:620px;margin:0 auto 12px;padding-bottom:2px}
+.achTab{padding:8px 13px;border-radius:999px;background:var(--card);color:var(--tx);font-size:.82rem;font-weight:700;white-space:nowrap;flex:0 0 auto}
+.achTab.on{background:var(--acc);color:#fff}
+#achRank{max-width:620px;margin:0 auto 12px;background:var(--card);border-radius:16px;padding:12px 14px}
+#achRank b{font-size:1.1rem}#achRank small{color:var(--mut)}
+.achSw{width:46px;height:46px;border-radius:50%;margin:0 auto;border:3px solid #fff5;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.achChips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.achChips span{background:var(--card);border-radius:999px;padding:6px 11px;font-size:.8rem}
+.achBars{display:flex;align-items:flex-end;gap:4px;height:110px;background:var(--card);border-radius:14px;padding:10px 8px 6px;margin:6px 0 12px}
+.achBars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:.58rem;color:var(--mut)}
+.achBars i{display:block;width:100%;background:var(--acc);border-radius:3px 3px 0 0;min-height:2px}
+.achH{max-width:620px;margin:10px auto 4px;font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
 #achOpen{width:100%;margin:0 0 14px;padding:14px;border-radius:16px;font-weight:800;font-size:1rem;background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.08);text-align:left}
 .achStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:620px;margin:0 auto 16px}
 .achStats div{background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;font-size:.72rem;color:var(--mut)}
@@ -495,7 +509,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 </ul><button id="introOk">Rozumiem</button></div></div>
 <div id="fps" style="display:none"></div><div id="dim"></div><canvas id="jp" width="240" height="240" style="display:none"></canvas><div id="wait" style="display:none"></div><div id="alarm"><div class="al1">⚠ NADJEŻDŻA POCIĄG</div><div class="al2" id="alT">–</div><div class="al3" id="alD"></div><button id="alOk" type="button">Widzę</button></div>
 <div id="histbox" style="display:none"></div>
-<div id="achv" role="dialog" aria-label="Osiągnięcia"><div class="sHead"><button id="achBack" aria-label="Wróć" type="button">‹</button><h2>Osiągnięcia</h2></div><div class="sBody"><div class="achStats" id="achStats"></div><div class="achList" id="achList"></div></div></div>
+<div id="achv" role="dialog" aria-label="Osiągnięcia"><div class="sHead"><button id="achBack" aria-label="Wróć" type="button">‹</button><h2>Osiągnięcia</h2></div><div class="sBody"><div id="achRank"></div><div class="achStats" id="achStats"></div><div class="achTabs" id="achTabs"></div><div class="achList" id="achList"></div></div></div>
 <div id="settings" role="dialog" aria-label="Ustawienia"><div class="sHead"><button id="setBack" aria-label="Wróć" type="button">‹</button><h2>Ustawienia</h2><small id="setVer"></small></div>
 <div class="sBody">
 <button id="achOpen" type="button">🏆 Osiągnięcia i nowe samochody <span id="achCnt" style="float:right;color:var(--mut);font-weight:700"></span></button>
@@ -523,9 +537,12 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <div class="sInfo">Dane: RainViewer – obraz z ostatnich minut (bez prognozy), niska dokładność przestrzenna (ok. 1–2 km). Jeśli serwis zablokuje dostęp z przeglądarki, radar się nie pokaże.</div>
 <small id="radStat" style="display:block;color:var(--mut);padding:4px 0 10px"></small>
 </div></section>
-<section><h3><i>🚗</i>Samochód</h3><div class="sc" data-g="car"></div></section>
+<section><h3><i>🚗</i>Samochód</h3><div class="sc" data-g="car"><label><span>Tablica rejestracyjna na aucie</span><input id="plate" maxlength="8" placeholder="np. DW 1234" autocomplete="off" style="width:120px;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;text-transform:uppercase;text-align:center"></label>
+<label><span>Ślad za autem</span><select id="trailSel"></select></label></div></section>
 <section><h3><i>🔋</i>Jazda i bateria</h3><div class="sc" data-g="drive"></div></section>
-<section><h3><i>📊</i>Historia i dane</h3><div class="sc" data-g="data"></div></section>
+<section><h3><i>📊</i>Historia i dane</h3><div class="sc" data-g="data"><label><span>Pokaż przejechane przeze mnie ulice</span><input type="checkbox" id="heatOn"></label>
+<button id="liveShare" class="sec" type="button">📍 Udostępnij dojazd na żywo (link)</button>
+<button id="gpxRoute" class="sec" type="button">Eksportuj bieżącą trasę (GPX)</button></div></section>
 <section><h3><i>🔧</i>Źródła danych i klucze</h3><div class="sc" data-g="adv"></div></section>
 <section><h3><i>ℹ️</i>O aplikacji</h3><div class="sc" data-g="about"><div class="sInfo">Przejazd – alert kolejowy. Ostrzeżenia o pociągach na przejazdach kolejowych na Twojej trasie. To wsparcie, nie zabezpieczenie – zawsze rozglądaj się na przejeździe.</div></div></section>
 </div></div>
@@ -613,7 +630,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 92</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 93</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -628,7 +645,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
     <details id="more"><summary>Więcej opcji: godzina wyjazdu, unikanie dróg</summary>
     <div class="fld"><span>⏱</span><input id="dep" type="datetime-local" title="Wyjazd o (puste = teraz)"></div>
     <small>Wyjazd o wybranej godzinie (puste = teraz): prognoza korków i najlepsza pora wyjazdu.</small>
-    <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label><label><input type="checkbox" id="avX"> Mniej przejazdów kolejowych</label></div>
+    <div class="opts"><label><input type="checkbox" id="avMw"> Bez autostrad</label><label><input type="checkbox" id="avToll"> Bez dróg płatnych</label><label><input type="checkbox" id="avFer"> Bez promów</label><label><input type="checkbox" id="avX"> Mniej przejazdów kolejowych</label></div>
     <div class="lbl">Paliwo (zasięg i ostrzeżenia o tankowaniu)</div>
     <div class="fld"><span>🔌</span><select id="fuelType"><option value="0">Silnik spalinowy (paliwo)</option><option value="1">Auto elektryczne (bateria)</option></select></div>
     <div class="fld"><span id="fuelIc">⛽</span><input id="fuelCap" type="number" inputmode="decimal" min="0" placeholder="Bak (litry), np. 55"></div>
@@ -1348,7 +1365,7 @@ async function loadWeather(R){
       const eta=Date.now()+R.dur*1000*fr[k],loc=eta+(w.utc_offset_seconds||0)*1000;
       let i=Math.floor((loc-Date.parse(h.time[0]+'Z'))/3600000);i=Math.max(0,Math.min(h.time.length-1,i));
       const kd=wxKind(h.weather_code[i],h.precipitation[i],h.temperature_2m[i],h.visibility&&h.visibility[i]);
-      const km=Math.round(R.len*fr[k]/1000);R.wx.push({lat:pts[k][0],lon:pts[k][1],kd:kd[0],code:h.weather_code[i],t:Math.round(h.temperature_2m[i])});
+      const km=Math.round(R.len*fr[k]/1000);R.wx.push({d:R.len*fr[k],lat:pts[k][0],lon:pts[k][1],kd:kd[0],code:h.weather_code[i],t:Math.round(h.temperature_2m[i])});
       if(k===arr.length-1)end={t:Math.round(h.temperature_2m[i]),kd:kd[0]};
       if(kd[1]>0&&(!worst||kd[1]>worst.s))worst={kind:kd[0],s:kd[1],km,when:new Date(eta).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})};
     });
@@ -1484,7 +1501,7 @@ async function fetchTT(a,b,hdg){
     '&traffic=true&travelMode=car&routeType=fastest&maxAlternatives=2&instructionsType=coded&language=pl-PL&sectionType=traffic&computeTravelTimeFor=all&routeRepresentation=polyline';
   if(hdg!=null)u+='&vehicleHeading='+Math.round((hdg+360)%360);
   if(depTime)u+='&departAt='+encodeURIComponent(depTime.toISOString().replace(/\.\d+Z$/,'+00:00'));
-  if(opts.mw)u+='&avoid=motorways';if(opts.toll)u+='&avoid=tollRoads';
+  if(opts.mw)u+='&avoid=motorways';if(opts.toll)u+='&avoid=tollRoads';if(opts.fer)u+='&avoid=ferries';
   const r=await fetch(u);if(!r.ok)throw new Error('TomTom HTTP '+r.status);
   const j=await r.json(),all=(j.routes||[]).map(ttRoute).filter(x=>x.geometry.coordinates.length>1&&x.duration>0);
   if(!all.length)throw new Error('TomTom: brak trasy');
@@ -1517,7 +1534,7 @@ var ttErr='',ttSt='',flSt='';
 async function fetchRouteOsrm(a,b,hdg){
   const base=($('osrm').value.trim()||'https://router.project-osrm.org').replace(/\/$/,'');
   const pts=[a].concat(viaList,[b]);
-  const ex=[opts.mw&&'motorway',opts.toll&&'toll'].filter(Boolean).join(',');
+  const ex=[opts.mw&&'motorway',opts.toll&&'toll',opts.fer&&'ferry'].filter(Boolean).join(',');
   const url=base+'/route/v1/driving/'+pts.map(q=>q.lon+','+q.lat).join(';')+'?overview=full&geometries=geojson&alternatives=false&steps=true'+(ex?'&exclude='+ex:'');
   let j=null;
   if(hdg!=null){   // kierunek jazdy: serwer nie każe zawracać w miejscu
@@ -1545,9 +1562,9 @@ const F={from:{el:$('from'),pt:null},via:{el:$('via'),pt:null},via2:{el:$('via2'
 var places={home:null,work:null,recent:[]},viaPt=null,viaList=[],depTime=null,opts={mw:false,toll:false,x:false};
 try{places=Object.assign(places,JSON.parse(localStorage.getItem('places')||'{}'));opts=Object.assign(opts,JSON.parse(localStorage.getItem('opts')||'{}'));if(!localStorage.getItem('xoff84')){opts.x=false;localStorage.setItem('xoff84','1');localStorage.setItem('opts',JSON.stringify(opts))}}catch(e){}
 const savePlaces=()=>{try{localStorage.setItem('places',JSON.stringify(places))}catch(e){}};
-$('avMw').checked=!!opts.mw;$('avToll').checked=!!opts.toll;
+$('avMw').checked=!!opts.mw;$('avToll').checked=!!opts.toll;$('avFer').checked=!!opts.fer;
 $('avX').checked=opts.x===true;
-['avMw','avToll','avX'].forEach(id=>$(id).onchange=()=>{opts.mw=$('avMw').checked;opts.toll=$('avToll').checked;opts.x=$('avX').checked;try{localStorage.setItem('opts',JSON.stringify(opts))}catch(e){}});
+['avMw','avToll','avFer','avX'].forEach(id=>$(id).onchange=()=>{opts.mw=$('avMw').checked;opts.toll=$('avToll').checked;opts.fer=$('avFer').checked;opts.x=$('avX').checked;try{localStorage.setItem('opts',JSON.stringify(opts))}catch(e){}});
 function pickDest(pt){F.to.el.value=pt.label;F.to.pt={lat:pt.lat,lon:pt.lon,label:pt.label};$('sug').innerHTML='';$('rinfo').textContent='';renderChips()}
 function renderChips(){
   const c=$('chips'),sb=$('savebar');c.innerHTML='';sb.innerHTML='';
@@ -1948,7 +1965,7 @@ function showReport(tr,dur){
   b.innerHTML='<h3>Podsumowanie przejazdu</h3>';
   [['Cel',tr.to],['Czas',Math.round(dur/60)+' min'],['Dystans',(tr.dist/1000).toFixed(1).replace('.',',')+' km'],
    ['Średnia prędkość',Math.round(tr.dist/mov*3.6)+' km/h (w ruchu)'],['Maksymalna prędkość',Math.round(tr.max*3.6)+' km/h'],
-   ['Postoje i korki',Math.round(tr.stop/60)+' min'],['Przejazdy kolejowe',String(tr.xs.size)]].concat(tr.xw>=5?[['Czekanie na przejazdach',Math.round(tr.xw/60*10)/10+' min ('+tr.xn+' '+(tr.xn===1?'raz':'razy')+')']]:[]).forEach(([k,v])=>{
+   ['Postoje i korki',Math.round(tr.stop/60)+' min'],['Przejazdy kolejowe',String(tr.xs.size)]].concat(tr.xw>=5?[['Czekanie na przejazdach',Math.round(tr.xw/60*10)/10+' min ('+tr.xn+' '+(tr.xn===1?'raz':'razy')+')']]:[]).concat(tr.ds>=120?[['Spokojna jazda',Math.round(100*(tr.cs||0)/tr.ds)+'%'+(tr.hb?' · gwałtownych hamowań: '+tr.hb:'')]]:[]).forEach(([k,v])=>{
     const d=document.createElement('div');d.className='it';d.innerHTML='<small></small><br><b></b>';d.querySelector('small').textContent=k;d.querySelector('b').textContent=v;b.appendChild(d)});
   const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>b.style.display='none';b.appendChild(c);b.style.display='block';
 }
@@ -2800,6 +2817,7 @@ setInterval(()=>{
    if(xErr&&Date.now()-xErr<150000&&cp&&![...xAll.values()].some(c=>dist(cp.lat,cp.lon,c.lat,c.lon)<5000))chips.push('<span class="w">⚠ brak danych o przejazdach – ponawiam</span>')}
   if(grpFr.length&&!pv)chips.push('<span>👥 '+grpFr.map(f=>(f.n||'?').slice(0,8)).slice(0,3).join(', ')+(grpFr.length>3?' +'+(grpFr.length-3):'')+'</span>');
   if(radOn&&radSamp.length&&!pv)chips.push('<span>☔ radar</span>');
+  if(route&&route.wx&&!pv){const nw=route.wx.find(w=>w.d!=null&&w.d>(route.along||0)+2000&&w.kd!=='bez opadów');if(nw)chips.push('<span class="w">'+wxIcon(nw.code,nw.kd)+' '+nw.kd+' za '+Math.max(1,Math.round((nw.d-(route.along||0))/1000))+' km</span>')}
   if(route&&!window.preview&&last&&route.off<=120&&route.pts&&route.pts.length>=3){
     const fm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m',it=[];
     (typeof aheadList!=='undefined'?aheadList:[]).slice(0,2).forEach(a=>it.push([a.d,'🚆 '+fm(a.d)]));
@@ -3113,6 +3131,7 @@ function drawRadar(){
     mx.fillStyle='rgba('+p.r+','+p.g+','+p.b+','+(.34*p.a).toFixed(2)+')';mx.beginPath();mx.arc(q.x,q.y,rr,0,6.2832);mx.fill();
   }
 }
+
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
@@ -4145,8 +4164,10 @@ function drawMarkers(){
   drawRadar();
   updCarSnap();carShadow();
   drawBuildings3D();
+  drawHeat();
   drawAlts();drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
+  drawTrail();
   drawPoi();drawEvents();drawCams();drawFriends();drawWx();
   if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
@@ -4238,7 +4259,7 @@ Object.assign(CARS,{
  weteran:{c:['#8a3a24','#a64b31'],n:'Staruszek',svg:genCar({bw:33,by:36,rw:23,rt:12,sl:5,c1:'#8a3a24',c2:'#a64b31',x:'<circle cx="28" cy="46" r="3.5" fill="#ffe9a3" stroke="#aaa" stroke-width="1"/><circle cx="72" cy="46" r="3.5" fill="#ffe9a3" stroke="#aaa" stroke-width="1"/>'})}
 });
 // ---- Osiągnięcia ----
-const ACH_ST=Object.assign({km:0,night:0,x:0,xw:0,rep:0,days:[],trips:0},LSget('achv1',{}));
+const ACH_ST=Object.assign({km:0,night:0,x:0,xw:0,rep:0,days:[],trips:0,tr:0,cats:[],catn:{},seen:{},log:[],calmS:0,driveS:0,hb:0,d:{},early:0},LSget('achv1',{}));
 const achSave=()=>LSput('achv1',ACH_ST);
 const ACHS=[
  {car:'hatch',n:'Pierwsze kroki',d:'Przejedź 20 km z aplikacją',k:'km',v:20,u:' km'},
@@ -4256,56 +4277,173 @@ const ACHS=[
  {car:'patrol',n:'Pomocna dłoń',d:'Wyślij 5 zgłoszeń dla innych kierowców',k:'rep',v:5,u:''},
  {car:'elektryk',n:'Stały bywalec',d:'Korzystaj z aplikacji w 7 różnych dni',k:'days',v:7,u:''}
 ];
-const achVal=a=>a.k==='days'?ACH_ST.days.length:ACH_ST[a.k]||0;
+const achVal=a=>STV[a.k]?STV[a.k]():(ACH_ST[a.k]||0);
 const achDone=a=>achVal(a)>=a.v;
 const carOpen=k=>{const a=ACHS.find(x=>x.car===k);return !a||achDone(a)};
-let achLast=0,achDay='';
+let achLast=0,achPv=null,achX=null,achW=false,achSaveAt=0;
 function achTick(p){
   const now=Date.now(),dt=achLast?Math.min(5,(now-achLast)/1000):0;achLast=now;
   if(window.preview||typeof sim!=='undefined'&&sim||typeof demo!=='undefined'&&demo)return;
-  const v=p.speed||0;if(v>70||v<0.8||!dt)return;      // odrzuć nierealne skoki
-  const km=v*dt/1000,h=new Date().getHours();
-  ACH_ST.km+=km;if(h>=22||h<5)ACH_ST.night+=km;
-  const day=new Date().toISOString().slice(0,10);if(!ACH_ST.days.includes(day)){ACH_ST.days.push(day);ACH_ST.days=ACH_ST.days.slice(-400)}
-  // przejazd obok przejazdu kolejowego (≤40 m, raz na 10 min na obiekt)
-  if(window._nearX&&now-window._nearX.t<4000&&window._nearX.d<40){const id=window._nearX.id;achX=achX||{};if(!achX[id]||now-achX[id]>600000){achX[id]=now;ACH_ST.x++}}
-  const w=!!(window._nearX&&now-window._nearX.t<4000&&window._nearX.d<150&&v<1.5);
+  const v=p.speed||0,nx=window._nearX;
+  // przejazd obok przejazdu kolejowego (≤40 m, raz na 10 min na obiekt) i czekanie przed nim
+  if(nx&&now-nx.t<4000&&nx.d<40&&v>0.8){achX=achX||{};if(!achX[nx.id]||now-achX[nx.id]>600000){achX[nx.id]=now;ACH_ST.x++}}
+  const w=!!(nx&&now-nx.t<4000&&nx.d<150&&v<1.5);
   if(w&&!achW)ACH_ST.xw++;achW=w;
-  const before=ACHS.filter(achDone).length;
+  if(v>70||v<0.8||!dt){achPv=v<0.8?null:achPv;return}   // odrzuć nierealne skoki i postoje
+  const km=v*dt/1000,h=new Date().getHours(),day=dayKey();
+  ACH_ST.km+=km;if(h>=22||h<5)ACH_ST.night+=km;if(h>=4&&h<6)ACH_ST.early+=km;
+  if(!ACH_ST.days.includes(day)){ACH_ST.days.push(day);ACH_ST.days=ACH_ST.days.slice(-400);const lim=dayKey(-120);for(const k in ACH_ST.d)if(k<lim)delete ACH_ST.d[k]}
+  ACH_ST.d[day]=(ACH_ST.d[day]||0)+km;
+  // spokojna jazda: gwałtowne hamowanie/przyspieszanie i znaczne przekroczenie limitu
+  const pv0=achPv,acc=pv0!=null&&dt>=.5?(v-pv0)/dt:0;achPv=v;
+  const lim=typeof limV!=='undefined'&&limV&&typeof limShow!=='undefined'&&now-limShow<20000?limV:null;
+  const hard=acc<-3.2&&pv0>3,sharp=acc>3.5,over=lim&&v*3.6>lim+10,ok=!hard&&!sharp&&!over;
+  ACH_ST.driveS+=dt;if(ok)ACH_ST.calmS+=dt;
+  if(hard&&now-(achTick.hb||0)>3000){achTick.hb=now;ACH_ST.hb++;if(trip)trip.hb=(trip.hb||0)+1}
+  if(trip){trip.ds=(trip.ds||0)+dt;if(ok)trip.cs=(trip.cs||0)+dt}
+  if(typeof trkAdd==='function'&&p.lat!=null){trkAdd(p,now,km);visAdd(p.lat,p.lon)}
   if(now-achSaveAt>20000){achSaveAt=now;achSave()}
   achCheck();
 }
-let achX=null,achW=false,achSaveAt=0;
-function achCheck(){
-  let known=LSget('achKnown',[]);
-  for(const a of ACHS)if(achDone(a)&&!known.includes(a.car)){known.push(a.car);LSput('achKnown',known);achSave();
-    try{evToast('🏆 Nowe auto: '+CARS[a.car].n,a.n+' – wybierz je w ustawieniach.')}catch(e){}
-    try{say&&say('Odblokowano nowy samochód: '+CARS[a.car].n)}catch(e){}}
+function achAll(){
+  const a=[];
+  ACHS.forEach(x=>a.push([x.car,achDone(x),'Nowe auto: '+CARS[x.car].n,x.n]));
+  for(const k in LOCKS.col)a.push(['col:'+k,lkOk(LOCKS.col[k]),'Nowy lakier: '+COLN[k],LOCKS.col[k].d]);
+  for(const k in LOCKS.trail)a.push(['trail:'+k,lkOk(LOCKS.trail[k]),'Nowy ślad za autem: '+TRAILS[k],LOCKS.trail[k].d]);
+  BADGES.forEach(b=>a.push(['badge:'+b.id,lkOk(b.l),'Odznaka: '+b.n,b.l.d]));
+  return a;
 }
+function achCheck(){
+  const known=LSget('achKnown',[]),fresh=[];
+  for(const [id,ok,t1,t2] of achAll())if(ok&&!known.includes(id)){known.push(id);fresh.push([t1,t2])}
+  if(!fresh.length)return;
+  LSput('achKnown',known);achSave();
+  const t1=fresh.length===1?'🏆 '+fresh[0][0]:'🏆 Nowe nagrody: '+fresh.length,t2=fresh.length===1?fresh[0][1]+' – szczegóły w ustawieniach → Osiągnięcia.':fresh.map(x=>x[0]).slice(0,3).join(' · ')+(fresh.length>3?' …':'');
+  try{evToast(t1,t2,[],8000)}catch(e){}
+  try{say('ach'+known.length,fresh.length===1?'Odblokowano nagrodę: '+fresh[0][0].replace(/^[^:]+: /,''):'Odblokowano '+fresh.length+' nowe nagrody.',[100],'Nowa nagroda')}catch(e){}
+}
+// ---- ekran osiągnięć: zakładki ----
+let achTab=LSget('achTab','cars');
+const ACH_TABS=[['cars','Samochody'],['extras','Dodatki'],['trains','Pociągi'],['stats','Statystyki'],['group','Grupa']];
+function achItem(im,name,desc,val,max,u,on,btn,done){
+  const it=document.createElement('div');it.className='achItem'+(done?'':' lock');
+  it.innerHTML='<div class="im">'+im+'</div><div class="tx"><b>'+(done?'✅ ':'🔒 ')+name+'</b><small>'+desc+'</small><div class="achBar"><i style="width:'+Math.round(100*Math.min(1,val/max))+'%"></i></div><div class="st">'+(done?'zdobyte':lkTxt(val,max,u))+'</div></div>';
+  if(btn){const b=document.createElement('button');b.className='sec';b.textContent=on?'Wybrane':'Wybierz';b.onclick=btn;it.appendChild(b)}
+  return it;
+}
+const lkTxt=(v,m,u)=>(Number.isInteger(m)&&Number.isInteger(v)?v:(+v).toFixed(1))+' / '+m+(u||'');
 function achRender(){
-  const S=$('achStats');
-  S.innerHTML='<div><b>'+Math.round(ACH_ST.km)+' km</b>razem</div><div><b>'+ACH_ST.x+'</b>mijane przejazdy</div><div><b>'+ACH_ST.days.length+'</b>dni z aplikacją</div>';
-  const L=$('achList');L.innerHTML='';let n=0;
-  for(const a of ACHS){const ok=achDone(a);if(ok)n++;
-    const it=document.createElement('div');it.className='achItem'+(ok?'':' lock');
-    const val=Math.min(a.v,achVal(a)),pr=Math.round(val/a.v*100);
-    it.innerHTML='<div class="im">'+carSvg(a.car)+'</div><div class="tx"><b>'+(ok?'✅ ':'🔒 ')+a.n+'</b><small>'+a.d+' → '+CARS[a.car].n+'</small><div class="achBar"><i style="width:'+pr+'%"></i></div><div class="st">'+(a.k==='km'||a.k==='night'?val.toFixed(1):Math.floor(val))+' / '+a.v+a.u+'</div></div>';
-    if(ok){const b=document.createElement('button');b.className='sec';b.textContent=carKind===a.car?'Wybrane':'Wybierz';b.onclick=()=>{carKind=a.car;try{localStorage.setItem('car',a.car)}catch(e){}showCar();achRender()};it.appendChild(b)}
-    L.appendChild(it)}
-  $('achCnt').textContent=n+' / '+ACHS.length;
+  const ri=rankInfo();
+  $('achRank').innerHTML='<b>'+ri.name+'</b> <small>· '+ri.xp+' pkt'+(ri.next?' · do „'+ri.next+'” brakuje '+ri.need:' · najwyższa ranga')+'</small><div class="achBar" style="margin-top:8px"><i style="width:'+ri.pct+'%"></i></div><small>Seria: '+streakNow()+(streakNow()===1?' dzień':' dni')+' z rzędu · zdobyte nagrody: '+achCount()+'</small>';
+  $('achStats').innerHTML='<div><b>'+Math.round(ACH_ST.km)+' km</b>razem</div><div><b>'+ACH_ST.x+'</b>mijane przejazdy</div><div><b>'+ACH_ST.tr+'</b>zobaczone pociągi</div>';
+  const T=$('achTabs');T.innerHTML='';
+  for(const [k,n] of ACH_TABS){const b=document.createElement('button');b.type='button';b.className='achTab'+(k===achTab?' on':'');b.textContent=n;b.onclick=()=>{achTab=k;LSput('achTab',k);achRender()};T.appendChild(b)}
+  const L=$('achList');L.innerHTML='';
+  if(achTab==='cars')achCars(L);else if(achTab==='extras')achExtras(L);else if(achTab==='trains')achTrains(L);else if(achTab==='stats')achStatsTab(L);else achGroup(L);
+  $('achCnt').textContent=achCount()+' nagród';
+}
+function achCars(L){
+  for(const a of ACHS){const ok=achDone(a);
+    L.appendChild(achItem(carSvg(a.car),a.n,a.d+' → '+CARS[a.car].n,Math.min(a.v,achVal(a)),a.v,a.u,carKind===a.car,ok?()=>{carKind=a.car;try{localStorage.setItem('car',a.car)}catch(e){}showCar();achRender()}:null,ok))}
+}
+function achExtras(L){
+  const h1=document.createElement('div');h1.className='achH';h1.textContent='Lakiery';L.appendChild(h1);
+  for(const k in LOCKS.col){const l=LOCKS.col[k],ok=lkOk(l);
+    L.appendChild(achItem('<div class="achSw" style="background:linear-gradient(135deg,'+CCOLS[k][0]+','+CCOLS[k][1]+')"></div>','Lakier: '+COLN[k],l.d,Math.min(l.v,STV[l.k]()),l.v,l.u,carCol===k,ok?()=>{carCol=k;try{localStorage.setItem('carcol',k)}catch(e){}buildCars();showCar();achRender()}:null,ok))}
+  const h2=document.createElement('div');h2.className='achH';h2.textContent='Ślad za autem';L.appendChild(h2);
+  const ico={neon:'💠',fire:'🔥',rainbow:'🌈',ice:'❄️'};
+  for(const k in LOCKS.trail){const l=LOCKS.trail[k],ok=lkOk(l);
+    L.appendChild(achItem('<div class="achSw" style="background:var(--bg)">'+ico[k]+'</div>','Ślad: '+TRAILS[k],l.d,Math.min(l.v,STV[l.k]()),l.v,l.u,trailKind===k,ok?()=>{setTrail(k);achRender()}:null,ok))}
+  const h3=document.createElement('div');h3.className='achH';h3.textContent='Odznaki';L.appendChild(h3);
+  for(const b of BADGES){const ok=lkOk(b.l);L.appendChild(achItem('<div class="achSw" style="background:var(--bg)">'+b.ico+'</div>',b.n,b.l.d,Math.min(b.l.v,STV[b.l.k]()),b.l.v,b.l.u,false,null,ok))}
+}
+function achTrains(L){
+  const d=document.createElement('div');
+  d.innerHTML='<div class="achH">Dziennik pociągów</div><div style="color:var(--mut);font-size:.82rem;margin:0 0 6px">Pociąg wpada do dziennika, gdy jest w promieniu ok. 1,2 km od Ciebie podczas jazdy (według rozkładu jazdy). Liczy się raz dziennie.</div><div class="achChips"></div>';
+  const ch=d.querySelector('.achChips');
+  const cats=Object.keys(ACH_ST.catn||{}).sort((a,b)=>ACH_ST.catn[b]-ACH_ST.catn[a]);
+  if(!cats.length)ch.innerHTML='<span>Jeszcze nic – jedź i obserwuj tory 🚆</span>';
+  cats.forEach(k=>{const e=document.createElement('span');e.textContent=(trainCatLabel(k))+' × '+ACH_ST.catn[k];ch.appendChild(e)});
+  L.appendChild(d);
+  const h=document.createElement('div');h.className='achH';h.textContent='Ostatnio widziane';L.appendChild(h);
+  (ACH_ST.log||[]).slice(0,25).forEach(x=>{const it=document.createElement('div');it.className='achItem';it.innerHTML='<div class="tx"><b></b><small></small></div>';it.querySelector('b').textContent='🚆 '+x.id;it.querySelector('small').textContent=trainCatLabel(x.k)+' · '+new Date(x.t).toLocaleString('pl-PL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});L.appendChild(it)});
+}
+function bars(vals,labs){const m=Math.max(1,...vals);return '<div class="achBars">'+vals.map((v,i)=>'<div title="'+v.toFixed(1)+' km"><span style="margin-bottom:2px">'+(v>=1?Math.round(v):'')+'</span><i style="height:'+Math.round(80*v/m)+'%"></i><span style="margin-top:3px">'+labs[i]+'</span></div>').join('')+'</div>'}
+function monday(o){const d=new Date(Date.now()+(o||0)*7*86400000);const w=(d.getDay()+6)%7;return new Date(d.getFullYear(),d.getMonth(),d.getDate()-w)}
+const dKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function weekKm(o){const m=monday(o),a=dKey(m),b=dKey(new Date(m.getFullYear(),m.getMonth(),m.getDate()+7));let s=0;for(const k in ACH_ST.d)if(k>=a&&k<b)s+=ACH_ST.d[k];return s}
+function achStatsTab(L){
+  const dv=[],dl=[];for(let i=13;i>=0;i--){const dt=new Date(Date.now()-i*86400000),k=dKey(dt);dv.push(ACH_ST.d[k]||0);dl.push(dt.getDate())}
+  const wv=[],wl=[];for(let i=7;i>=0;i--){wv.push(weekKm(-i));const m=monday(-i);wl.push(m.getDate()+'.'+(m.getMonth()+1))}
+  let mon=0;const mk=new Date().toISOString().slice(0,7);for(const k in ACH_ST.d)if(k.slice(0,7)===mk)mon+=ACH_ST.d[k];
+  const calm=ACH_ST.driveS>=300?Math.round(100*ACH_ST.calmS/ACH_ST.driveS):null;
+  const c=document.createElement('div');
+  c.innerHTML='<div class="achStats"><div><b>'+weekKm(0).toFixed(1)+' km</b>ten tydzień</div><div><b>'+mon.toFixed(1)+' km</b>ten miesiąc</div><div><b>'+(calm==null?'–':calm+'%')+'</b>spokojna jazda</div></div>'
+   +'<div class="achH">Ostatnie 14 dni (km)</div>'+bars(dv,dl)+'<div class="achH">Ostatnie 8 tygodni (km)</div>'+bars(wv,wl)
+   +'<div style="color:var(--mut);font-size:.8rem;margin:0 0 10px">Spokojna jazda to udział czasu bez gwałtownego hamowania i przyspieszania oraz bez przekraczania limitu o więcej niż 10 km/h. Gwałtowne hamowania: '+ACH_ST.hb+'.</div>';
+  L.appendChild(c);
+  const hb=document.createElement('button');hb.className='sec';hb.type='button';hb.style.cssText='width:100%;margin:0 0 8px';hb.textContent=(heatOn?'Ukryj':'Pokaż')+' przejechane ulice na mapie ('+vis.size+' pól)';
+  hb.onclick=()=>{setHeat(!heatOn);if(heatOn)$('achv').classList.remove('open');achRender()};L.appendChild(hb);
+  const h=document.createElement('div');h.className='achH';h.textContent='Zapisane przejazdy (GPX)';L.appendChild(h);
+  if(!tracks.length){const e=document.createElement('div');e.style.cssText='color:var(--mut);font-size:.85rem';e.textContent='Brak zapisanych przejazdów – pojawią się po jeździe z GPS.';L.appendChild(e)}
+  tracks.forEach(t=>{const it=document.createElement('div');it.className='achItem';it.innerHTML='<div class="tx"><b></b><small></small></div>';
+    it.querySelector('b').textContent=new Date(t.t0).toLocaleString('pl-PL',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+    it.querySelector('small').textContent=(t.km||0).toFixed(1)+' km · '+Math.max(1,Math.round((t.l-t.t0)/60000))+' min · '+t.pts.length+' punktów';
+    const b=document.createElement('button');b.className='sec';b.textContent='GPX';b.onclick=()=>gpxDl(t);it.appendChild(b);L.appendChild(it)});
+}
+async function achGroup(L){
+  const box=document.createElement('div');box.innerHTML='<div class="achH">Ranking grupy – ten tydzień</div><div class="achList" id="lbList" style="color:var(--mut);font-size:.85rem">Ładowanie…</div>';L.appendChild(box);
+  const out=$('lbList');
+  if(!grpOk()){out.textContent='Aby zobaczyć ranking, ustaw adres bazy i kod grupy w ustawieniach („Znajomi na mapie”) i włącz udostępnianie.';return}
+  try{
+    const r=await fetch(evBase()+'/lb/'+grpCode+'.json');const o=r.ok?(await r.json()||{}):{};
+    const wk=dKey(monday(0)),rows=Object.keys(o).filter(k=>o[k]&&o[k].w===wk&&k!==evUid).map(k=>({n:o[k].n,km:o[k].wk,rk:o[k].r,me:false}));
+    rows.push({n:(grpName||'Ja')+' (Ty)',km:+weekKm(0).toFixed(1),rk:rankInfo().name,me:true});
+    rows.sort((a,b)=>b.km-a.km);out.innerHTML='';
+    rows.forEach((x,i)=>{const it=document.createElement('div');it.className='achItem';it.innerHTML='<div class="im" style="width:34px;flex:0 0 34px;font-size:1.4rem;text-align:center">'+(['🥇','🥈','🥉'][i]||(i+1)+'.')+'</div><div class="tx"><b></b><small></small></div>';
+      it.querySelector('b').textContent=x.n;it.querySelector('small').textContent=x.km+' km · '+(x.rk||'');if(x.me)it.style.outline='2px solid var(--acc)';out.appendChild(it)});
+    if(rows.length===1){const e=document.createElement('div');e.style.cssText='color:var(--mut);font-size:.8rem;padding:6px 2px';e.textContent='Na razie tylko Ty. Znajomi pojawią się, gdy włączą udostępnianie w tej samej grupie (wymaga aktualnej wersji aplikacji).';out.appendChild(e)}
+  }catch(e){out.textContent='Nie udało się pobrać rankingu.'}
 }
 $('achOpen').onclick=()=>{achRender();$('achv').classList.add('open');$('achv').querySelector('.sBody').scrollTop=0};
 $('achBack').onclick=()=>{$('achv').classList.remove('open')};
-$('achCnt').textContent=ACHS.filter(achDone).length+' / '+ACHS.length;
 window.addEventListener('pagehide',achSave);
-const CCOLS={default:null,blue:['#2b6cb0','#3d82cc'],red:['#d62828','#e04a4a'],green:['#2f6f4f','#3d8b64'],yellow:['#f2c200','#ffd740'],orange:['#e8710a','#ff9a3d'],black:['#23262b','#3a3f47'],white:['#e6e9ee','#ffffff'],purple:['#6d3fb8','#8a5fd6']};
-let carCol='default';try{carCol=localStorage.getItem('carcol')||'default'}catch(e){}if(!(carCol in CCOLS))carCol='default';
+
+const dayKey=(o)=>new Date(Date.now()+(o||0)*86400000).toISOString().slice(0,10);
+function streakNow(){const S=new Set(ACH_ST.days);let k=S.has(dayKey())?dayKey():dayKey(-1),n=0,o=S.has(dayKey())?0:-1;while(S.has(dayKey(o))){n++;o--}return n}
+const STV={km:()=>ACH_ST.km,night:()=>ACH_ST.night,x:()=>ACH_ST.x,xw:()=>ACH_ST.xw,rep:()=>ACH_ST.rep,days:()=>ACH_ST.days.length,tr:()=>ACH_ST.tr,cats:()=>ACH_ST.cats.length,streak:streakNow,
+  calm:()=>ACH_ST.driveS>=1800?Math.round(100*ACH_ST.calmS/ACH_ST.driveS):0,early:()=>ACH_ST.early};
+const lkOk=l=>STV[l.k]()>=l.v;
+const lkProg=l=>{const v=STV[l.k]();return (l.k==='km'||l.k==='night'||l.k==='early'?v.toFixed(1):Math.floor(v))+' / '+l.v+(l.u||'')};
+const COLN={pink:'Różowy',teal:'Morski',lime:'Limonka',chrome:'Chrom',gold:'Złoty',neon:'Neonowy'};
+const TRAILS={none:'Brak',neon:'Neon',fire:'Ogień',rainbow:'Tęcza',ice:'Lód'};
+const LOCKS={
+ col:{pink:{k:'km',v:30,u:' km',d:'Przejedź 30 km z aplikacją'},teal:{k:'days',v:3,d:'Użyj aplikacji w 3 różne dni'},lime:{k:'tr',v:3,d:'Zobacz 3 pociągi z drogi'},
+      chrome:{k:'x',v:20,d:'Miń 20 przejazdów kolejowych'},gold:{k:'streak',v:5,u:' dni',d:'Seria 5 dni z aplikacją z rzędu'},neon:{k:'night',v:100,u:' km',d:'Przejedź 100 km po zmroku'}},
+ trail:{neon:{k:'km',v:75,u:' km',d:'Przejedź 75 km z aplikacją'},fire:{k:'x',v:15,d:'Miń 15 przejazdów kolejowych'},rainbow:{k:'cats',v:4,d:'Zbierz 4 rodzaje pociągów w dzienniku'},
+        ice:{k:'calm',v:90,u:'%',d:'Wynik spokojnej jazdy co najmniej 90% (min. 30 min jazdy)'}}};
+const BADGES=[
+ {id:'lowca',n:'Łowca pociągów',ico:'🚆',l:{k:'tr',v:5,d:'Zobacz 5 pociągów z drogi'}},
+ {id:'znawca',n:'Znawca rozkładów',ico:'📖',l:{k:'tr',v:25,d:'Zobacz 25 pociągów z drogi'}},
+ {id:'kolekcjoner',n:'Kolekcjoner',ico:'🗂️',l:{k:'cats',v:3,d:'Zbierz 3 rodzaje pociągów'}},
+ {id:'seria3',n:'Trzy dni z rzędu',ico:'🔥',l:{k:'streak',v:3,u:' dni',d:'Seria 3 dni z aplikacją z rzędu'}},
+ {id:'seria7',n:'Cały tydzień',ico:'🏅',l:{k:'streak',v:7,u:' dni',d:'Seria 7 dni z aplikacją z rzędu'}},
+ {id:'spokojny',n:'Spokojny kierowca',ico:'🕊️',l:{k:'calm',v:90,u:'%',d:'Wynik spokojnej jazdy co najmniej 90%'}},
+ {id:'ptaszek',n:'Wczesny ptaszek',ico:'🌅',l:{k:'early',v:10,u:' km',d:'Przejedź 10 km między 4:00 a 6:00'}}];
+const RANKS=[[0,'Nowicjusz'],[300,'Kierowca'],[1000,'Doświadczony kierowca'],[3000,'Znawca przejazdów'],[7000,'Mistrz szos'],[15000,'Legenda torów']];
+function achCount(){let n=ACHS.filter(achDone).length;for(const k in LOCKS.col)if(lkOk(LOCKS.col[k]))n++;for(const k in LOCKS.trail)if(lkOk(LOCKS.trail[k]))n++;BADGES.forEach(b=>{if(lkOk(b.l))n++});return n}
+function achXp(){return Math.round(ACH_ST.km*10+ACH_ST.x*20+ACH_ST.tr*15+ACH_ST.rep*30+ACH_ST.days.length*50+achCount()*150)}
+function rankInfo(){const xp=achXp();let i=0;for(let k=0;k<RANKS.length;k++)if(xp>=RANKS[k][0])i=k;const nx=RANKS[i+1];return {xp,name:RANKS[i][1],next:nx?nx[1]:null,pct:nx?Math.round(100*(xp-RANKS[i][0])/(nx[0]-RANKS[i][0])):100,need:nx?nx[0]-xp:0}}
+let plate=LSget('plate','');
+function plateEl(){let e=$('carPlate');if(!e){e=document.createElement('div');e.id='carPlate'}if(e.parentNode!==$('carIcon'))$('carIcon').appendChild(e);e.textContent=plate;e.style.display=plate?'block':'none'}
+const CCOLS={default:null,blue:['#2b6cb0','#3d82cc'],red:['#d62828','#e04a4a'],green:['#2f6f4f','#3d8b64'],yellow:['#f2c200','#ffd740'],orange:['#e8710a','#ff9a3d'],black:['#23262b','#3a3f47'],white:['#e6e9ee','#ffffff'],purple:['#6d3fb8','#8a5fd6'],pink:['#e91e8c','#ff5fb0'],teal:['#0f9d9a','#2fc4c0'],lime:['#7cb518','#9fd83a'],chrome:['#8b95a3','#cfd6df'],gold:['#d4a017','#f5cf57'],neon:['#00b8d4','#00e5ff']};
+let carCol='default';try{carCol=localStorage.getItem('carcol')||'default'}catch(e){}if(!(carCol in CCOLS)||(LOCKS.col[carCol]&&!lkOk(LOCKS.col[carCol])))carCol='default';
 function carSvg(k){const c=CARS[k],cc=CCOLS[carCol];if(!c.c||!cc)return c.svg;return c.svg.split(c.c[0]).join(cc[0]).split(c.c[1]).join(cc[1])}
 let carKind='sedan';try{carKind=localStorage.getItem('car')||'sedan'}catch(e){}
 if(!CARS[carKind]||!carOpen(carKind))carKind='sedan';   // zapisany, już usunięty model
 function showCar(){
   if(!CARS[carKind]||!carOpen(carKind))carKind='sedan';
-  $('carIcon').innerHTML=carSvg(carKind);
+  $('carIcon').innerHTML=carSvg(carKind);plateEl();
   document.querySelectorAll('#cars button,#pickcars button').forEach(b=>{const on=b.dataset.k===carKind;b.classList.toggle('on',on);b.style.outline=on&&b.parentElement.id==='cars'?'3px solid #1a73e8':'none'});
 }
 function buildCars(){
@@ -4321,10 +4459,140 @@ function buildCars(){
   const row=$('carCols');row.innerHTML='';
   for(const k in CCOLS){const d=document.createElement('button');d.type='button';d.setAttribute('aria-label',k);
     d.style.cssText='width:30px;height:30px;border-radius:50%;padding:0;border:3px solid '+(k===carCol?'#1a73e8':'#8886')+';background:'+(CCOLS[k]?CCOLS[k][0]:'conic-gradient(#d62828,#f2c200,#2f6f4f,#2b6cb0,#d62828)');
-    d.onclick=()=>{carCol=k;try{localStorage.setItem('carcol',k)}catch(e){}buildCars();showCar()};row.appendChild(d)}
+    const L=LOCKS.col[k],lk=L&&!lkOk(L);if(lk){d.style.opacity='.4';d.textContent='🔒';d.style.fontSize='11px';d.title=L.d}
+    d.onclick=()=>{if(lk){evToast('🔒 Lakier: '+COLN[k],L.d+' ('+lkProg(L)+')');return}carCol=k;try{localStorage.setItem('carcol',k)}catch(e){}buildCars();showCar()};row.appendChild(d)}
 }
 buildCars();
 showCar();
+
+// ================= v93: ślad, tablica, dziennik pociągów, trasy/GPX, mapa ulic, ranking, udostępnianie na żywo =================
+// ---- ślad za autem ----
+let trailKind=LSget('trail','none');if(!TRAILS[trailKind]||(LOCKS.trail[trailKind]&&!lkOk(LOCKS.trail[trailKind])))trailKind='none';
+const trailPts=[];
+function fillTrailSel(){const S=$('trailSel');S.innerHTML='';for(const k in TRAILS){const L=LOCKS.trail[k],lk=L&&!lkOk(L),o=document.createElement('option');o.value=k;o.textContent=(lk?'🔒 ':'')+TRAILS[k]+(lk?' – '+L.d:'');S.appendChild(o)}S.value=trailKind}
+function setTrail(k){const L=LOCKS.trail[k];if(L&&!lkOk(L)){evToast('🔒 Ślad: '+TRAILS[k],L.d+' ('+lkProg(L)+')');fillTrailSel();return false}trailKind=k;LSput('trail',k);fillTrailSel();return true}
+$('trailSel').onchange=()=>setTrail($('trailSel').value);fillTrailSel();
+setInterval(()=>{
+  if(trailKind==='none'||window.preview||!vf||!vf.car)return;
+  const c=vf.car,p=trailPts[trailPts.length-1];
+  if(!p||dist(p.lat,p.lon,c.lat,c.lon)>5){trailPts.push({lat:c.lat,lon:c.lon});if(trailPts.length>70)trailPts.shift()}
+},400);
+function drawTrail(){
+  if(trailKind==='none'||trailPts.length<2||!vf||window.preview)return;
+  const n=trailPts.length;mx.save();mx.lineCap='round';mx.lineJoin='round';
+  if(trailKind==='neon'||trailKind==='ice'){mx.shadowBlur=14;mx.shadowColor=trailKind==='neon'?'#00e5ff':'#bfe6ff'}
+  let prev=proj(trailPts[0].lat,trailPts[0].lon);
+  for(let i=1;i<n;i++){
+    const q=proj(trailPts[i].lat,trailPts[i].lon);if(!q||!prev){prev=q;continue}
+    const f=i/n,w=Math.max(2,Math.min(15,(3+8*f)*q.k));
+    mx.strokeStyle=trailKind==='neon'?'#00e5ff':trailKind==='fire'?'hsl('+(4+46*f)+',100%,'+(48+12*f)+'%)':trailKind==='ice'?'rgba(205,235,255,1)':'hsl('+((i*13+Date.now()/25)%360)+',90%,58%)';
+    mx.globalAlpha=.12+.78*f;mx.lineWidth=w;mx.beginPath();mx.moveTo(prev.x,prev.y);mx.lineTo(q.x,q.y);mx.stroke();prev=q;
+  }
+  mx.restore();
+}
+// ---- tablica rejestracyjna ----
+$('plate').value=plate;
+$('plate').oninput=()=>{plate=$('plate').value.toUpperCase().replace(/[^A-Z0-9 ĄĆĘŁŃÓŚŹŻ-]/g,'').slice(0,8);$('plate').value=plate;LSput('plate',plate);plateEl()};
+plateEl();
+// ---- dziennik pociągów ----
+const TCAT=[[/\bEIP\b/i,'EIP','PKP Intercity – Pendolino'],[/\bEIC\b/i,'EIC','PKP Intercity – Express InterCity'],[/\bTLK\b/i,'TLK','PKP Intercity – TLK'],[/\bIC\b/i,'IC','PKP Intercity'],
+ [/\bKD\b/i,'KD','Koleje Dolnośląskie'],[/\bKW\b/i,'KW','Koleje Wielkopolskie'],[/\bKM\b/i,'KM','Koleje Mazowieckie'],[/\bKS\b/i,'KS','Koleje Śląskie'],[/\bSKM\b/i,'SKM','SKM'],
+ [/\bPR\b|Polregio/i,'PR','Polregio'],[/\bWKD\b/i,'WKD','WKD'],[/\bŁKA\b|\bLKA\b/i,'ŁKA','Łódzka Kolej Aglomeracyjna'],[/\bAD\b|Arriva/i,'AD','Arriva'],[/\bR\b|REGIO|\bOs\b/i,'R','Regio / osobowy']];
+function trainCat(nm){for(const [re,k,l] of TCAT)if(re.test(nm))return {k,l};return {k:'INNE',l:'Inny pociąg'}}
+function trainCatLabel(k){const t=TCAT.find(x=>x[1]===k);return t?t[2]:'Inny pociąg'}
+setInterval(()=>{
+  if(window.preview||typeof demo!=='undefined'&&demo||typeof sim!=='undefined'&&sim||!last||!gpsOk||Date.now()-gpsOk.t>10000||(gpsOk.speed||0)<1)return;
+  const day=dayKey();let ch=false;
+  for(const t of (trains||[])){
+    if(dist(last.lat,last.lon,t.lat,t.lon)>1200)continue;
+    const nm=String(t.id||'');if(!nm||nm==='DEMO')continue;
+    const key=nm+'|'+day;if(ACH_ST.seen[key])continue;
+    ACH_ST.seen[key]=day;ACH_ST.tr++;const c=trainCat(nm);ACH_ST.catn[c.k]=(ACH_ST.catn[c.k]||0)+1;if(!ACH_ST.cats.includes(c.k))ACH_ST.cats.push(c.k);
+    ACH_ST.log.unshift({id:nm,k:c.k,t:Date.now()});ACH_ST.log.length=Math.min(ACH_ST.log.length,40);ch=true;
+  }
+  if(ch){for(const k in ACH_ST.seen)if(ACH_ST.seen[k]!==day&&ACH_ST.seen[k]!==dayKey(-1))delete ACH_ST.seen[k];achSave();achCheck()}
+},4000);
+// ---- zapis przejazdów (GPX) i pól przejechanych ulic ----
+const tracks=[];let trk=null;const vis=new Set();let visDirty=false,trkDirty=false;
+idbGet('tracks').then(a=>{if(Array.isArray(a))a.forEach(x=>{if(x&&x.pts&&!tracks.some(t=>t.t0===x.t0))tracks.push(x)});tracks.sort((a,b)=>b.t0-a.t0);if(tracks.length>12)tracks.length=12}).catch(()=>{});
+idbGet('vis').then(a=>{if(Array.isArray(a))a.forEach(k=>vis.add(k))}).catch(()=>{});
+function trkAdd(p,now,km){
+  if(!trk||now-trk.l>900000){trk={t0:now,l:now,pt:0,pts:[],km:0};tracks.unshift(trk);if(tracks.length>12)tracks.length=12}
+  trk.l=now;trk.km+=km;trkDirty=true;
+  if(now-trk.pt<4000)return;trk.pt=now;trk.pts.push([+p.lat.toFixed(5),+p.lon.toFixed(5),Math.round(now/1000),Math.round((p.speed||0)*3.6)]);
+}
+function visAdd(lat,lon){const k=Math.round(lat/.0009)+'_'+Math.round(lon/.0014);if(!vis.has(k)){vis.add(k);visDirty=true}}
+setInterval(()=>{if(trkDirty){trkDirty=false;idbSet('tracks',tracks).catch(()=>{})}if(visDirty){visDirty=false;idbSet('vis',[...vis]).catch(()=>{})}},30000);
+function gpxOf(t){return '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Przejazd" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Przejazd '+new Date(t.t0).toLocaleString('pl-PL')+'</name><trkseg>'+t.pts.map(p=>'<trkpt lat="'+p[0]+'" lon="'+p[1]+'"><time>'+new Date(p[2]*1000).toISOString()+'</time></trkpt>').join('')+'</trkseg></trk></gpx>'}
+function fileDl(txt,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function gpxDl(t){fileDl(gpxOf(t),'przejazd-'+new Date(t.t0).toISOString().slice(0,16).replace(/[:T]/g,'-')+'.gpx','application/gpx+xml')}
+$('gpxRoute').onclick=()=>{
+  if(!route||!route.pts||route.pts.length<2){alert('Najpierw wyznacz trasę.');return}
+  const x='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Przejazd" xmlns="http://www.topografix.com/GPX/1/1"><rte><name>Trasa do '+String(F.to.el.value||'celu').replace(/[<&>]/g,'')+'</name>'+route.pts.map(p=>'<rtept lat="'+(+p[0]).toFixed(5)+'" lon="'+(+p[1]).toFixed(5)+'"/>').join('')+'</rte></gpx>';
+  fileDl(x,'trasa.gpx','application/gpx+xml');
+};
+// mapa przejechanych ulic
+let heatOn=LSget('heatOn',false),visView=[],visAt=0;
+$('heatOn').checked=!!heatOn;
+function setHeat(v){heatOn=!!v;LSput('heatOn',heatOn);$('heatOn').checked=heatOn;visAt=0}
+$('heatOn').onchange=()=>setHeat($('heatOn').checked);
+function drawHeat(){
+  if(!heatOn||!vf||!vis.size)return;const now=Date.now();
+  if(now-visAt>2000){visAt=now;const c=vf.cam;visView=[];for(const k of vis){const [a,b]=k.split('_');const la=a*.0009,lo=b*.0014;if(Math.abs(la-c.lat)<.12&&Math.abs(lo-c.lon)<.2)visView.push([la,lo])}if(visView.length>4000)visView.length=4000}
+  if(!visView.length)return;
+  const q0=proj(visView[0][0],visView[0][1]),q1=q0&&proj(visView[0][0]+.0009,visView[0][1]);if(!q0||!q1)return;
+  const rr=Math.max(3,Math.min(26,Math.hypot(q1.x-q0.x,q1.y-q0.y)*.6));
+  mx.save();mx.fillStyle='rgba(46,204,113,.38)';mx.beginPath();
+  for(const [la,lo] of visView){const q=proj(la,lo);if(!q||q.x<-rr||q.x>innerWidth+rr||q.y<-rr||q.y>innerHeight+rr)continue;mx.moveTo(q.x+rr,q.y);mx.arc(q.x,q.y,rr,0,6.2832)}
+  mx.fill();mx.restore();
+}
+// ---- ranking grupy: tygodniowe kilometry (tylko przy włączonym udostępnianiu) ----
+let lbPut=0;
+setInterval(async()=>{
+  if(!grpOk()||!grpShare)return;const now=Date.now();if(now-lbPut<60000)return;lbPut=now;
+  try{await fetch(evBase()+'/lb/'+grpCode+'/'+evUid+'.json',{method:'PUT',body:JSON.stringify({n:grpName||'Ktoś',wk:+weekKm(0).toFixed(1),w:dKey(monday(0)),r:rankInfo().name,t:now})})}catch(e){}
+},20000);
+$('grpShare').addEventListener('change',()=>{if(!grpShare&&evDb&&grpCode){lbPut=0;fetch(evBase()+'/lb/'+grpCode+'/'+evUid+'.json',{method:'DELETE'}).catch(()=>{})}});
+// ---- udostępnianie dojazdu na żywo ----
+let liveCode='',liveOn=false,liveAt=0;
+const liveLink=()=>location.href.split('#')[0]+'#sledz='+liveCode+'&b='+encodeURIComponent(btoa(evDb));
+function liveStat(){$('liveShare').textContent=liveOn?'📍 Udostępniam dojazd – dotknij, by zakończyć':'📍 Udostępnij dojazd na żywo (link)'}
+async function liveStop(){liveOn=false;liveStat();if(evDb&&liveCode)try{await fetch(evBase()+'/trk/'+liveCode+'.json',{method:'DELETE'})}catch(e){}}
+$('liveShare').onclick=async()=>{
+  if(liveOn){await liveStop();evToast('Udostępnianie zakończone','Link przestał działać.');return}
+  if(!evDb){alert('Najpierw podaj adres bazy w sekcji „Zgłoszenia kierowców”.');return}
+  liveCode=Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,8);liveOn=true;liveAt=0;liveStat();livePush();
+  const link=liveLink();
+  try{if(navigator.share){await navigator.share({title:'Śledź mój dojazd',text:'Zobacz, gdzie jestem i kiedy dojadę:',url:link});return}}catch(e){if(e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(link);alert('Link skopiowany do schowka. Wyślij go komuś – zobaczy Twoją pozycję i czas dojazdu, dopóki aplikacja jest otwarta:\n'+link)}catch(e){prompt('Skopiuj link:',link)}
+};
+async function livePush(){
+  if(!liveOn||!evDb||!gpsOk||Date.now()-gpsOk.t>30000)return;const now=Date.now();if(now-liveAt<9000)return;liveAt=now;
+  let eta=null,rem=null;if(route&&route.len>0){const r=Math.max(0,route.len-(route.along||0));rem=Math.round(r/100)/10;eta=now+Math.max(1,route.dur*(r/route.len))*1000}
+  try{await fetch(evBase()+'/trk/'+liveCode+'.json',{method:'PUT',body:JSON.stringify({n:grpName||'Kierowca',lat:+gpsOk.lat.toFixed(5),lon:+gpsOk.lon.toFixed(5),h:gpsOk.h!=null?Math.round(gpsOk.h):null,v:Math.round((gpsOk.speed||0)*3.6),to:String(F.to.el.value||'').slice(0,60),eta,rem,t:now})})}catch(e){}
+}
+setInterval(livePush,3000);
+// tryb obserwatora: link #sledz=<kod>&b=<baza>
+(function(){
+  const m=location.hash.match(/#sledz=([A-Za-z0-9]+)&b=([^&]+)/);if(!m)return;
+  let db='';try{db=atob(decodeURIComponent(m[2])).replace(/\/+$/,'')}catch(e){return}if(!/^https:\/\//.test(db))return;
+  const code=m[1];let started=false,lastOk=0;
+  async function poll(){
+    try{
+      const r=await fetch(db+'/trk/'+code+'.json');if(!r.ok)throw 0;const o=await r.json();
+      if(!o){if(started)setBanner('warn','Udostępnianie zakończone','Kierowca wyłączył udostępnianie dojazdu');return}
+      lastOk=Date.now();
+      const age=Math.round((Date.now()-o.t)/1000),eta=o.eta?new Date(o.eta).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}):null;
+      grpFr=[{id:'live',n:o.n||'Kierowca',lat:o.lat,lon:o.lon,h:o.h,t:o.t}];
+      const ttl=(o.n||'Kierowca')+(o.to?' → '+o.to:''),sub=(eta?'przyjazd ok. '+eta+(o.rem!=null?' · jeszcze '+o.rem+' km':'')+' · ':'')+o.v+' km/h · pozycja sprzed '+(age<90?age+' s':Math.round(age/60)+' min');
+      if(!started){started=true;enterBrowse({lat:o.lat,lon:o.lon,title:ttl,label:ttl});$('brwFav').style.display='none';$('brwGo').style.display='none'}
+      else if(!freeCam){try{follow({lat:o.lat,lon:o.lon,speed:0,heading:0})}catch(e){}}
+      setBanner(age>180?'warn':'ok',ttl,sub);$('big').textContent=ttl;$('sub').textContent=sub;
+    }catch(e){if(started&&Date.now()-lastOk>30000)setBanner('warn','Brak połączenia','Próbuję ponownie…')}
+  }
+  setTimeout(()=>{const i=$('intro');if(i)i.style.display='none';poll();setInterval(poll,5000)},2500);
+})();
+$('achCnt').textContent=achCount()+' nagród';
 
 
 // ---- Rozkład jazdy (GTFS): pozycja pociągu wzdłuż toru, import wewnątrz aplikacji ----
