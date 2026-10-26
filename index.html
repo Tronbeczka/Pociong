@@ -222,6 +222,8 @@ body.night #sig{background:rgba(32,34,40,.95);color:#e6e9ee}
     <button id="gload" class="sec">Załaduj rozkład</button> <small id="gstat"></small>
     <small>Klucz API geOps Realtime (darmowy klucz testowy: developer.geops.io):</small>
     <input id="gkey" placeholder="np. 5cc87b12d7c5370001c1d655...">
+    <small>Klucz TomTom (korki na żywo + trasa uwzględniająca ruch; darmowy: developer.tomtom.com → Create account → API key, 2500 zapytań dziennie):</small>
+    <input id="ttkey" placeholder="np. a1B2c3D4e5...">
     <small>— lub własny adres JSON z pozycjami pociągów (opcjonalnie):</small>
     <input id="feed" placeholder="https://twoj-serwer/pociagi.json">
     <small>Wymagane: lat i lon (też lng/latitude/longitude). Opcjonalne: id, speed (km/h), heading (°) — jeśli ich brak, aplikacja policzy je z kolejnych odczytów. Adres musi zwracać CORS (Access-Control-Allow-Origin), inaczej przeglądarka go zablokuje.</small>
@@ -282,7 +284,7 @@ try{feedUrl=localStorage.getItem('feed')||'';$('feed').value=feedUrl}catch(e){}
 $('gear').onclick=()=>{const c=$('cfg');c.style.display=c.style.display==='block'?'none':'block'};
 $('save').onclick=()=>{
   feedUrl=$('feed').value.trim();gKey=$('gkey').value.trim();
-  gmKey=$('gmkey').value.trim();
+  gmKey=$('gmkey').value.trim();ttKey=$('ttkey').value.trim();flowAt=0;trChk=0;try{localStorage.setItem('ttkey',ttKey)}catch(e){}
   try{localStorage.setItem('feed',feedUrl);localStorage.setItem('gkey',gKey);localStorage.setItem('gmkey',gmKey);localStorage.setItem('tkey',$('tkey').value.trim())}catch(e){}
   if(map.hasLayer(osm))map.removeLayer(osm);
   osm=makeBase();
@@ -451,6 +453,7 @@ $('start').onclick=async()=>{
 // ---- geOps Realtime API (WebSocket) ----
 let gKey='', ws=null, gTraj={}, gBox=null, pingT=null;
 try{gKey=localStorage.getItem('gkey')||'';$('gkey').value=gKey}catch(e){}
+var ttKey='',flowAt=0,trChk=0;try{ttKey=localStorage.getItem('ttkey')||'';$('ttkey').value=ttKey}catch(e){}
 const MX=20037508.34;
 const toM=(lat,lon)=>[lon*MX/180, Math.log(Math.tan((90+lat)*Math.PI/360))/Math.PI*MX];
 const fromM=(x,y)=>[(2*Math.atan(Math.exp(y/MX*Math.PI))-Math.PI/2)*180/Math.PI, x/MX*180];
@@ -559,7 +562,8 @@ function follow(p){
 }
 
 // ---- Trasa: adresy (Photon/OSM), najszybsza trasa (OSRM), niebieska linia ----
-let route=null, endPt=null, sim=null, routeSeg=null;
+let route=null, endPt=null, sim=null, routeSeg=null, routeSegI=0;
+const jamLayer=L.layerGroup().addTo(map),JC=['','#f9a825','#e53935','#8e1b1b'];
 const rCase=L.polyline([],{color:'#fff',weight:16,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
 const rLine=L.polyline([],{color:'#1a73e8',weight:10,opacity:1,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
 // ROUTE-PURE-START
@@ -586,8 +590,8 @@ function routeAt(R,d){
   return [R.pts[lo][0]+(R.pts[hi][0]-R.pts[lo][0])*f,R.pts[lo][1]+(R.pts[hi][1]-R.pts[lo][1])*f];
 }
 // ROUTE-PURE-END
-function setRoute(coords,dur,steps){
-  route=makeRoute(coords,dur);routeSeg=route.pts;navSaid={};
+function setRoute(coords,dur,steps,jam,delay){
+  route=makeRoute(coords,dur);route.jam=(jam&&jam.length>=route.pts.length-1)?jam:null;route.delay=delay||0;routeSeg=route.pts;routeSegI=0;navSaid={};
   let o=0;route.steps=(steps||[]).map(x=>{const y={...x,off:o};o+=x.dist;return y});
   rCase.setLatLngs(route.pts);rLine.setLatLngs(route.pts);
 }
@@ -683,10 +687,27 @@ function routeUpdate(p){
   const lim=r.along+6000,seg=[[p.lat,p.lon]];  // rysujemy tylko najbliższe ~6 km
   for(let i=r.i+1;i<route.pts.length&&route.cum[i]<=lim;i++)seg.push(route.pts[i]);
   if(seg.length<2)seg.push(route.pts[route.pts.length-1]);
-  rCase.setLatLngs(seg);rLine.setLatLngs(seg);routeSeg=seg;
+  rCase.setLatLngs(seg);rLine.setLatLngs(seg);routeSeg=seg;routeSegI=r.i;
+  // korki na trasie: pierwszy odcinek >= czerwonego przed nami
+  let jamD=null,jamLv=0;
+  jamLayer.clearLayers();
+  if(route.jam){
+    let run=null;
+    for(let i=r.i;i<route.pts.length-1&&route.cum[i]<=lim;i++){
+      const lv=route.jam[i];
+      if(lv>=2&&jamD==null){jamD=Math.max(0,route.cum[i]-r.along);jamLv=lv}
+      if(!vec){ // tryb kafelkowy: czerwone odcinki w Leaflet
+        if(lv>0){if(run&&run.lv===lv)run.p.push(route.pts[i+1]);else{if(run)L.polyline(run.p,{color:JC[run.lv],weight:10,opacity:1,interactive:false}).addTo(jamLayer);run={lv,p:[route.pts[i],route.pts[i+1]]}}}
+        else if(run){L.polyline(run.p,{color:JC[run.lv],weight:10,opacity:1,interactive:false}).addTo(jamLayer);run=null}
+      }
+    }
+    if(run)L.polyline(run.p,{color:JC[run.lv],weight:10,opacity:1,interactive:false}).addTo(jamLayer);
+  }
+  route.jamD=jamD;
+  if(jamD!=null&&jamD<1500&&!(route.jamSaid&&Date.now()-route.jamSaid<120000)){route.jamSaid=Date.now();say('jam','Korek na trasie za '+(jamD<1000?Math.round(jamD/50)*50+' metrów':(jamD/1000).toFixed(1).replace('.',',')+' kilometra'),[120,80,120])}
   const rem=Math.max(0,route.len-r.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
   const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  $('bsub').textContent=mins+' min · '+fmtD(rem)+' · '+eta;
+  $('bsub').textContent=mins+' min · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
   if(rem<40){setBanner('ok','Cel osiągnięty','Dojechano do celu');clearRoute();return}
   // zjechanie z trasy (zły skręt): po ~3 s poza trasą liczymy nową, najszybszą od bieżącej pozycji
   route.offN=(r.off>45&&(p.speed||0)>2)?route.offN+1:0;
@@ -694,11 +715,60 @@ function routeUpdate(p){
     route.lastRr=Date.now();rerouting=true;const old=route;
     say('reroute','Przeliczam trasę',[80]);navUpdate();
     fetchRoute(p,endPt,(p.speed||0)>2?lastH:null).then(x=>{
-      if(route===old){setRoute(x.geometry.coordinates,x.duration,x.steps);route.lastRr=Date.now();say('rerouted','Nowa trasa',[60])}
+      if(route===old){setRoute(x.geometry.coordinates,x.duration,x.steps,x.jam,x.delay);route.lastRr=Date.now();say('rerouted','Nowa trasa',[60])}
     }).catch(()=>{}).finally(()=>{rerouting=false;if(route)navUpdate()});
   }
 }
+// --- TomTom: trasa z ruchem na żywo (korki, alternatywy, najszybsza wg aktualnego czasu przejazdu) ---
+const TT_MAN={DEPART:['depart',''],ARRIVE:['arrive',''],ARRIVE_LEFT:['arrive','left'],ARRIVE_RIGHT:['arrive','right'],
+ TURN_LEFT:['turn','left'],TURN_RIGHT:['turn','right'],SHARP_LEFT:['turn','sharp left'],SHARP_RIGHT:['turn','sharp right'],
+ BEAR_LEFT:['turn','slight left'],BEAR_RIGHT:['turn','slight right'],KEEP_LEFT:['fork','slight left'],KEEP_RIGHT:['fork','slight right'],
+ MAKE_UTURN:['turn','uturn'],ENTER_HIGHWAY_LEFT_LANE:['on ramp','left'],ENTER_HIGHWAY_RIGHT_LANE:['on ramp','right'],
+ EXIT_HIGHWAY_LEFT:['off ramp','left'],EXIT_HIGHWAY_RIGHT:['off ramp','right'],MOTORWAY_EXIT_LEFT:['off ramp','left'],MOTORWAY_EXIT_RIGHT:['off ramp','right'],
+ TAKE_EXIT:['off ramp',''],ROUNDABOUT_LEFT:['roundabout',''],ROUNDABOUT_RIGHT:['roundabout',''],ROUNDABOUT_CROSS:['roundabout',''],ROUNDABOUT_BACK:['roundabout','']};
+function ttRoute(r){
+  const pts=[].concat(...(r.legs||[]).map(l=>l.points||[]));
+  const coords=pts.map(q=>[q.longitude,q.latitude]),jam=new Uint8Array(Math.max(1,coords.length));
+  (r.sections||[]).forEach(sc=>{
+    if(sc.sectionType!=='TRAFFIC')return;
+    const cat=sc.simpleCategory,mg=sc.magnitudeOfDelay||0;
+    const lv=cat==='ROAD_CLOSURE'?3:cat==='JAM'?(mg>=3?3:mg===2?2:1):0;
+    for(let i=sc.startPointIndex;i<sc.endPointIndex&&i<jam.length;i++)jam[i]=Math.max(jam[i],lv);
+  });
+  const ins=((r.guidance&&r.guidance.instructions)||[]).filter(x=>TT_MAN[x.maneuver]);
+  const steps=ins.map((x,i)=>{const m=TT_MAN[x.maneuver],nx=ins[i+1];
+    return {type:m[0],mod:m[1],exit:x.roundaboutExitNumber,name:x.street||x.roadNumbers&&x.roadNumbers[0]||'',dist:nx?Math.max(0,nx.routeOffsetInMeters-x.routeOffsetInMeters):0}});
+  const sm=r.summary||{};
+  return {geometry:{coordinates:coords},duration:sm.travelTimeInSeconds,distance:sm.lengthInMeters,steps,jam,delay:sm.trafficDelayInSeconds||0,traffic:true};
+}
+async function fetchTT(a,b,hdg){
+  let u='https://api.tomtom.com/routing/1/calculateRoute/'+a.lat+','+a.lon+':'+b.lat+','+b.lon+'/json?key='+encodeURIComponent(ttKey)+
+    '&traffic=true&travelMode=car&routeType=fastest&maxAlternatives=2&instructionsType=coded&language=pl-PL&sectionType=traffic&computeTravelTimeFor=all&routeRepresentation=polyline';
+  if(hdg!=null)u+='&vehicleHeading='+Math.round((hdg+360)%360);
+  const r=await fetch(u);if(!r.ok)throw new Error('TomTom HTTP '+r.status);
+  const j=await r.json(),all=(j.routes||[]).map(ttRoute).filter(x=>x.geometry.coordinates.length>1&&x.duration>0);
+  if(!all.length)throw new Error('TomTom: brak trasy');
+  all.sort((x,y)=>x.duration-y.duration);
+  const best=all[0];best.alts=all;return best;
+}
+// czy trasa kandydująca pokrywa się z bieżącą (próbkowanie pozostałej części)?
+function sameAsRoute(R,rt){
+  if(!R||R.pts.length<2)return false;
+  const co=rt.geometry.coordinates,Q={pts:co.map(c=>[c[1],c[0]]),cum:null};
+  const rem=Math.max(0,R.len-R.along);if(rem<50)return false;
+  for(const f of [.15,.4,.65,.9]){
+    const q=routeAt(R,R.along+rem*f);let m=1e9;
+    for(let i=0;i<Q.pts.length;i+=1){const d=Math.hypot((Q.pts[i][0]-q[0])*111195,(Q.pts[i][1]-q[1])*111195*Math.cos(rad(q[0])));if(d<m)m=d;if(m<30)break}
+    if(m>=30)return false;
+  }
+  return true;
+}
 async function fetchRoute(a,b,hdg){
+  if(ttKey){try{return await fetchTT(a,b,hdg)}catch(e){ttErr=e.message}}
+  return fetchRouteOsrm(a,b,hdg);
+}
+var ttErr='';
+async function fetchRouteOsrm(a,b,hdg){
   const base=($('osrm').value.trim()||'https://router.project-osrm.org').replace(/\/$/,'');
   const url=base+'/route/v1/driving/'+a.lon+','+a.lat+';'+b.lon+','+b.lat+'?overview=full&geometries=geojson&alternatives=false&steps=true';
   let j=null;
@@ -771,8 +841,8 @@ async function planRoute(){
     info('Wyznaczanie najszybszej trasy…');
     const r=await fetchRoute(a,b);
     if(!(r.distance>30)||!r.geometry||r.geometry.coordinates.length<2)throw new Error('start i cel są w tym samym miejscu – wybierz inny start (pole A) lub cel');
-    endPt=b;setRoute(r.geometry.coordinates,r.duration,r.steps);
-    info('Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km');
+    endPt=b;setRoute(r.geometry.coordinates,r.duration,r.steps,r.jam,r.delay);
+    info('Trasa: '+Math.round(r.duration/60)+' min · '+(r.distance/1000).toFixed(1).replace('.',',')+' km'+(r.traffic?(r.delay>=120?' · korki +'+Math.round(r.delay/60)+' min':' · bez korków'):(ttKey?' · bez danych o ruchu ('+ttErr+')':' · (korki: dodaj klucz TomTom w ustawieniach)')));
     return true;
   }catch(e){info('Błąd: '+e.message);return false}
 }
@@ -1166,7 +1236,7 @@ async function loadVec(lat,lon){
       vecData=dat;$('attr').textContent='© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap';
       const rest=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(dx||dy)rest.push(getTile(tpl,z,tx+dx,ty+dy));
       const all=[first,...(await Promise.allSettled(rest)).filter(r=>r.status==='fulfilled').map(r=>r.value)];
-      dat=buildMvt(all,lat,lon);vecData=dat;
+      dat=buildMvt(all,lat,lon);dat.tx=tx;dat.ty=ty;dat.z=z;vecData=dat;
       fetchSpeed(lat,lon,dat);
       return;
     }catch(e){tileMem.clear()}
@@ -1188,6 +1258,37 @@ async function loadVec(lat,lon){
   }catch(e){vecNext=Date.now()+15000;vecErr='błąd mapy: '+e.message}
   finally{vecBusy=false}
 }
+// korki na całej mapie: kafelki „relative-delay” TomTom (rysowane tylko tam, gdzie jest spowolnienie)
+let flowBusy=false;
+async function loadFlow(){
+  const D=vecData;if(!ttKey||!D||D.tx==null||flowBusy)return;flowBusy=true;
+  try{
+    const W=40075016.686,cl=Math.cos(rad(D.lat)),cx=D.lon/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(D.lat)/2)),T=W/Math.pow(2,D.z),jobs=[];
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const x=D.tx+dx,y=D.ty+dy,url='https://api.tomtom.com/traffic/map/4/tile/flow/relative-delay/'+D.z+'/'+x+'/'+y+'.png?key='+encodeURIComponent(ttKey)+'&tileSize=512';
+      jobs.push(new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok({img:im,x0:(-W/2+x*T-cx)*cl,y0:(W/2-y*T-cy)*cl,w:T*cl});im.onerror=()=>no();im.src=url}));
+    }
+    const res=(await Promise.allSettled(jobs)).filter(r=>r.status==='fulfilled').map(r=>r.value);
+    if(res.length&&vecData===D){D.flow=res;flowAt=Date.now();vd=null}
+    else flowAt=Date.now()-120000; // ponów za minutę
+  }catch(e){}
+  finally{flowBusy=false}
+}
+setInterval(()=>{if(ttKey&&vec&&vecData&&!flowBusy&&(!vecData.flow||Date.now()-flowAt>180000))loadFlow()},4000);
+// co ~2,5 min: sprawdź, czy nie ma szybszej trasy (np. przez nowy korek) i odśwież korki na trasie
+setInterval(async()=>{
+  if(!ttKey||!route||!endPt||demo||sim||rerouting||!last||Date.now()-trChk<150000||Date.now()-route.lastRr<60000)return;
+  trChk=Date.now();const old=route,rem=Math.max(0,old.len-old.along);if(rem<800)return;
+  try{
+    const x=await fetchTT({lat:last.lat,lon:last.lon},endPt,(gpsOk&&gpsOk.speed>2)?lastH:null);
+    if(route!==old||rerouting)return;
+    const cur=x.alts.find(a=>sameAsRoute(old,a)),curT=cur?cur.duration:old.dur*(rem/old.len);
+    if(x.duration<curT-90&&x.duration<curT*.92){
+      setRoute(x.geometry.coordinates,x.duration,x.steps,x.jam,x.delay);route.lastRr=Date.now();
+      say('faster','Znaleziono szybszą trasę, oszczędzasz '+Math.round((curT-x.duration)/60)+' minut',[80,60,80]);
+    }else if(cur){setRoute(cur.geometry.coordinates,cur.duration,cur.steps,cur.jam,cur.delay);route.lastRr=Date.now()}
+  }catch(e){}
+},20000);
 let vctx=null,vq=1,lastVt=0,vd=null;
 function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(1.25,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0;vd=null}
 // Mapa jest rysowana RZADKO (gdy kamera odjedzie o ~12% płótna, zmieni się skala/dane/tryb nocny);
@@ -1215,6 +1316,7 @@ function paintVec(cam){
       c.strokeStyle=pal.rail;c.lineWidth=4.5/s;c.stroke(P.rail);
       c.strokeStyle=pal.railDash;c.lineWidth=2.2/s;c.setLineDash([9/s,9/s]);c.stroke(P.rail);c.setLineDash([]);
     }
+    if(D.flow){for(const f of D.flow){c.save();c.translate(f.x0,f.y0);c.scale(1,-1);c.globalAlpha=.92;c.drawImage(f.img,0,0,f.w,f.w);c.restore()}}
     c.restore();
     if(D.LB&&s>=.3){
       c.font='600 12.5px Inter,system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=4;c.lineJoin='round';
@@ -1258,9 +1360,10 @@ function drawRouteTop(){
   const pr=pts.map(q=>proj(q[0],q[1]));
   mx.lineCap='round';mx.lineJoin='round';
   for(const [w,col] of [[20,pal.routeEdge],[12,pal.route]]){
-    mx.strokeStyle=col;
     for(let i=0;i<pr.length-1;i++){
       const a=pr[i],b=pr[i+1];if(!a||!b)continue;
+      const jl=(w===12&&route&&route.jam)?route.jam[routeSegI+i]||0:0;
+      mx.strokeStyle=jl?JC[jl]:col;
       mx.beginPath();mx.moveTo(a.x,a.y);mx.lineTo(b.x,b.y);
       mx.lineWidth=w*Math.max(.3,Math.min(1.25,(a.k+b.k)/2));mx.stroke();
     }
