@@ -425,6 +425,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"></div></section>
 <section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
 <section><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
+<section><h3><i>🧭</i>Własne wskazówki nawigacji</h3><div class="sc" id="clipNav"><div class="sInfo">Nagraj lub wgraj własne „Skręć w prawo”, „Zjedź z ronda” itd. Aplikacja powie wtedy „Za 200 metrów”, odtworzy Twoje nagranie, a po nim przeczyta nazwę ulicy. Manewry bez nagrania są czytane głosem lektora.</div></div></section>
 <section><h3><i>🚗</i>Samochód</h3><div class="sc" data-g="car"></div></section>
 <section><h3><i>🔋</i>Jazda i bateria</h3><div class="sc" data-g="drive"></div></section>
 <section><h3><i>📊</i>Historia i dane</h3><div class="sc" data-g="data"></div></section>
@@ -496,7 +497,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 74</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 75</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -613,14 +614,15 @@ function pickVoice(){
   return vs.find(x=>x.name===voiceName)||vs.find(x=>V_MALE.test(x.name)&&!V_FEMALE.test(x.name))||vs.find(x=>!V_FEMALE.test(x.name))||vs[0];
 }
 let voiceMuted=false;
-function speak(text,vol){if(voiceMuted&&text!==undefined&&!speak.force)return;
-  if(!$('voice').checked||!window.speechSynthesis)return;
+function speak(text,vol,done){if(voiceMuted&&text!==undefined&&!speak.force){if(done)done();return}
+  if(!$('voice').checked||!window.speechSynthesis){if(done)done();return}
   try{
     const u=new SpeechSynthesisUtterance(text),v=pickVoice();u.lang='pl-PL';if(v)u.voice=v;
     const male=v&&V_MALE.test(v.name)&&!V_FEMALE.test(v.name);
     u.rate=.9;u.pitch=male?.9:.75;u.volume=vol||.9;   // spokojne tempo; niższy ton, gdy brak wyraźnie męskiego głosu
+    if(done){u.onend=u.onerror=()=>done()}
     speechSynthesis.speak(u);
-  }catch(e){}
+  }catch(e){if(done)done()}
 }
 try{speechSynthesis.onvoiceschanged=fillVoices}catch(e){}
 fillVoices();
@@ -1148,7 +1150,13 @@ function navUpdate(){
   nav={txt:cur.txt,icon:navIcon(cur.ic),dist:fmtD(d),d,i,then:i+1<st.length?'Potem: '+navStep(st[i+1]).txt:''};
   laneUpdate(st,i,d);
   if(d<300&&!navSaid[i]){navSaid[i]=1;
-    const t=navSay(st[i]),dm=Math.max(50,Math.round(d/50)*50);
+    const t=navSay(st[i]),dm=Math.max(50,Math.round(d/50)*50),sl=navSlot(st[i]);
+    if(clips[sl]&&$('voice').checked&&!voiceMuted&&!vcOff.Nav&&!window.preview){   // własne nagranie manewru
+      spoken['n'+i]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}
+      const a=[];if(st[i].type!=='arrive'&&st[i].type!=='depart')a.push({tts:'Za '+dm+' metrów'});
+      a.push({clip:sl});if(st[i].name&&st[i].type!=='arrive'&&st[i].type!=='depart')a.push({tts:st[i].name});
+      speakSeq(a,.9);return;
+    }
     say('n'+i,st[i].type==='arrive'?t:'Za '+dm+' metrów '+t.charAt(0).toLowerCase()+t.slice(1),[120],t);
   }
 }
@@ -2229,6 +2237,47 @@ const CLIP_SLOTS=[
  ['rest','Czas na przerwę','Jedzie Pan już ponad dwie godziny. Proszę rozważyć postój.',/^rest$/],
  ['fuel','Mało paliwa','Zostało paliwa na 40 kilometrów. Proszę zatankować.',/^fuel/]
 ];
+
+const NAV_SLOTS=[
+ ['turnR','Skręć w prawo','Proszę skręcić w prawo.',null],['turnL','Skręć w lewo','Proszę skręcić w lewo.',null],
+ ['slightR','Skręć lekko w prawo','Proszę skręcić lekko w prawo.',null],['slightL','Skręć lekko w lewo','Proszę skręcić lekko w lewo.',null],
+ ['sharpR','Skręć ostro w prawo','Proszę skręcić ostro w prawo.',null],['sharpL','Skręć ostro w lewo','Proszę skręcić ostro w lewo.',null],
+ ['uturn','Zawróć','Proszę zawrócić.',null],['straight','Jedź prosto','Proszę jechać prosto.',null],['depart','Ruszaj prosto (start)','Proszę ruszać prosto.',null],
+ ['round1','Rondo: pierwszy zjazd','Na rondzie proszę zjechać pierwszym zjazdem.',null],['round2','Rondo: drugi zjazd','Na rondzie proszę zjechać drugim zjazdem.',null],
+ ['round3','Rondo: trzeci zjazd','Na rondzie proszę zjechać trzecim zjazdem.',null],['round4','Rondo: czwarty i dalszy zjazd','Na rondzie proszę zjechać czwartym zjazdem.',null],
+ ['exitRound','Zjedź z ronda','Proszę zjechać z ronda.',null],
+ ['forkL','Rozwidlenie: trzymaj się lewej','Na rozwidleniu proszę trzymać się lewej strony.',null],['forkR','Rozwidlenie: trzymaj się prawej','Na rozwidleniu proszę trzymać się prawej strony.',null],
+ ['merge','Włącz się do ruchu','Proszę włączyć się do ruchu.',null],['ramp','Wjazd lub zjazd z drogi (łącznik)','Proszę zjechać zjazdem.',null],
+ ['arrive','Dojechałeś do celu','Dojechaliśmy do celu.',null],['arriveVia','Dojechałeś do przystanku','Dojechaliśmy do przystanku.',null]
+];
+const ALL_SLOTS=CLIP_SLOTS.concat(NAV_SLOTS);
+function navSlot(st){
+  const m=st.mod||'',L=m.includes('left'),R=m.includes('right');
+  switch(st.type){
+   case 'depart':return 'depart';
+   case 'arrive':return viaList.length?'arriveVia':'arrive';
+   case 'roundabout':case 'rotary':return 'round'+Math.max(1,Math.min(4,st.exit||1));
+   case 'exit roundabout':case 'exit rotary':return 'exitRound';
+   case 'fork':return L?'forkL':'forkR';
+   case 'merge':return 'merge';
+   case 'on ramp':case 'off ramp':return 'ramp';
+  }
+  if(m==='uturn')return 'uturn';
+  if(L||R)return (m.includes('slight')?'slight':m.includes('sharp')?'sharp':'turn')+(L?'L':'R');
+  return 'straight';
+}
+// zdanie złożone: „Za 200 metrów” (lektor) + własne nagranie manewru + nazwa ulicy (lektor)
+function speakSeq(parts,vol){
+  (async()=>{
+    for(const p of parts){
+      if(p.clip){await new Promise(ok=>{
+        if(!playClip(p.clip,vol)){ok();return}
+        let t;const done=()=>{clearTimeout(t);clipAudio.removeEventListener('ended',done);clipAudio.removeEventListener('error',done);ok()};
+        clipAudio.addEventListener('ended',done);clipAudio.addEventListener('error',done);t=setTimeout(done,12000)})}
+      else if(p.tts){await new Promise(ok=>{const t=setTimeout(ok,9000);speak(p.tts,vol,()=>{clearTimeout(t);ok()})})}
+    }
+  })();
+}
 const clips={},clipAudio=new Audio();
 const CLIP_SILENCE='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
 function clipSlot(key){for(const x of CLIP_SLOTS)if(x[3]&&x[3].test(key))return x[0];return null}
@@ -2238,7 +2287,7 @@ function playClip(slot,vol){
 }
 document.addEventListener('pointerdown',()=>{try{clipAudio.src=CLIP_SILENCE;clipAudio.volume=0;const p=clipAudio.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}},{once:true});   // odblokowanie odtwarzania po pierwszym dotknięciu
 async function loadClips(){
-  for(const x of CLIP_SLOTS){
+  for(const x of ALL_SLOTS){
     try{const c=await idbGet('clip|'+x[0]);if(c&&c.buf){clips[x[0]]={url:URL.createObjectURL(new Blob([c.buf],{type:c.type||'audio/mpeg'})),name:c.name||'nagranie'}}}catch(e){}
   }
   renderClips();
@@ -2279,9 +2328,9 @@ async function recStart(id,btn){
   }catch(e){alert(e.name==='NotAllowedError'?'Brak zgody na mikrofon. Włącz ją w ustawieniach przeglądarki.':'Nie można uruchomić mikrofonu: '+e.message)}
 }
 function renderClips(){
-  const box=$('clipList');if(!box)return;
-  box.querySelectorAll('.clipRow').forEach(e=>e.remove());
-  for(const [id,label,sample] of CLIP_SLOTS){
+  const box1=$('clipList'),box2=$('clipNav');if(!box1||!box2)return;
+  document.querySelectorAll('#clipList .clipRow,#clipNav .clipRow').forEach(e=>e.remove());
+  for(const [id,label,sample] of ALL_SLOTS){const box=NAV_SLOTS.some(x=>x[0]===id)?box2:box1;
     const row=document.createElement('div');row.className='clipRow';
     const has=!!clips[id];
     row.innerHTML='<div class="ct"><b></b><small></small></div><button class="pl" type="button" aria-label="Odtwórz">▶</button><button class="rc" type="button" aria-label="Nagraj">⏺ Nagraj</button><button class="up" type="button">'+(has?'Zmień':'Wgraj')+'</button>'+(has?'<button class="del" type="button" aria-label="Usuń">✕</button>':'');
