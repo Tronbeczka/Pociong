@@ -601,7 +601,7 @@ function follow(p){
 
 // ---- Trasa: adresy (Photon/OSM), najszybsza trasa (OSRM), niebieska linia ----
 let route=null, endPt=null, sim=null, routeSeg=null, routeSegI=0;
-const jamLayer=L.layerGroup().addTo(map),JC=['','#f9a825','#e53935','#8e1b1b'];
+const jamLayer=L.layerGroup().addTo(map),JC=['','#ffd600','#ff6d00','#e50000','#8a0000'],JE=['','#9a7d00','#a64400','#7a0000','#3d0000'];
 const rCase=L.polyline([],{color:'#fff',weight:16,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
 const rLine=L.polyline([],{color:'#1a73e8',weight:10,opacity:1,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
 // ROUTE-PURE-START
@@ -803,11 +803,11 @@ function routeUpdate(p){
       const lv=route.jam[i];
       if(lv>=2&&jamD==null){jamD=Math.max(0,route.cum[i]-r.along);jamLv=lv}
       if(!vec){ // tryb kafelkowy: czerwone odcinki w Leaflet
-        if(lv>0){if(run&&run.lv===lv)run.p.push(route.pts[i+1]);else{if(run)L.polyline(run.p,{color:JC[run.lv],weight:10,opacity:1,interactive:false}).addTo(jamLayer);run={lv,p:[route.pts[i],route.pts[i+1]]}}}
-        else if(run){L.polyline(run.p,{color:JC[run.lv],weight:10,opacity:1,interactive:false}).addTo(jamLayer);run=null}
+        if(lv>0){if(run&&run.lv===lv)run.p.push(route.pts[i+1]);else{if(run)L.polyline(run.p,{color:JC[run.lv],weight:13,opacity:1,interactive:false}).addTo(jamLayer);run={lv,p:[route.pts[i],route.pts[i+1]]}}}
+        else if(run){L.polyline(run.p,{color:JC[run.lv],weight:13,opacity:1,interactive:false}).addTo(jamLayer);run=null}
       }
     }
-    if(run)L.polyline(run.p,{color:JC[run.lv],weight:10,opacity:1,interactive:false}).addTo(jamLayer);
+    if(run)L.polyline(run.p,{color:JC[run.lv],weight:13,opacity:1,interactive:false}).addTo(jamLayer);
   }
   route.jamD=jamD;
   if(jamD!=null&&jamD<1500&&!(route.jamSaid&&Date.now()-route.jamSaid<120000)){route.jamSaid=Date.now();say('jam','Korek na trasie za '+(jamD<1000?Math.round(jamD/50)*50+' metrów':(jamD/1000).toFixed(1).replace('.',',')+' kilometra'),[120,80,120])}
@@ -838,7 +838,7 @@ function ttRoute(r){
   (r.sections||[]).forEach(sc=>{
     if(sc.sectionType!=='TRAFFIC')return;
     const cat=sc.simpleCategory,mg=sc.magnitudeOfDelay||0;
-    const lv=cat==='ROAD_CLOSURE'?3:cat==='JAM'?(mg>=3?3:mg===2?2:1):0;
+    const lv=cat==='ROAD_CLOSURE'?4:cat==='JAM'?(mg>=3?3:mg===2?2:1):0;
     for(let i=sc.startPointIndex;i<sc.endPointIndex&&i<jam.length;i++)jam[i]=Math.max(jam[i],lv);
   });
   const ins=((r.guidance&&r.guidance.instructions)||[]).filter(x=>TT_MAN[x.maneuver]);
@@ -1473,10 +1473,10 @@ function drawRouteTop(){
   for(const [w,col] of [[20,pal.routeEdge],[12,pal.route]]){
     for(let i=0;i<pr.length-1;i++){
       const a=pr[i],b=pr[i+1];if(!a||!b)continue;
-      const jl=(w===12&&route&&route.jam)?route.jam[routeSegI+i]||0:0;
-      mx.strokeStyle=jl?JC[jl]:col;
+      const jl=(route&&route.jam)?route.jam[routeSegI+i]||0:0;   // natężenie ruchu: kolor drogi zależy od korka
+      mx.strokeStyle=jl?(w===12?JC[jl]:JE[jl]):col;
       mx.beginPath();mx.moveTo(a.x,a.y);mx.lineTo(b.x,b.y);
-      mx.lineWidth=w*Math.max(.3,Math.min(1.25,(a.k+b.k)/2));mx.stroke();
+      mx.lineWidth=(w+(jl?(w===12?3:5):0))*Math.max(.3,Math.min(1.25,(a.k+b.k)/2));mx.stroke();
     }
   }
 }
