@@ -646,7 +646,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 104</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 105</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -959,6 +959,7 @@ function onPos(g){window.gpsErr=false;
   if(t-(onPos.sv||0)>10000){onPos.sv=t;try{localStorage.setItem('lastpos',JSON.stringify({lat:c.latitude,lon:c.longitude,t:Date.now()}))}catch(e){}}
   last={lat:c.latitude,lon:c.longitude,t};
   evaluate({lat:c.latitude,lon:c.longitude,speed,heading});
+  drMark(speed);
 }
 
 async function startGps(quiet){
@@ -2736,7 +2737,7 @@ function xDepartures(c){
 function showBoard(c){
   const B=$('xBoard'),L=xDepartures(c);
   const hh=t=>new Date(t*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  const kind=c.user?'dodany przez Ciebie':c.der?'wykryty na mapie (tor przecina drogę), rodzaj nieznany':c.inf&&!c.br&&!c.li&&!c.nb?'rodzaj nieznany (brak opisu w OpenStreetMap)':c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
+  const kind=c.rem?'dodany przez innego kierowcę':c.user?'dodany przez Ciebie':c.der?'wykryty na mapie (tor przecina drogę), rodzaj nieznany':c.inf&&!c.br&&!c.li&&!c.nb?'rodzaj nieznany (brak opisu w OpenStreetMap)':c.nb?'bez zapór':(c.br&&c.br!=='no'?'z zaporami':(c.li==='yes'?'ze światłami':'rodzaj nieznany')),tracks=c.tr>1?', torów: '+c.tr:'';
   let h='<h3>🚆 Przejazd kolejowy</h3><div class="xs">'+kind+tracks+' · najbliższe pociągi (wg rozkładu i opóźnień na żywo)</div>';
   {const X=LSget('xwait',{})[c.id],hk=hourKey(),cs=(LSget('cstat',{})[c.id]||{})[hk]||0,own=[];
    if(X&&X.n>0)own.push('Zwykle czekasz tu ok. '+(X.s/X.n>=90?Math.round(X.s/X.n/60)+' min':Math.round(X.s/X.n)+' s')+' ('+X.n+' '+(X.n===1?'raz':'razy')+')');
@@ -4417,9 +4418,9 @@ function achTick(p){
   if(window.preview||typeof sim!=='undefined'&&sim||typeof demo!=='undefined'&&demo)return;
   const v=p.speed||0,nx=window._nearX;
   // przejazd obok przejazdu kolejowego (≤40 m, raz na 10 min na obiekt) i czekanie przed nim
-  if(nx&&now-nx.t<4000&&nx.d<40&&v>0.8){achX=achX||{};if(!achX[nx.id]||now-achX[nx.id]>600000){achX[nx.id]=now;ACH_ST.x++}}
+  if(nx&&now-nx.t<4000&&nx.d<40&&v>0.8){achX=achX||{};if(!achX[nx.id]||now-achX[nx.id]>600000){achX[nx.id]=now;ACH_ST.x++;wkAdd('x')}}
   const w=!!(nx&&now-nx.t<4000&&nx.d<150&&v<1.5);
-  if(w&&!achW)ACH_ST.xw++;achW=w;
+  if(w&&!achW){ACH_ST.xw++;wkAdd('xw')}achW=w;
   if(v>70||v<0.8||!dt){achPv=v<0.8?null:achPv;return}   // odrzuć nierealne skoki i postoje
   const km=v*dt/1000,h=new Date().getHours(),day=dayKey();
   ACH_ST.km+=km;if(h>=22||h<5)ACH_ST.night+=km;if(h>=4&&h<6)ACH_ST.early+=km;
@@ -4447,7 +4448,7 @@ function achAll(){
 }
 let achKnownC=null,achChkAt=0;
 function achCheck(force){
-  const nw=Date.now();if(!force&&nw-achChkAt<4000)return;achChkAt=nw;   // nie częściej niż co 4 s
+  const nw=Date.now();if(!force&&nw-achChkAt<4000)return;achChkAt=nw;try{chCheck()}catch(e){}   // nie częściej niż co 4 s
   const known=achKnownC||(achKnownC=LSget('achKnown',[])),fresh=[];
   for(const [id,ok,t1,t2] of achAll())if(ok&&!known.includes(id)){known.push(id);fresh.push([t1,t2])}
   if(!fresh.length)return;
@@ -4470,6 +4471,7 @@ function achRender(){
   const ri=rankInfo();
   $('achRank').innerHTML='<b>'+ri.name+'</b> <small>· '+ri.xp+' pkt'+(ri.next?' · do „'+ri.next+'” brakuje '+ri.need:' · najwyższa ranga')+'</small><div class="achBar" style="margin-top:8px"><i style="width:'+ri.pct+'%"></i></div><small>Seria: '+streakNow()+(streakNow()===1?' dzień':' dni')+' z rzędu · zdobyte nagrody: '+achCount()+'</small>';
   $('achStats').innerHTML='<div><b>'+Math.round(ACH_ST.km)+' km</b>razem</div><div><b>'+ACH_ST.x+'</b>mijane przejazdy</div><div><b>'+ACH_ST.tr+'</b>zobaczone pociągi</div>';
+  try{chRender()}catch(e){}
   const T=$('achTabs');T.innerHTML='';
   for(const [k,n] of ACH_TABS){const b=document.createElement('button');b.type='button';b.className='achTab'+(k===achTab?' on':'');b.textContent=n;b.onclick=()=>{achTab=k;LSput('achTab',k);achRender()};T.appendChild(b)}
   const L=$('achList');L.innerHTML='';
@@ -4574,7 +4576,7 @@ const BADGES=[
  {id:'ptaszek',n:'Wczesny ptaszek',ico:'🌅',l:{k:'early',v:10,u:' km',d:'Przejedź 10 km między 4:00 a 6:00'}}];
 const RANKS=[[0,'Nowicjusz'],[300,'Kierowca'],[1000,'Doświadczony kierowca'],[3000,'Znawca przejazdów'],[7000,'Mistrz szos'],[15000,'Legenda torów']];
 function achCount(){let n=ACHS.filter(achDone).length;for(const k in LOCKS.col)if(lkOk(LOCKS.col[k]))n++;for(const k in LOCKS.trail)if(lkOk(LOCKS.trail[k]))n++;for(const k in LOCKS.train)if(lkOk(LOCKS.train[k]))n++;BADGES.forEach(b=>{if(lkOk(b.l))n++});return n}
-function achXp(){return Math.round(ACH_ST.km*10+ACH_ST.x*20+ACH_ST.tr*15+ACH_ST.rep*30+ACH_ST.days.length*50+achCount()*150)}
+function achXp(){return Math.round((ACH_ST.chd||0)*40+ACH_ST.km*10+ACH_ST.x*20+ACH_ST.tr*15+ACH_ST.rep*30+ACH_ST.days.length*50+achCount()*150)}
 function rankInfo(){const xp=achXp();let i=0;for(let k=0;k<RANKS.length;k++)if(xp>=RANKS[k][0])i=k;const nx=RANKS[i+1];return {xp,name:RANKS[i][1],next:nx?nx[1]:null,pct:nx?Math.round(100*(xp-RANKS[i][0])/(nx[0]-RANKS[i][0])):100,need:nx?nx[0]-xp:0}}
 function seasonNow(){
   const o=LSget('season','auto');if(o==='off')return {s:null,b:false};
@@ -4659,7 +4661,7 @@ setInterval(()=>{
     if(dist(last.lat,last.lon,t.lat,t.lon)>1200)continue;
     const nm=String(t.id||'');if(!nm||nm==='DEMO')continue;
     const key=nm+'|'+day;if(ACH_ST.seen[key])continue;
-    ACH_ST.seen[key]=day;ACH_ST.tr++;const c=trainCat(nm);ACH_ST.catn[c.k]=(ACH_ST.catn[c.k]||0)+1;if(!ACH_ST.cats.includes(c.k))ACH_ST.cats.push(c.k);
+    ACH_ST.seen[key]=day;ACH_ST.tr++;wkAdd('tr');const c=trainCat(nm);ACH_ST.catn[c.k]=(ACH_ST.catn[c.k]||0)+1;if(!ACH_ST.cats.includes(c.k))ACH_ST.cats.push(c.k);
     ACH_ST.log.unshift({id:nm,k:c.k,t:Date.now()});ACH_ST.log.length=Math.min(ACH_ST.log.length,40);ch=true;
   }
   if(ch){for(const k in ACH_ST.seen)if(ACH_ST.seen[k]!==day&&ACH_ST.seen[k]!==dayKey(-1))delete ACH_ST.seen[k];achSave();achCheck(true)}
@@ -5177,26 +5179,29 @@ const celLink=/^#cel=/.test(location.hash);   // aplikacja otwarta z linku „wy
 // --- korekty przejazdów: ukryte (błędne/nieczynne) i dodane ręcznie ---
 function xSame(a,b){return Math.abs(a.lat-b.lat)<.0004&&Math.abs(a.lon-b.lon)<.0007&&dist(a.lat,a.lon,b.lat,b.lon)<35}
 function xHid(c){
-  if(!xHidL||!xHidL.length||c.user)return false;
-  for(const h of xHidL)if(xSame(h,c))return true;
+  if(c.user&&!c.rem)return false;
+  if(xHidL)for(const h of xHidL)if(xSame(h,c))return true;
+  if(xHidR)for(const h of xHidR)if(xSame(h,c))return true;   // ukryte przez co najmniej dwóch kierowców
   return false;
 }
 function xUserSync(){   // przejazdy dodane przez użytkownika trafiają do mapy i do ostrzeżeń (jak te z OpenStreetMap)
   if(!xUsrL)return;
-  for(const u of xUsrL){
+  for(const u of xUsrL.concat(xAddR||[])){
+    const off=u.rem&&xHid(u);
+    if(off){xAll.delete(u.id);const k=crossings.indexOf(u);if(k>=0)crossings.splice(k,1);continue}
     if(!xAll.has(u.id))xAll.set(u.id,u);
     const near=!last||dist(last.lat,last.lon,u.lat,u.lon)<6000,i=crossings.indexOf(u);
     if(near&&i<0)crossings.push(u);else if(!near&&i>=0)crossings.splice(i,1);
   }
 }
 function xUserOnRoute(R,xs){
-  if(!xUsrL||!xUsrL.length||!R||!R.pts||R.pts.length<2)return;
-  for(const u of xUsrL){const rc=projRoute(R,u.lat,u.lon,0,R.pts.length-2);if(rc.off<35&&!xs.includes(u))xs.push(u)}
+  if(!R||!R.pts||R.pts.length<2)return;
+  for(const u of xUsrL.concat((xAddR||[]).filter(q=>!xHid(q)))){const rc=projRoute(R,u.lat,u.lon,0,R.pts.length-2);if(rc.off<35&&!xs.includes(u))xs.push(u)}
 }
 function xHide(c){
-  if(c.user){xUsrL=xUsrL.filter(u=>u.id!==c.id);LSput('xuser',xUsrL)}
-  else{xHidL.push({lat:+c.lat.toFixed(6),lon:+c.lon.toFixed(6)});if(xHidL.length>400)xHidL.shift();LSput('xhid',xHidL)}
-  const gone=q=>q===c||q.id===c.id||(!q.user&&xHid(q));   // ten sam przejazd bywa w kilku kopiach (z różnych zapytań)
+  if(c.user&&!c.rem){xUsrL=xUsrL.filter(u=>u.id!==c.id);LSput('xuser',xUsrL);xfixDel(c)}
+  else{xHidL.push({lat:+c.lat.toFixed(6),lon:+c.lon.toFixed(6)});if(xHidL.length>400)xHidL.shift();LSput('xhid',xHidL);xfixPush('h',c)}
+  const gone=q=>q===c||q.id===c.id||(!(q.user&&!q.rem)&&xHid(q));   // ten sam przejazd bywa w kilku kopiach (z różnych zapytań)
   for(const [id,q] of [...xAll])if(gone(q))xAll.delete(id);
   for(let i=crossings.length-1;i>=0;i--)if(gone(crossings[i]))crossings.splice(i,1);
   if(route&&route.xs)for(let i=route.xs.length-1;i>=0;i--)if(gone(route.xs[i]))route.xs.splice(i,1);
@@ -5214,9 +5219,9 @@ function xBoardExtras(c){
     xWatchL.unshift({lat:+c.lat.toFixed(6),lon:+c.lon.toFixed(6),nm:nm.trim().slice(0,30)});xWatchL=xWatchL.slice(0,20);LSput('xwatch',xWatchL);
     w.textContent='★ Obserwowany';evToast('★ Przejazd obserwowany','Zobaczysz go w Ustawienia → Historia i dane → Obserwowane przejazdy.',null,5000);
   };
-  h.textContent=c.user?'🗑 Usuń ten przejazd':'🚫 To nie przejazd – ukryj';
+  h.textContent=c.user&&!c.rem?'🗑 Usuń ten przejazd':'🚫 To nie przejazd – ukryj';
   h.onclick=()=>{
-    if(!confirm(c.user?'Usunąć przejazd dodany przez Ciebie?':'Ukryć ten przejazd? Zniknie z mapy i ostrzeżeń (przywrócisz go w Ustawienia → Historia i dane → Obserwowane przejazdy).'))return;
+    if(!confirm(c.user&&!c.rem?'Usunąć przejazd dodany przez Ciebie?':'Ukryć ten przejazd? Zniknie z mapy i ostrzeżeń (przywrócisz go w Ustawienia → Historia i dane → Obserwowane przejazdy).'))return;
     xHide(c);$('xBoard').style.display='none';
   };
 }
@@ -5253,8 +5258,8 @@ function showWatchList(){
   const hn=xHidL.length,un=xUsrL.length;
   if(hn||un){
     const q=document.createElement('p');q.style.marginTop='14px';q.textContent='Ukryte przejazdy: '+hn+' · dodane przez Ciebie: '+un;b.appendChild(q);
-    if(hn){const r=document.createElement('button');r.textContent='Przywróć ukryte przejazdy';r.onclick=()=>{xHidL=[];LSput('xhid',[]);lastFetch=null;showWatchList();evToast('Przywrócono ukryte przejazdy','Pojawią się po chwili (część dopiero po odświeżeniu strony).',null,5000)};b.appendChild(r)}
-    if(un){const r=document.createElement('button');r.textContent='Usuń dodane przeze mnie przejazdy';r.onclick=()=>{for(const u of xUsrL){xAll.delete(u.id);const j=crossings.indexOf(u);if(j>=0)crossings.splice(j,1)}xUsrL=[];LSput('xuser',[]);showWatchList()};b.appendChild(r)}
+    if(hn){const r=document.createElement('button');r.textContent='Przywróć ukryte przejazdy';r.onclick=()=>{xHidL.forEach(xfixDel);xHidL=[];LSput('xhid',[]);lastFetch=null;showWatchList();evToast('Przywrócono ukryte przejazdy','Pojawią się po chwili (część dopiero po odświeżeniu strony).',null,5000)};b.appendChild(r)}
+    if(un){const r=document.createElement('button');r.textContent='Usuń dodane przeze mnie przejazdy';r.onclick=()=>{for(const u of xUsrL){xfixDel(u);xAll.delete(u.id);const j=crossings.indexOf(u);if(j>=0)crossings.splice(j,1)}xUsrL=[];LSput('xuser',[]);showWatchList()};b.appendChild(r)}
   }
   const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>{b.style.display='none'};b.appendChild(c);b.style.display='block';
 }
@@ -5326,7 +5331,7 @@ function showPinSheet(){
     const near=nearestXAt(q.lat,q.lon,45);
     if(near){hidePin();showBoard(near);evToast('Ten przejazd już jest na mapie','Pokazuję jego tablicę.',null,4000);return}
     const u={id:'u'+Math.round(q.lat*1e5)+'_'+Math.round(q.lon*1e5),lat:q.lat,lon:q.lon,tr:1,nb:false,inf:true,user:true,maxOff:70};
-    xUsrL.push(u);xUsrL=xUsrL.slice(-200);LSput('xuser',xUsrL);xAll.set(u.id,u);xUserSync();
+    xUsrL.push(u);xUsrL=xUsrL.slice(-200);LSput('xuser',xUsrL);xAll.set(u.id,u);xUserSync();xfixPush('a',u);
     pinPt=null;showBoard(u);evToast('🚆 Dodano przejazd','Będzie na mapie i w ostrzeżeniach. Usuniesz go na jego tablicy.',null,5000);
   };
   $('pinSh').onclick=()=>{const q=pinPt;if(q)shareDest({lat:q.lat,lon:q.lon,label:lab()})};
@@ -5405,6 +5410,106 @@ setTimeout(()=>{
   if(LSget('hint104',0)||route||celLink||$('evToast').style.display==='block')return;
   LSput('hint104',1);evToast('💡 Wskazówka','Przytrzymaj palec na mapie, aby wybrać cel, dodać przejazd albo wysłać miejsce znajomemu.',null,9000);
 },30000);
+
+// ================= Wersja 105: jazda w tunelu, wspólne korekty, wyzwania dnia, podsumowanie tygodnia =================
+// --- 1) utrata GPS (tunel, wiadukt): auto jedzie dalej po trasie z ostatnią prędkością, najwyżej ok. 100 s ---
+var dr=null,drOn=false;
+function drMark(v){dr=(route&&route.off<60&&v>=4&&!window.preview)?{al:route.along,t:Date.now(),v}:null;drOn=false}
+setInterval(()=>{
+  if(!dr||!route||watchId==null||demo||sim||window.preview)return;
+  const now=Date.now(),el=(now-dr.t)/1000;
+  if(gpsOk&&now-gpsOk.t<4500)return;
+  if(el<5)return;
+  if(el>100){dr=null;drOn=false;return}
+  const slow=Math.max(0,el-60),d=dr.v*Math.min(el,60)+dr.v*slow*(1-slow/80),v=el>60?dr.v*Math.max(0,1-slow/40):dr.v;
+  const al=Math.min(route.len-5,dr.al+d),a=routeAt(route,al),b=routeAt(route,al+15);
+  if(!drOn){drOn=true;try{evToast('📡 Brak sygnału GPS','Szacuję pozycję na trasie – ostrzeżenia działają dalej.',null,5000)}catch(e){}}
+  last={lat:a[0],lon:a[1],t:now};
+  evaluate({lat:a[0],lon:a[1],speed:v,heading:bear(a[0],a[1],b[0],b[1])});
+},1000);
+
+// --- 2) wspólne korekty przejazdów przez bazę Firebase (ukrycie wymaga dwóch kierowców, dodanie – jednego) ---
+var xHidR=[],xAddR=[],xfixAt=0;
+const xfixKey=c=>Math.round(c.lat*1e5)+'_'+Math.round(c.lon*1e5);
+const xfixUrl=c=>evBase()+'/xfix/'+evCell(c.lat,c.lon)+'/'+xfixKey(c)+'_'+evUid+'.json';
+function xfixPush(ty,c){if(!evDb)return;try{fetch(xfixUrl(c),{method:'PUT',body:JSON.stringify({ty,lat:+c.lat.toFixed(6),lon:+c.lon.toFixed(6),u:evUid,t:Date.now()})}).catch(()=>{})}catch(e){}}
+function xfixDel(c){if(!evDb)return;try{fetch(xfixUrl(c),{method:'DELETE'}).catch(()=>{})}catch(e){}}
+async function xfixPoll(force){
+  if(!evDb||!last)return;
+  if(!force&&Date.now()-xfixAt<300000)return;xfixAt=Date.now();
+  const la=Math.floor(last.lat*10),lo=Math.floor(last.lon*10),jobs=[];
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)jobs.push(fetch(evBase()+'/xfix/'+(la+a)+'_'+(lo+b)+'.json').then(r=>r.ok?r.json():null).catch(()=>null));
+  const res=await Promise.all(jobs),hid=[],add=new Map();
+  for(const o of res)if(o)for(const k in o){
+    const e=o[k];if(!e||!e.ty||!(Math.abs(e.lat)<=90)||!(Math.abs(e.lon)<=180))continue;
+    if(e.ty==='h'){let g=hid.find(q=>xSame(q,e));if(!g){g={lat:e.lat,lon:e.lon,us:new Set()};hid.push(g)}g.us.add(e.u)}
+    else if(e.ty==='a'&&e.u!==evUid){const id='r'+xfixKey(e);if(!add.has(id))add.set(id,{id,lat:e.lat,lon:e.lon,tr:1,nb:false,inf:true,user:true,rem:true,maxOff:70})}
+  }
+  xHidR=hid.filter(g=>g.us.size>=2).map(g=>({lat:g.lat,lon:g.lon}));
+  xAddR=[...add.values()];
+  for(const [id,q] of [...xAll])if(!(q.user&&!q.rem)&&xHid(q)){xAll.delete(id);const i=crossings.indexOf(q);if(i>=0)crossings.splice(i,1)}
+  xUserSync();
+}
+setTimeout(()=>xfixPoll(true),12000);setInterval(()=>xfixPoll(),60000);
+
+// --- 3) wyzwania dnia i podsumowanie tygodnia ---
+function wkAdd(k){
+  const d=dayKey(),w=ACH_ST.w||(ACH_ST.w={});
+  if(!w[d]){const lim=dayKey(-40);for(const x in w)if(x<lim)delete w[x];w[d]={}}
+  w[d][k]=(w[d][k]||0)+1;
+}
+const chB=()=>(ACH_ST.ch&&ACH_ST.ch.base)||{x:0,tr:0,rep:0,hb:0,xw:0};
+const CH_POOL=[
+ {t:'Przejedź 5 km',v:5,f:()=>ACH_ST.d[dayKey()]||0,u:' km'},
+ {t:'Przejedź 20 km',v:20,f:()=>ACH_ST.d[dayKey()]||0,u:' km'},
+ {t:'Miń 2 przejazdy kolejowe',v:2,f:()=>ACH_ST.x-chB().x},
+ {t:'Miń 5 przejazdów kolejowych',v:5,f:()=>ACH_ST.x-chB().x},
+ {t:'Zobacz 2 pociągi',v:2,f:()=>ACH_ST.tr-chB().tr},
+ {t:'Wyślij zgłoszenie dla innych kierowców',v:1,f:()=>ACH_ST.rep-chB().rep},
+ {t:'10 km bez gwałtownego hamowania',v:10,f:()=>ACH_ST.hb===chB().hb?(ACH_ST.d[dayKey()]||0):0,u:' km'},
+ {t:'Spokojnie poczekaj na otwarcie przejazdu',v:1,f:()=>ACH_ST.xw-chB().xw}
+];
+function chInit(){
+  const day=dayKey();if(ACH_ST.ch&&ACH_ST.ch.day===day)return;
+  const n=Math.floor(Date.parse(day)/864e5),m=CH_POOL.length;
+  ACH_ST.ch={day,ids:[n%m,(n+3)%m,(n+5)%m],base:{x:ACH_ST.x,tr:ACH_ST.tr,rep:ACH_ST.rep,hb:ACH_ST.hb,xw:ACH_ST.xw},done:[]};achSave();
+}
+function chCheck(){
+  if(window.preview||typeof sim!=='undefined'&&sim||typeof demo!=='undefined'&&demo)return;
+  chInit();const C=ACH_ST.ch;
+  for(const i of C.ids){
+    if(C.done.includes(i))continue;const q=CH_POOL[i];
+    if(q.f()>=q.v){
+      C.done.push(i);ACH_ST.chd=(ACH_ST.chd||0)+1;achSave();
+      try{evToast('🎯 Wyzwanie ukończone','„'+q.t+'” – brawo! +40 pkt'+(C.done.length===3?' · wszystkie wyzwania dnia zaliczone':''),null,7000)}catch(e){}
+      try{say('ch'+i+C.day,'Wyzwanie ukończone. Gratuluję.',[100],'Wyzwanie ukończone')}catch(e){}
+    }
+  }
+}
+function wkSum(off){   // 7 dni kończących się dziś (off=0) lub tydzień wcześniej (off=-7)
+  const o={km:0,x:0,xw:0,tr:0,days:0};
+  for(let i=-6;i<=0;i++){const d=dayKey(i+off),k=(ACH_ST.d&&ACH_ST.d[d])||0,w=(ACH_ST.w&&ACH_ST.w[d])||{};
+    o.km+=k;o.x+=w.x||0;o.xw+=w.xw||0;o.tr+=w.tr||0;if(k>0.2)o.days++}
+  return o;
+}
+function chRender(){
+  chInit();let el=$('achCh');
+  if(!el){el=document.createElement('div');el.id='achCh';el.style.cssText='margin:12px 0;line-height:1.5';$('achStats').insertAdjacentElement('afterend',el)}
+  const C=ACH_ST.ch,a=wkSum(0),b=wkSum(-7),dk=Math.round((a.km-b.km)*10)/10;
+  let h='<b>🎯 Wyzwania dnia</b> <small>(za każde +40 pkt)</small>';
+  for(const i of C.ids){const q=CH_POOL[i],ok=C.done.includes(i),v=Math.min(q.v,q.f());
+    h+='<div>'+(ok?'✅':'⬜')+' '+q.t+' <small>'+(ok?'zaliczone':(Number.isInteger(q.v)&&q.v<10?Math.floor(v):v.toFixed(1))+' / '+q.v+(q.u||''))+'</small></div>'}
+  h+='<details style="margin-top:8px"><summary><b>📅 Podsumowanie tygodnia</b></summary><div>Ostatnie 7 dni: <b>'+a.km.toFixed(1).replace('.',',')+' km</b> w '+a.days+' '+(a.days===1?'dzień':'dni')
+   +'<br>Mijane przejazdy kolejowe: <b>'+a.x+'</b> · czekanie przed przejazdem: <b>'+a.xw+'</b> · zobaczone pociągi: <b>'+a.tr+'</b>'
+   +'<br><small>'+(b.km<0.1?'Tydzień wcześniej nie było jazdy z aplikacją.':'W porównaniu z poprzednim tygodniem: '+(dk>=0?'+':'')+dk.toFixed(1).replace('.',',')+' km.')+'</small></div></details>';
+  el.innerHTML=h;
+}
+setTimeout(()=>{   // w poniedziałek: krótkie podsumowanie minionego tygodnia
+  try{
+    const a=wkSum(0);if(new Date().getDay()!==1||LSget('wkShown','')===dayKey()||a.km<.5)return;LSput('wkShown',dayKey());
+    evToast('📅 Podsumowanie tygodnia',a.km.toFixed(1).replace('.',',')+' km · '+a.x+' mijanych przejazdów · '+a.tr+' pociągów',[['Pokaż',()=>$('achOpen').click()],['Zamknij',()=>{}]],14000);
+  }catch(e){}
+},16000);
 </script>
 </body>
 </html>
