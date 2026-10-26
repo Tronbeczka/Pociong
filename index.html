@@ -15,8 +15,9 @@ body.night{background:#10141a}
 #view{position:absolute;inset:0;overflow:hidden;perspective:900px;perspective-origin:50% 45%;background:#e8eaed}
 body.night #view{background:#10141a}
 #rot{position:absolute;left:50%;top:68%;width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;will-change:transform;transform-origin:50% 50%}
-#sky{position:absolute;left:0;right:0;top:0;height:34%;z-index:400;pointer-events:none;background:linear-gradient(#e8eaed 15%,#e8eaed00)}
-body.night #sky{background:linear-gradient(#10141a 15%,#10141a00)}
+#vmap{position:absolute;left:0;top:0;width:100%;height:100%;display:none}
+#sky{position:absolute;left:0;right:0;top:0;height:34%;z-index:400;pointer-events:none;background:linear-gradient(var(--sky,#e8eaed) 15%,transparent)}
+body.night #sky{background:linear-gradient(var(--sky,#10141a) 15%,transparent)}
 body.flat #sky{display:none}
 #map{position:absolute;inset:0;background:transparent}
 body.night .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.8)}
@@ -100,7 +101,7 @@ body.night #bsub{color:#9aa0a6}
 </style>
 </head>
 <body>
-<div id="view"><div id="rot"><div id="map"></div></div><div id="sky"></div></div>
+<div id="view"><div id="rot"><div id="map"></div><canvas id="vmap"></canvas></div><div id="sky"></div></div>
 <canvas id="mk"></canvas>
 <div id="carIcon"></div>
 <div id="top">
@@ -413,19 +414,19 @@ if(gmKey)useGoogle();
 
 // ---- Widok jak w nawigacji samochodowej ----
 function setDist(t){$('dist').textContent=t}
-let tiltDeg=35, curRot=0, tgtRot=0, rotInit=true, lastH=0, night=(()=>{const h=new Date().getHours();return h>=19||h<6})();
+let tiltDeg=50, curRot=0, tgtRot=0, rotInit=true, lastH=0, night=(()=>{const h=new Date().getHours();return h>=19||h<6})();
 function applyNight(){document.body.classList.toggle('night',night);$('night').textContent=night?'Dzień':'Noc'}
 $('night').onclick=()=>{night=!night;applyNight()};
 applyNight();
 window.addEventListener('resize',()=>map.invalidateSize());
 function applyRot(){document.body.classList.toggle('flat',!tiltDeg)}
-$('tilt').onclick=()=>{tiltDeg=tiltDeg?0:35;$('tilt').textContent=tiltDeg?'2D':'3D';applyRot()};
+$('tilt').onclick=()=>{tiltDeg=tiltDeg?0:50;$('tilt').textContent=tiltDeg?'2D':'3D';applyRot()};
 function follow(p){
   const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  scaleTgt=kmh>110?.14:kmh>80?.2:kmh>50?.3:kmh>25?.42:.55;
+  scaleTgt=kmh>110?.3:kmh>80?.4:kmh>50?.55:kmh>25?.75:1;
   if(vec){
     camFix(p,p.heading!=null?p.heading:lastH);
-    if((!vecData||dist(vecData.lat,vecData.lon,p.lat,p.lon)>800)&&Date.now()>vecNext)loadVec(p.lat,p.lon);
+    if((!vecData||dist(vecData.lat,vecData.lon,p.lat,p.lon)>600)&&Date.now()>vecNext)loadVec(p.lat,p.lon);
   }else map.setView([p.lat,p.lon],kmh>90?15:kmh>50?16:17,{animate:false});
   if(p.heading!=null&&(p.speed||0)>1.5)lastH=p.heading;
   tgtRot=-lastH;if(rotInit){curRot=tgtRot;rotInit=false}
@@ -605,10 +606,10 @@ function updInfo(p){
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
-const VC={sv:{w:2},rs:{w:3.5},tr:{w:5},sc:{w:6},pr:{w:7},mw:{w:8}};
+const VC={sv:{w:3.5},rs:{w:7},tr:{w:9},sc:{w:11},pr:{w:13},mw:{w:15}};
 const PAL={
- day:{bg:'#f1f2f4',water:'#c4d7ee',park:'#cfe9d0',casing:'#d9dce0',sv:'#fff',rs:'#fff',tr:'#fff',sc:'#fff',pr:'#fff',mw:'#fff',rail:'#c7cacf',railDash:'#f1f2f4',lbl:'#6f757c',halo:'#ffffffe6',route:'#1a73e8',routeEdge:'#1558b8'},
- night:{bg:'#1c2230',water:'#1d3b52',park:'#20332b',casing:'#10141c',sv:'#38415a',rs:'#3d475f',tr:'#465170',sc:'#4f5b7c',pr:'#5a6688',mw:'#66739a',rail:'#7a859c',railDash:'#1c2230',lbl:'#a9b3c8',halo:'#1c2230e6',route:'#4f8df5',routeEdge:'#2c5fc0'}};
+ day:{bg:'#f2efe9',water:'#aad3df',park:'#cde8b9',casing:'#cfcbc4',sv:'#fff',rs:'#fff',tr:'#fff',sc:'#fff',pr:'#fff',mw:'#fff',rail:'#b9b5ad',railDash:'#fff',lbl:'#4d4d4d',halo:'#ffffffe0',route:'#4285f4',routeEdge:'#f5a623'},
+ night:{bg:'#1c2230',water:'#1d3b52',park:'#20332b',casing:'#10141c',sv:'#38415a',rs:'#3d475f',tr:'#465170',sc:'#4f5b7c',pr:'#5a6688',mw:'#66739a',rail:'#7a859c',railDash:'#1c2230',lbl:'#c3cbdc',halo:'#1c2230e6',route:'#4f8df5',routeEdge:'#c98a2b'}};
 // VEC-PURE-START
 const HW={motorway:'mw',trunk:'mw',motorway_link:'mw',trunk_link:'mw',primary:'pr',primary_link:'pr',secondary:'sc',secondary_link:'sc',tertiary:'tr',tertiary_link:'tr',unclassified:'rs',residential:'rs',living_street:'rs',service:'sv'};
 function buildVec(j,lat,lon){
@@ -660,7 +661,7 @@ function proj2d(lat,lon){
 // VEC-PURE-END
 async function loadVec(lat,lon){
   if(vecBusy)return;vecBusy=true;
-  const R=2000,a='(around:'+R+','+lat+','+lon+')';
+  const R=2500,a='(around:'+R+','+lat+','+lon+')';
   const q='[out:json][timeout:30];(way'+a+'["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$"];'
    +'way'+a+'["railway"~"^(rail|light_rail|tram|narrow_gauge)$"];way'+a+'["natural"="water"];way'+a+'["waterway"~"^(river|canal)$"];way'+a+'["leisure"~"^(park|garden)$"];);out geom;';
   try{
@@ -673,61 +674,70 @@ async function loadVec(lat,lon){
   }catch(e){vecNext=Date.now()+20000;vecErr='błąd mapy: '+e.message}   // przy błędzie następna próba za 20 s
   finally{vecBusy=false}
 }
-function drawVec(W,H){
-  const pal=PAL[night?'night':'day'],cam=vecCam(performance.now());
-  mx.fillStyle=pal.bg;mx.fillRect(0,0,W,H);
+let vctx=null,vq=1,lastVt=0;
+function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(1.25,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0}
+// mapa rysowana płasko (północ u góry); pochylenie i obrót robi CSS, tak jak w nawigacji Google
+function drawVec(){
+  const now=performance.now(),cam=vecCam(now);
   if(!cam){vf=null;return}
-  const R=rad(curRot),s=scaleCur,cr=Math.cos(R),sr=Math.sin(R),cx=W*.5,cy=H*.68;
-  vf={cam,cr,sr,s,cx,cy,kx:111195*Math.cos(rad(cam.lat))};
+  const S=$('rot').clientWidth;if(!S)return;
+  if(!vctx||$('vmap').width!==Math.round(S*vq))sizeV();
+  if(!vctx||(vf&&now-lastVt<33))return;
+  lastVt=now;
+  const s=scaleCur,kx=111195*Math.cos(rad(cam.lat)),pal=PAL[night?'night':'day'],c=vctx;
+  vf={cam,s,kx};
+  $('view').style.background=pal.bg;document.documentElement.style.setProperty('--sky',pal.bg);
+  c.setTransform(vq,0,0,vq,0,0);
+  c.fillStyle=pal.bg;c.fillRect(0,0,S,S);
+  const toXY=(lat,lon)=>[S/2+s*(lon-cam.lon)*kx,S/2-s*(lat-cam.lat)*111195];
   if(vecData){
     const D=vecData,P=D.P,ox=(cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(cam.lat-D.lat)*111195;
-    mx.save();
-    mx.transform(s*cr,s*sr,s*sr,-s*cr,cx,cy);   // metry -> ekran: obrót, skala, kamera w (cx,cy)
-    mx.translate(-ox,-oy);
-    mx.lineCap='round';mx.lineJoin='round';
-    if(P.park){mx.fillStyle=pal.park;mx.fill(P.park)}
-    if(P.water){mx.fillStyle=pal.water;mx.fill(P.water)}
-    if(P.wline){mx.strokeStyle=pal.water;mx.lineWidth=6/s;mx.stroke(P.wline)}
+    c.save();c.translate(S/2,S/2);c.scale(s,-s);c.translate(-ox,-oy);
+    c.lineCap='round';c.lineJoin='round';
+    if(P.park){c.fillStyle=pal.park;c.fill(P.park)}
+    if(P.water){c.fillStyle=pal.water;c.fill(P.water)}
+    if(P.wline){c.strokeStyle=pal.water;c.lineWidth=8/s;c.stroke(P.wline)}
     const order=['sv','rs','tr','sc','pr','mw'];
-    for(const c of order)if(P[c]){mx.strokeStyle=pal.casing;mx.lineWidth=(VC[c].w+2)/s;mx.stroke(P[c])}
-    for(const c of order)if(P[c]){mx.strokeStyle=pal[c];mx.lineWidth=VC[c].w/s;mx.stroke(P[c])}
+    for(const k of order)if(P[k]){c.strokeStyle=pal.casing;c.lineWidth=(VC[k].w+2.5)/s;c.stroke(P[k])}
+    for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].w/s;c.stroke(P[k])}
     if(P.rail){
-      mx.strokeStyle=pal.rail;mx.lineWidth=3.2/s;mx.stroke(P.rail);
-      mx.strokeStyle=pal.railDash;mx.lineWidth=1.5/s;mx.setLineDash([7/s,7/s]);mx.stroke(P.rail);mx.setLineDash([]);
+      c.strokeStyle=pal.rail;c.lineWidth=4/s;c.stroke(P.rail);
+      c.strokeStyle=pal.railDash;c.lineWidth=2/s;c.setLineDash([8/s,8/s]);c.stroke(P.rail);c.setLineDash([]);
     }
-    mx.restore();
-    if(D.LB&&s>.2){
-      mx.font='600 11px system-ui,sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.lineWidth=3;mx.lineJoin='round';
-      const used=new Set();let n=0;
+    c.restore();
+    if(D.LB&&s>=.3){
+      c.font='600 12px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=3.5;c.lineJoin='round';
+      const used=new Set(),rr=rad(curRot);let n=0;
       for(const l of D.LB){
-        const dx=l.x-ox,dy=l.y-oy,sx=cx+s*(dx*cr+dy*sr),sy=cy+s*(dx*sr-dy*cr);
-        if(sx<20||sx>W-20||sy<70||sy>H-70)continue;
-        const key=Math.round(sx/90)+','+Math.round(sy/26);if(used.has(key))continue;
-        let ang=Math.atan2(s*(l.ex*sr-l.ny*cr),s*(l.ex*cr+l.ny*sr));if(Math.cos(ang)<0)ang+=Math.PI;
-        const tw=mx.measureText(l.n).width;if(tw>Math.hypot(l.ex,l.ny)*0+s*160)continue;
+        const sx=S/2+s*(l.x-ox),sy=S/2-s*(l.y-oy);
+        if(Math.abs(sx-S/2)>S*.42||Math.abs(sy-S/2)>S*.42)continue;
+        const key=Math.round(sx/80)+','+Math.round(sy/28);if(used.has(key))continue;
+        let a=Math.atan2(-l.ny,l.ex);if(Math.cos(a+rr)<0)a+=Math.PI;
         used.add(key);
-        mx.save();mx.translate(sx,sy);mx.rotate(ang);
-        mx.strokeStyle=pal.halo;mx.strokeText(l.n,0,0);mx.fillStyle=pal.lbl;mx.fillText(l.n,0,0);mx.restore();
-        if(++n>40)break;
+        c.save();c.translate(sx,sy);c.rotate(a);
+        c.strokeStyle=pal.halo;c.strokeText(l.n,0,0);c.fillStyle=pal.lbl;c.fillText(l.n,0,0);c.restore();
+        if(++n>70)break;
       }
     }
   }
-  if(routeSeg&&routeSeg.length>1){   // niebieska linia trasy
-    mx.lineCap='round';mx.lineJoin='round';
-    for(const [w,col] of [[14,pal.routeEdge],[10,pal.route]]){
-      mx.beginPath();
-      routeSeg.forEach((q,i)=>{const p=proj2d(q[0],q[1]);if(i)mx.lineTo(p.x,p.y);else mx.moveTo(p.x,p.y)});
-      mx.lineWidth=w;mx.strokeStyle=col;mx.stroke();
+  if(routeSeg&&routeSeg.length>1){
+    c.lineCap='round';c.lineJoin='round';
+    for(const [w,col] of [[20,pal.routeEdge],[11,pal.route]]){
+      c.beginPath();
+      routeSeg.forEach((q,i)=>{const [x,y]=toXY(q[0],q[1]);if(i)c.lineTo(x,y);else c.moveTo(x,y)});
+      c.lineWidth=w;c.strokeStyle=col;c.stroke();
     }
   }
 }
 function setVec(on){
   vec=on;try{localStorage.setItem('vec',on?'1':'0')}catch(e){}
-  $('view').style.display=on?'none':'block';
-  $('mapmode').textContent=on?'Mapa: 2D':'Mapa: kafelki';
-  $('tilt').style.display=on?'none':'block';
-  tiltDeg=on?0:35;$('tilt').textContent='2D';applyRot();
-  if(!on){map.invalidateSize();if(last)map.setView([last.lat,last.lon],17,{animate:false})}
+  $('map').style.display=on?'none':'block';$('vmap').style.display=on?'block':'none';
+  $('mapmode').textContent=on?'Mapa: wektorowa':'Mapa: kafelki';
+  $('tilt').style.display='block';
+  if(!on){$('view').style.background='';document.documentElement.style.removeProperty('--sky')}
+  tiltDeg=50;$('tilt').textContent='2D';applyRot();
+  if(on)sizeV();
+  else{map.invalidateSize();if(last)map.setView([last.lat,last.lon],17,{animate:false})}
 }
 $('mapmode').onclick=()=>setVec(!vec);
 {let v='1';try{v=localStorage.getItem('vec')||'1'}catch(e){}setVec(v!=='0')}
@@ -736,10 +746,11 @@ $('mapmode').onclick=()=>setVec(!vec);
 // ---- Markery rysowane pionowo nad pochyloną mapą (okręgi nie spłaszczają się) ----
 const mk=$('mk'), mx=mk.getContext('2d');
 function sizeMk(){const r=window.devicePixelRatio||1,w=window.innerWidth,h=window.innerHeight;mk.width=w*r;mk.height=h*r;mk.style.width=w+'px';mk.style.height=h+'px';mx.setTransform(r,0,0,r,0,0)}
-window.addEventListener('resize',sizeMk);sizeMk();
+window.addEventListener('resize',()=>{sizeMk();if(typeof sizeV==='function')sizeV()});sizeMk();
 // ten sam rachunek co CSS: obrót, nachylenie, perspektywa 900 px (sprawdzone z macierzami 4x4)
 function proj(lat,lon){
-  const W=window.innerWidth,H=window.innerHeight,S=$('map').clientWidth,q=map.latLngToContainerPoint([lat,lon]);
+  if(vec&&!vf)return null;
+  const W=window.innerWidth,H=window.innerHeight,S=$('rot').clientWidth,q=vec?{x:S/2+vf.s*(lon-vf.cam.lon)*vf.kx,y:S/2-vf.s*(lat-vf.cam.lat)*111195}:map.latLngToContainerPoint([lat,lon]);
   const u=q.x-S/2,v=q.y-S/2,R=rad(curRot),T=rad(tiltDeg),D=900;
   const x1=u*Math.cos(R)-v*Math.sin(R),y1=u*Math.sin(R)+v*Math.cos(R),z=y1*Math.sin(T);
   if(z>=D-50)return null;
@@ -749,7 +760,7 @@ function proj(lat,lon){
 function drawMarkers(){
   const W=window.innerWidth,H=window.innerHeight;
   mx.clearRect(0,0,W,H);
-  const P=vec?(drawVec(W,H),proj2d):proj;
+  if(vec)drawVec();const P=proj;
   const list=[];
   crossings.forEach(c=>{const p=P(c.lat,c.lon);if(p)list.push({p,t:0})});
   trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt})});
