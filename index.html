@@ -83,6 +83,19 @@ body.night #settings input[type=checkbox]{background:#4a5059}body.night #setting
 .clipRow button{padding:8px 11px;border-radius:10px;background:var(--bg);color:var(--tx);font-size:.85rem;font-weight:700;margin:0}
 .clipRow button.del{color:#d93025}
 .clipRow button.rc{color:#d93025}.clipRow button.rc.rec{background:#d93025;color:#fff;animation:alPulse 1s ease-in-out infinite}
+#repfab{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 398px);z-index:900;width:50px;height:50px;padding:0;border-radius:16px;background:#fff;font-size:24px;box-shadow:0 6px 20px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
+body.night #repfab{background:#2d3139}body.preview #repfab{display:none}
+#repSheet{position:fixed;left:0;right:0;bottom:0;z-index:3300;background:#fff;color:#202124;border-radius:26px 26px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:0 -10px 40px rgba(0,0,0,.4);display:none;animation:sheetUp .3s cubic-bezier(.2,.8,.2,1)}
+body.night #repSheet{background:#202228;color:#e8eaed}
+#repSheet h3{margin:0 0 4px;font-size:1.15rem}#repSheet p{margin:0 0 12px;font-size:.85rem;opacity:.7}
+#repGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#repGrid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border-radius:18px;background:#f1f3f4;color:#202124;font-size:.95rem;font-weight:700}
+body.night #repGrid button{background:#2d3139;color:#e8eaed}
+#repGrid button span{font-size:2rem;line-height:1}
+#repCancel{width:100%;margin-top:12px;padding:14px;border-radius:14px;background:transparent;color:inherit;font-weight:700;font-size:1rem;opacity:.75}
+#evToast{position:fixed;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 150px);z-index:3200;background:#202124ee;color:#fff;border-radius:18px;padding:12px 14px;display:none;box-shadow:0 10px 30px #0008;animation:cardIn .25s ease}
+#evToast b{display:block;font-size:1rem;margin-bottom:2px}#evToast .evb{display:flex;gap:8px;margin-top:10px}
+#evToast button{flex:1;padding:10px;border-radius:12px;background:#ffffff26;color:#fff;font-weight:700}
 @keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(10px)}to{opacity:.999;transform:none}}
 @keyframes spBar{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
@@ -426,6 +439,13 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
 <section><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
 <section><h3><i>🧭</i>Własne wskazówki nawigacji</h3><div class="sc" id="clipNav"><div class="sInfo">Nagraj lub wgraj własne „Skręć w prawo”, „Zjedź z ronda” itd. Aplikacja powie wtedy „Za 200 metrów”, odtworzy Twoje nagranie, a po nim przeczyta nazwę ulicy. Manewry bez nagrania są czytane głosem lektora.</div></div></section>
+<section><h3><i>📣</i>Zgłoszenia kierowców</h3><div class="sc" id="evSet">
+<label><span>Pokazuj zgłoszenia innych</span><input type="checkbox" id="evShow" checked></label>
+<label><span>Ostrzegaj głosem o zgłoszeniach</span><input type="checkbox" id="evVoice" checked></label>
+<div class="sInfo">Aby zgłoszenia widzieli też inni kierowcy, potrzebna jest wspólna baza (Firebase Realtime Database – darmowa). Bez niej zgłoszenia widzisz tylko Ty, na tym telefonie. Wszyscy, którzy mają ten sam adres bazy, widzą swoje zgłoszenia.</div>
+<div><input id="evDb" placeholder="https://twoja-baza-default-rtdb.firebaseio.com" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;font-size:.9rem;margin:8px 0"><button id="evTest" class="sec" type="button">Sprawdź połączenie z bazą</button><small id="evStat" style="display:block;color:var(--mut);padding:4px 0 10px"></small></div>
+<div class="sInfo">Jak założyć bazę: console.firebase.google.com → dodaj projekt → Build → Realtime Database → utwórz → w zakładce Reguły wpisz {"rules":{".read":true,".write":true}} → skopiuj adres bazy i wklej powyżej. Uwaga: otwarta baza pozwala każdemu zapisywać dane – używaj jej w zaufanym gronie.</div>
+</div></section>
 <section><h3><i>🚗</i>Samochód</h3><div class="sc" data-g="car"></div></section>
 <section><h3><i>🔋</i>Jazda i bateria</h3><div class="sc" data-g="drive"></div></section>
 <section><h3><i>📊</i>Historia i dane</h3><div class="sc" data-g="data"></div></section>
@@ -493,11 +513,14 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
 <button id="mic" aria-label="Polecenia głosowe">🎤</button><div id="micTo"></div>
 <div id="zoomb"><button id="zin" aria-label="Przybliż">+</button><button id="zout" aria-label="Oddal">−</button></div>
+<button id="repfab" aria-label="Zgłoś zdarzenie" type="button">⚠️</button>
+<div id="repSheet"><h3>Zgłoś zdarzenie dla innych kierowców</h3><p id="repSub">Zgłoszenie dotyczy Twojej obecnej pozycji.</p><div id="repGrid"></div><button id="repCancel" type="button">Anuluj</button></div>
+<div id="evToast"><b id="evT1"></b><span id="evT2"></span><div class="evb" id="evB"></div></div>
 <button id="planfab" aria-label="Wyznacz trasę" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6"/></svg></button>
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 76</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 77</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -679,7 +702,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
-  logSample(p);tripTick(p);fuelTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
+  logSample(p);tripTick(p);fuelTick(p);evCheck(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -2234,8 +2257,9 @@ const CLIP_SLOTS=[
  ['limit','Zmiana ograniczenia prędkości','Za 200 metrów ograniczenie prędkości.',/^limA/],
  ['camera','Fotoradar','Za 300 metrów fotoradar.',null],
  ['bump','Próg zwalniający','Za 100 metrów próg zwalniający.',null],
- ['incident','Wypadek lub roboty drogowe','Za 500 metrów zdarzenie drogowe. Proszę zachować ostrożność.',/^inc/],
- ['jam','Korek na trasie','Za kilometr na trasie jest korek.',/^jam$/],
+ ['police','Policja zgłoszona przez kierowców','Za 400 metrów kierowcy zgłosili policję.',/^evP/],
+ ['incident','Wypadek lub roboty drogowe','Za 500 metrów zdarzenie drogowe. Proszę zachować ostrożność.',/^(inc|evA|evW|evO)/],
+ ['jam','Korek na trasie','Za kilometr na trasie jest korek.',/^(jam$|evJ)/],
  ['reroute','Nowa trasa / objazd','Nowa trasa jest gotowa.',/^(rerout|detour|nodetour|faster)/],
  ['zone','Szkoła / granica miejscowości','Za 200 metrów szkoła. Proszę zwolnić.',/^z/],
  ['weather','Ślisko, mgła lub deszcz','Na trasie może być ślisko.',/^wx$/],
@@ -2358,6 +2382,113 @@ function renderClips(){
   }
 }
 renderClips();loadClips();
+
+// ================= Zgłoszenia kierowców (policja, wypadek, roboty…) =================
+const EV_TYPES={
+ police:{n:'Policja',ic:'🚓',ttl:45,col:'#1a56db',k:'P',w:'kierowcy zgłosili policję'},
+ accident:{n:'Wypadek',ic:'💥',ttl:90,col:'#d93025',k:'A',w:'kierowcy zgłosili wypadek'},
+ works:{n:'Roboty drogowe',ic:'🚧',ttl:720,col:'#e68a00',k:'W',w:'kierowcy zgłosili roboty drogowe'},
+ jam:{n:'Korek',ic:'🚗',ttl:45,col:'#e8710a',k:'J',w:'kierowcy zgłosili korek'},
+ obstacle:{n:'Przeszkoda na drodze',ic:'⚠️',ttl:60,col:'#7c3aed',k:'O',w:'kierowcy zgłosili przeszkodę na drodze'},
+ hazard:{n:'Ślisko lub mgła',ic:'❄️',ttl:120,col:'#0e7490',k:'O',w:'kierowcy zgłosili trudne warunki na drodze'}
+};
+let evDb=LSget('evDb','');const evUid=LSget('evUid','')||(()=>{const u=Math.random().toString(36).slice(2,10);LSput('evUid',u);return u})();
+let evMine=LSget('evMine',[]),evRemote=[],evHide=LSget('evHide',{}),evAlerted={},evLastRep={},evPollAt=0,evChk=0;
+$('evDb').value=evDb;$('evShow').checked=LSget('evShow',true);$('evVoice').checked=LSget('evVoice',true);
+const evBase=()=>evDb.replace(/\/+$/,'');
+const evCell=(la,lo)=>Math.floor(la*10)+'_'+Math.floor(lo*10);
+function evActive(){
+  const now=Date.now(),seen=new Set(),out=[];
+  for(const e of evMine.concat(evRemote)){
+    const T=EV_TYPES[e.ty];if(!T||seen.has(e.id))continue;
+    if(now-e.t>T.ttl*60000||evHide[e.id]||(e.g&&Object.keys(e.g).length>=2))continue;
+    seen.add(e.id);out.push(e);
+  }
+  return out;
+}
+function evToast(t1,t2,btns,ms){
+  $('evT1').textContent=t1;$('evT2').textContent=t2||'';const b=$('evB');b.innerHTML='';
+  (btns||[]).forEach(([lab,fn])=>{const x=document.createElement('button');x.type='button';x.textContent=lab;x.onclick=()=>{$('evToast').style.display='none';fn()};b.appendChild(x)});
+  $('evToast').style.display='block';clearTimeout(evToast.t);evToast.t=setTimeout(()=>{$('evToast').style.display='none'},ms||6000);
+}
+// panel zgłaszania
+{
+  const g=$('repGrid');
+  for(const k in EV_TYPES){const b=document.createElement('button');b.type='button';b.innerHTML='<span>'+EV_TYPES[k].ic+'</span>'+EV_TYPES[k].n;b.onclick=()=>reportEvent(k);g.appendChild(b)}
+}
+$('repfab').onclick=()=>{$('repSub').textContent=last?'Zgłoszenie dotyczy Twojej obecnej pozycji'+(evDb?' i trafi do innych kierowców.':' (zapisze się tylko na tym telefonie – baza w ustawieniach).'):'Brak pozycji GPS – poczekaj na sygnał.';$('repSheet').style.display='block'};
+$('repCancel').onclick=()=>{$('repSheet').style.display='none'};
+async function reportEvent(ty){
+  $('repSheet').style.display='none';
+  if(!last){evToast('Brak pozycji GPS','Spróbuj za chwilę.');return}
+  const T=EV_TYPES[ty],now=Date.now();
+  if(evLastRep[ty]&&now-evLastRep[ty]<60000){evToast('Zgłoszono przed chwilą','Poczekaj minutę przed kolejnym takim zgłoszeniem.');return}
+  evLastRep[ty]=now;
+  const e={id:now.toString(36)+Math.random().toString(36).slice(2,6),ty,lat:+last.lat.toFixed(5),lon:+last.lon.toFixed(5),t:now,u:evUid};
+  evMine.unshift(e);evMine=evMine.slice(0,30);LSput('evMine',evMine);
+  let ok=false;
+  if(evDb){try{const r=await fetch(evBase()+'/ev/'+evCell(e.lat,e.lon)+'/'+e.id+'.json',{method:'PUT',body:JSON.stringify(e)});ok=r.ok}catch(x){}}
+  evToast('Dziękuję! '+T.ic+' '+T.n,evDb?(ok?'Zgłoszenie widzą teraz inni kierowcy.':'Nie udało się wysłać – zapisano tylko na tym telefonie.'):'Zapisano na tym telefonie (aby udostępnić innym, dodaj bazę w ustawieniach).',null,5000);
+}
+// pobieranie zgłoszeń z okolicy (3×3 komórki ≈ 20 km)
+async function evPoll(force){
+  if(!evDb||!$('evShow').checked||!last||window.preview)return;
+  if(!force&&Date.now()-evPollAt<60000)return;evPollAt=Date.now();
+  const la=Math.floor(last.lat*10),lo=Math.floor(last.lon*10),jobs=[];
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)jobs.push(fetch(evBase()+'/ev/'+(la+a)+'_'+(lo+b)+'.json').then(r=>r.ok?r.json():null).catch(()=>null));
+  const res=await Promise.all(jobs),out=[];
+  for(const o of res)if(o)for(const id in o){const e=o[id];if(e&&e.ty&&e.lat!=null){e.id=e.id||id;out.push(e)}}
+  evRemote=out;
+}
+function evText(e,d){const T=EV_TYPES[e.ty],dm=Math.max(50,Math.round(d/50)*50);return 'Za '+dm+' metrów '+T.w+'. Proszę zachować ostrożność.'}
+function evCheck(p){
+  if(Date.now()-evChk<2500)return;evChk=Date.now();
+  if(!$('evShow').checked)return;
+  if(Date.now()-evPollAt>60000)evPoll();
+  for(const e of evActive()){
+    if(evAlerted[e.id])continue;
+    const d=dist(p.lat,p.lon,e.lat,e.lon);if(d>600||d<30)continue;
+    let ahead=false;
+    if(route&&route.off<80&&route.pts&&route.pts.length>2){const m=projRoute(route,e.lat,e.lon,0,route.pts.length-2);ahead=m.off<60&&m.along-route.along>20&&m.along-route.along<700}
+    else if(p.heading!=null&&(p.speed||0)>2)ahead=angDiff(bear(p.lat,p.lon,e.lat,e.lon),p.heading)<40;
+    if(!ahead)continue;
+    evAlerted[e.id]=1;
+    const T=EV_TYPES[e.ty];
+    if($('evVoice').checked)say('ev'+T.k+e.id,evText(e,d),[200,100,200],T.n+' za '+Math.round(d/50)*50+' m');
+    evToast(T.ic+' '+T.n+' za '+Math.round(d/50)*50+' m','Zgłoszone przez kierowców. Czy nadal tu jest?',[['Nadal jest',()=>evVote(e,true)],['Już nie ma',()=>evVote(e,false)]],12000);
+    break;
+  }
+}
+async function evVote(e,still){
+  if(!still){evHide[e.id]=1;LSput('evHide',evHide)}
+  if(!evDb||!e.lat)return;
+  const u=evBase()+'/ev/'+evCell(e.lat,e.lon)+'/'+e.id;
+  try{if(still)await fetch(u+'.json',{method:'PATCH',body:JSON.stringify({t:Date.now()})});else await fetch(u+'/g/'+evUid+'.json',{method:'PUT',body:'true'})}catch(x){}
+}
+function drawEvents(){
+  if(!vec&&!last)return;if(!$('evShow').checked||!(vf||last))return;
+  const car=vf&&vf.car?vf.car:last,W=window.innerWidth,H=window.innerHeight;
+  for(const e of evActive()){
+    if(dist(car.lat,car.lon,e.lat,e.lon)>3000)continue;
+    const q=proj(e.lat,e.lon);if(!q||q.x<-30||q.x>W+30||q.y<-30||q.y>H+30)continue;
+    const T=EV_TYPES[e.ty],u=Math.max(11,Math.min(18,13*q.k));
+    mx.save();mx.translate(q.x,q.y);
+    mx.beginPath();mx.arc(0,0,u,0,6.2832);mx.fillStyle=T.col;mx.fill();mx.lineWidth=Math.max(2,u*.2);mx.strokeStyle='#fff';mx.stroke();
+    mx.font=Math.round(u*1.15)+'px system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillStyle='#fff';mx.fillText(T.ic,0,u*.08);
+    mx.restore();
+  }
+}
+$('evShow').onchange=()=>LSput('evShow',$('evShow').checked);
+$('evVoice').onchange=()=>LSput('evVoice',$('evVoice').checked);
+$('evDb').onchange=()=>{evDb=$('evDb').value.trim();LSput('evDb',evDb);evRemote=[];evPollAt=0;$('evStat').textContent=evDb?'Zapisano. Sprawdź połączenie.':'Tryb lokalny (bez wspólnej bazy).'};
+$('evTest').onclick=async()=>{
+  evDb=$('evDb').value.trim();LSput('evDb',evDb);const st=$('evStat');
+  if(!/^https:\/\//.test(evDb)){st.textContent='Podaj adres zaczynający się od https://';return}
+  st.textContent='Sprawdzam…';
+  try{const r=await fetch(evBase()+'/ev.json?shallow=true');if(!r.ok)throw new Error('HTTP '+r.status+(r.status===401||r.status===403?' – ustaw reguły .read/.write na true':''));st.textContent='Połączenie działa ✓';evPollAt=0;evPoll(true)}
+  catch(e){st.textContent='Nie udało się: '+e.message}
+};
+setInterval(()=>{if(last)evPoll()},30000);
 // ---- ekran ładowania: znika płynnie, gdy mapa i pozycja są gotowe (min. 2 s, maks. 7 s) ----
 {
   const sp=$('splash'),t0=Date.now();let done=false;
@@ -3349,7 +3480,7 @@ function drawMarkers(){
   drawBuildings3D();
   drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
-  drawPoi();
+  drawPoi();drawEvents();
   if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
     if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
