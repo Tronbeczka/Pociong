@@ -1367,7 +1367,7 @@ function buildMvt(tiles,lat0,lon0){
           continue;
       }
       if(!cls)continue;
-      const path=gp(cls);
+      const path=new Path2D(),one=cls==='rs'&&f.l==='transportation'&&(pr.oneway==1||pr.oneway===true);   // jednokierunkowe ulice osiedlowe = jeden pas
       for(const rg of f.r){
         if(rg.length<4)continue;
         const x0=(ox+rg[0]*k-cx)*cl,y0=(oy-rg[1]*k-cy)*cl;
@@ -1380,6 +1380,7 @@ function buildMvt(tiles,lat0,lon0){
         }
         if(fill)path.closePath();
       }
+      gp(cls).addPath(path);if(one)gp('one1').addPath(path);
     }
   }
   return {lat:lat0,lon:lon0,P,LB,SP:[]};
@@ -1663,6 +1664,7 @@ var carSnap=null,laneCur=null,laneYaw=0;
 // docelowe położenie auta w poprzek jezdni (px od osi drogi, + = w prawo): domyślnie prawy pas; przed skrętem w lewo / przy zmianie pasa – przesunięcie w lewo
 function laneTarget(Rr){
   let tgt=Rr/4;
+  if(checkSingleLane())return 0;   // jeden pas: auto na środku drogi
   if(nav&&nav.i>0&&route&&route.steps){
     const st=route.steps[nav.i],d=nav.d;
     if(st&&d<230&&d>6){
@@ -1675,6 +1677,25 @@ function laneTarget(Rr){
     }
   }
   return tgt;
+}
+// czy auto jedzie drogą z jednym pasem (droga serwisowa / jednokierunkowa ulica osiedlowa)? – wtedy jedzie środkiem
+var singleLane=false,slAt=0,slHits=0;
+function checkSingleLane(){
+  const D=vecData,c=vctx;if(!D||!c||!D.P||!vf||!vf.car)return singleLane;
+  const now=performance.now();if(now-slAt<300)return singleLane;slAt=now;
+  const x=(vf.car.lon-D.lon)*111195*Math.cos(rad(D.lat)),y=(vf.car.lat-D.lat)*111195,P=D.P;
+  let on=false;
+  try{
+    c.save();c.setTransform(1,0,0,1,0,0);c.lineWidth=6;
+    if((P.sv&&c.isPointInStroke(P.sv,x,y))||(P.one1&&c.isPointInStroke(P.one1,x,y))){
+      c.lineWidth=7;on=true;
+      for(const k of ['pr','sc','tr','mw'])if(P[k]&&c.isPointInStroke(P[k],x,y)){on=false;break}   // na skrzyżowaniu z większą drogą – nie
+    }
+    c.restore();
+  }catch(e){}
+  slHits=on?Math.min(3,slHits+1):0;
+  if(slHits>=2)singleLane=true;else if(!on)singleLane=false;
+  return singleLane;
 }
 function updCarSnap(){
   const el=$('carIcon');carSnap=null;
