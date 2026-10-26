@@ -1192,7 +1192,7 @@ function updInfo(p){
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
 const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mw:{w:19,m:14}};   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
-const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s);
+const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4);   // z bliska drogi są szerokie na tyle, by auto mieściło się na pasie
 const PAL={
  day:{bg:'#e8e5dc',water:'#a8d6f5',waterEdge:'#8cc3e6',park:'#c9e8b4',parkEdge:'#b4d89c',bld:'#e9e5dd',bldEdge:'#d9d4ca',bldSh:'#00000012',casing:'#a9a496',csSc:'#c9a24d',csMw:'#d9722f',csPr:'#cf9c33',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',route:'#4285f4',routeEdge:'#f5a623'},
  night:{bg:'#141926',water:'#16344d',waterEdge:'#1f4767',park:'#1d3329',parkEdge:'#244035',bld:'#252d3f',bldEdge:'#2f384d',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#4a5472',rs:'#5b6788',tr:'#66739a',sc:'#7a78a3',pr:'#8c82a6',mw:'#c48a62',mwIn:'#d99d72',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',route:'#5b94f7',routeEdge:'#c98a2b'}};
@@ -1610,7 +1610,7 @@ function drawVec(){
 // trasa rysowana na wierzchu (pionowo), z szerokością malejącą z perspektywą
 function drawRouteTop(){
   if(!(vec&&routeSeg&&routeSeg.length>1&&vf))return;
-  const pal=PAL[night?'night':'day'],pts=[[vf.car.lat,vf.car.lon]];
+  const pal=PAL[night?'night':'day'],pts=[carSnap?[carSnap.lat,carSnap.lon]:[vf.car.lat,vf.car.lon]];
   for(let i=1;i<routeSeg.length;i++)pts.push(routeSeg[i]);
   const pr=pts.map(q=>proj(q[0],q[1]));
   mx.lineCap='round';mx.lineJoin='round';
@@ -1653,10 +1653,30 @@ function proj(lat,lon){
   const k=D/(D-z),Px=W*.5,Py=H*.45,Cx=W*.5,Cy=H*.68;
   return {x:Px+(Cx+x1-Px)*k,y:Py+(Cy+y1*Math.cos(T)-Py)*k,k};
 }
+// auto na jezdni: na wyznaczonej trasie ikona jest „przyklejona” do drogi i jedzie prawym pasem
+var carSnap=null;
+function updCarSnap(){
+  const el=$('carIcon');carSnap=null;
+  const Rr=rw('tr',scaleCur),Wc=Math.round(Math.max(40,Math.min(96,vec&&route?Rr*.8:96)));   // rozmiar auta dopasowany do szerokości drogi (tylko na trasie)
+  const base='translate(-50%,-80%)';
+  if(!(vec&&route&&vf&&vf.car&&!freeCam&&!demo&&route.pts.length>1&&route.len>0)){el.style.width='';el.style.height='';el.style.transform='';return}
+  el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px';
+  const n=route.pts.length-2,m=projRoute(route,vf.car.lat,vf.car.lon,Math.max(0,route.idx-2),Math.min(n,route.idx+12));
+  if(m.off>30){el.style.transform=base;return}
+  const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=routeAt(route,m.along),a=routeAt(route,Math.max(0,m.along-6)),b=routeAt(route,Math.min(route.len,m.along+6));
+  const brg=dist(a[0],a[1],b[0],b[1])>2?bear(a[0],a[1],b[0],b[1]):lastH;
+  const lanePx=Rr/4,laneM=lanePx/scaleCur;   // prawy pas: środek prawej połowy jezdni
+  const r=rad(brg+90),lat=c[0]+Math.cos(r)*laneM/111195,lon=c[1]+Math.sin(r)*laneM/(111195*Math.cos(rad(c[0])));
+  const q=proj(lat,lon),q0=proj(vf.car.lat,vf.car.lon);
+  carSnap={lat:c[0],lon:c[1]};
+  if(!q||!q0){el.style.transform=base;return}
+  el.style.transform='translate(calc(-50% + '+((q.x-q0.x)*w).toFixed(1)+'px),calc(-80% + '+((q.y-q0.y)*w).toFixed(1)+'px))';
+}
 function drawMarkers(){
   const W=window.innerWidth,H=window.innerHeight;
   mx.clearRect(0,0,W,H);
   if(vec)drawVec();const P=proj;
+  updCarSnap();
   drawRouteTop();
   drawRouteSigns();
   if(freeCam){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
