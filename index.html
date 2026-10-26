@@ -179,6 +179,10 @@ body.night #tcard{background:#202228;color:#e6e9ee}
 #tdist{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;line-height:1.15}
 #tmeta2{font-size:.72rem;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tmeta{font-size:.72rem;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sig{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 168px);transform:translate(-50%,-8px);opacity:0;pointer-events:none;z-index:950;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.96);color:#26303a;border-radius:999px;padding:8px 18px 8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.22);font-weight:700;font-size:.95rem;white-space:nowrap;transition:opacity .4s,transform .4s;max-width:calc(100% - 140px)}
+#sig.on{opacity:1;transform:translate(-50%,0)}
+#sig svg{width:30px;height:30px;flex:none;display:block}
+body.night #sig{background:rgba(32,34,40,.95);color:#e6e9ee}
 #ttstat{font-size:.75rem;opacity:.6;margin-top:12px;min-height:1.2em}
 </style>
 </head>
@@ -201,6 +205,7 @@ body.night #tcard{background:#202228;color:#e6e9ee}
   <button id="night" class="sec">Noc</button>
   <button id="mapmode" class="sec">Mapa: 2D</button>
   <label style="font-size:.9rem"><input type="checkbox" id="voice" checked> Głos</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="sigsnd" checked> Znaki STOP / ustąp</label>
   <div id="cfg">
     <small>Serwer tras OSRM (puste = publiczny serwer demo router.project-osrm.org):</small>
     <input id="osrm" placeholder="https://router.project-osrm.org">
@@ -243,6 +248,7 @@ body.night #tcard{background:#202228;color:#e6e9ee}
   <div id="ttstat"></div>
   <p style="font-size:.7rem;opacity:.55;margin-top:6px">Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
 </div></div>
+<div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
 <div id="lim"><span id="limv"></span></div>
 <div id="speed"><span id="spd">0</span><small>km/h</small></div>
@@ -337,6 +343,7 @@ function evaluate(p){
   follow(p);
   updInfo(p);
   updTrainCard(p);
+  signCheck(p);
   routeUpdate(p);
   if(!demo&&gtfsCenter&&!ttBusy&&Date.now()-lastRecentre>600000&&dist(gtfsCenter.lat,gtfsCenter.lon,p.lat,p.lon)>100000){lastRecentre=Date.now();loadTimetable(true)}
   if(!demo&&(!lastFetch||dist(lastFetch.lat,lastFetch.lon,p.lat,p.lon)>1500))loadCrossings(p.lat,p.lon);
@@ -778,6 +785,71 @@ $('closeNav').onclick=()=>{
   setBanner('ok','Zakończono','Wybierz samochód i naciśnij Jedź');
   $('pick').style.display='flex';
 };
+
+// ---- Znaki STOP i "ustąp pierwszeństwa": delikatny sygnał przed znakiem ----
+let signs=null,signsBusy=false,signsNext=0,sigSeen={};
+const SIG_ICON={
+ stop:'<svg viewBox="0 0 32 32"><polygon points="10,2 22,2 30,10 30,22 22,30 10,30 2,22 2,10" fill="#d93025"/><text x="16" y="19.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">STOP</text></svg>',
+ give_way:'<svg viewBox="0 0 32 32"><polygon points="4,6 28,6 16,28" fill="#fff" stroke="#d93025" stroke-width="4" stroke-linejoin="round"/></svg>'};
+async function loadSigns(lat,lon){
+  if(signsBusy||Date.now()<signsNext)return;signsBusy=true;
+  try{
+    const R=1500,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
+    const j=await fetchOverpass('[out:json][timeout:20];node["highway"~"^(stop|give_way)$"]'+bb+'->.s;.s out body;way(bn.s)["highway"];out geom qt;');
+    const byNode=new Map(),list=[];
+    for(const w of j.elements)if(w.type==='way'&&w.nodes&&w.geometry)w.nodes.forEach((id,i)=>{let a=byNode.get(id);if(!a)byNode.set(id,a=[]);a.push([w,i])});
+    const brg=(a,b)=>bear(a.lat,a.lon,b.lat,b.lon);
+    for(const n of j.elements){
+      if(n.type!=='node'||n.lat==null)continue;
+      const t=n.tags||{},ws=byNode.get(n.id)||[],hs=[],dir=t.direction||'';
+      for(const [w,i] of ws){
+        const g=w.geometry,last=g.length-1;if(last<1)continue;
+        if(i>0&&i<last){                       // znak w środku drogi
+          if(ws.length>1)continue;             // węzeł skrzyżowania: pomijamy drogę przelotową
+          if(dir!=='backward')hs.push(brg(g[i-1],g[i]));
+          if(dir!=='forward')hs.push(brg(g[i+1],g[i]));
+        }else if(i===last)hs.push(brg(g[i-1],g[i]));   // droga kończy się przy znaku
+        else hs.push(brg(g[1],g[0]));
+      }
+      if(hs.length)list.push({id:n.id,lat:n.lat,lon:n.lon,kind:t.highway==='stop'?'stop':'give_way',hs});
+    }
+    signs={lat,lon,list};
+  }catch(e){signsNext=Date.now()+30000}
+  finally{signsBusy=false}
+}
+function chime(kind){   // dwie miękkie, ciche nutki
+  try{
+    audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
+    const t=audio.currentTime;
+    (kind==='stop'?[784,587]:[659,880]).forEach((f,i)=>{
+      const o=audio.createOscillator(),g=audio.createGain(),t0=t+i*.22;
+      o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.06,t0+.03);g.gain.exponentialRampToValueAtTime(.0001,t0+.55);
+      o.connect(g);g.connect(audio.destination);o.start(t0);o.stop(t0+.6);
+    });
+  }catch(e){}
+}
+function signCheck(p){
+  const el=$('sig');
+  if((!signs||dist(signs.lat,signs.lon,p.lat,p.lon)>800)&&!signsBusy)loadSigns(p.lat,p.lon);
+  let best=null;
+  if(signs&&(p.speed||0)>1.5){
+    const h=lastH,Dw=Math.min(170,Math.max(70,(p.speed||0)*6));
+    for(const sg of signs.list){
+      const d=dist(p.lat,p.lon,sg.lat,sg.lon);if(d>Dw||d<4)continue;
+      const da=angDiff(bear(p.lat,p.lon,sg.lat,sg.lon),h);
+      if(da>35||d*Math.sin(rad(da))>12)continue;
+      if(!sg.hs.some(x=>angDiff(x,h)<35))continue;
+      if(!best||d<best.d)best={sg,d};
+    }
+  }
+  if(!best){el.classList.remove('on');return}
+  $('sigi').innerHTML=SIG_ICON[best.sg.kind];
+  $('sigt').textContent=(best.sg.kind==='stop'?'Stop':'Ustąp pierwszeństwa')+' za '+(Math.max(10,Math.round(best.d/10)*10))+' m';
+  el.classList.add('on');
+  const now=Date.now();
+  if($('sigsnd').checked&&(!sigSeen[best.sg.id]||now-sigSeen[best.sg.id]>90000)){sigSeen[best.sg.id]=now;chime(best.sg.kind);if(navigator.vibrate)try{navigator.vibrate(30)}catch(e){}}
+}
 let nearTrainId=null,aheadList=[];
 const fmtKm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m';
 const fmtEta=sec=>sec<90?'ok. '+Math.max(1,Math.round(sec))+' s':'ok. '+Math.round(sec/60)+' min';
