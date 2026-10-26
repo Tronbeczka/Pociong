@@ -107,6 +107,7 @@ body.night #bar{background:#202124;color:#e8eaed}
 #bmain{font-size:1.45rem;font-weight:500;color:#1a7f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #bar.warn #bmain{color:#e37400}
 #bar.bad #bmain{color:#d93025}
+body.night #bmain{color:#5fd68a}body.night #bar.warn #bmain{color:#ffb74d}body.night #bar.bad #bmain{color:#ff6b60}
 #bsub{font-size:.9rem;color:#5f6368;margin-top:1px}
 body.night #bsub{color:#9aa0a6}
 #histbox{position:absolute;left:12px;right:12px;top:70px;bottom:90px;z-index:1300;background:#fff;color:#202124;border-radius:20px;padding:14px;overflow:auto;box-shadow:0 14px 40px rgba(0,0,0,.45);font-size:.92rem}
@@ -258,6 +259,13 @@ body.night #zoomb{background:#2b3140}
 body.night #pick{background:#202228;color:#e8eaed}
 #pick .box{padding:0;margin:0;max-width:560px;text-align:left}
 #pick .grab{width:42px;height:4px;border-radius:2px;background:#d0d4d9;margin:6px auto 10px}
+body.night #pick .fld input::placeholder{color:#aab2bf;opacity:1}
+body.night #pick .fld input,body.night #pick input,body.night #pick select{color:#e8eaed;color-scheme:dark}
+body.night #pick input[type=datetime-local]{color:#e8eaed}
+body.night #pick input[type=datetime-local]::-webkit-datetime-edit,body.night #pick input[type=datetime-local]::-webkit-datetime-edit-fields-wrapper{color:#e8eaed}
+body.night #pick input[type=datetime-local]::-webkit-datetime-edit-text{color:#aab2bf}
+body.night #pick #sug div{background:#2d3139;color:#e8eaed}body.night #pick #sug small{color:#aab2bf}
+body.night #pick label,body.night #pick .opts{color:#e8eaed}
 body.night #pick .grab{background:#4a4f58}
 #pickx{position:absolute;right:12px;top:10px;width:34px;height:34px;padding:0;border-radius:50%;background:#eef1f4;color:#3c4043;font-size:1rem}
 body.night #pickx{background:#2d3139;color:#e8eaed}
@@ -407,11 +415,11 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 57</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 59</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
-    <div class="fld"><span>A</span><input id="from" placeholder="Start: Twoja lokalizacja (GPS) – lub wpisz adres" autocomplete="off"><button id="fromGps" class="sec" aria-label="Użyj GPS jako start">⌖</button></div>
+    <div class="fld"><span>A</span><input id="from" placeholder="Start: GPS lub wpisz adres" autocomplete="off"><button id="fromGps" class="sec" aria-label="Użyj GPS jako start">⌖</button></div>
     <div class="fld v"><span>+</span><input id="via" placeholder="Przystanek po drodze (opcjonalnie)" autocomplete="off"></div>
     <div class="fld v" id="via2w" style="display:none"><span>+</span><input id="via2" placeholder="Drugi przystanek" autocomplete="off"></div>
     <div class="fld v" id="via3w" style="display:none"><span>+</span><input id="via3" placeholder="Trzeci przystanek" autocomplete="off"></div>
