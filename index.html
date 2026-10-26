@@ -17,8 +17,8 @@ body.night{background:#10141a}
 body.night #view{background:#10141a}
 #rot{position:absolute;left:50%;top:68%;width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;will-change:transform;transform-origin:50% 50%}
 #vmap{position:absolute;left:0;top:0;width:100%;height:100%;display:none;transform-origin:50% 50%;will-change:transform}
-#sky{position:absolute;left:0;right:0;top:0;height:34%;z-index:400;pointer-events:none;background:linear-gradient(var(--sky,#e8eaed) 15%,transparent)}
-body.night #sky{background:linear-gradient(var(--sky,#10141a) 15%,transparent)}
+#sky{position:absolute;left:0;right:0;top:0;height:40%;z-index:400;pointer-events:none;background:linear-gradient(var(--sky,#e8eaed) 12%,transparent)}
+body.night #sky{background:linear-gradient(var(--sky,#10141a) 12%,transparent)}
 body.flat #sky{display:none}
 #map{position:absolute;inset:0;background:transparent}
 body.night .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.8)}
@@ -937,10 +937,10 @@ function updInfo(p){
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
-const VC={sv:{w:3.5},rs:{w:7},tr:{w:9},sc:{w:11},pr:{w:13},mw:{w:15}};
+const VC={sv:{w:4},rs:{w:8},tr:{w:10},sc:{w:12},pr:{w:14},mw:{w:16}};
 const PAL={
- day:{bg:'#f3f1ec',water:'#a9d3e8',park:'#cfe8bd',bld:'#e6e2da',bldEdge:'#d8d3c9',casing:'#d4d0c8',csMw:'#e0a94a',csPr:'#e3c27a',sv:'#fff',rs:'#fff',tr:'#fff',sc:'#fffdf5',pr:'#fdeab4',mw:'#fbd27e',rail:'#b9b5ad',railDash:'#fff',lbl:'#4d4d4d',halo:'#ffffffe0',route:'#4285f4',routeEdge:'#f5a623'},
- night:{bg:'#1c2230',water:'#1d3b52',park:'#20332b',bld:'#262e40',bldEdge:'#2d364a',csMw:'#7a6128',csPr:'#6a5b32',casing:'#10141c',sv:'#38415a',rs:'#3d475f',tr:'#465170',sc:'#4f5b7c',pr:'#5a6688',mw:'#66739a',rail:'#7a859c',railDash:'#1c2230',lbl:'#c3cbdc',halo:'#1c2230e6',route:'#4f8df5',routeEdge:'#c98a2b'}};
+ day:{bg:'#f2f0ea',water:'#a8d6f5',waterEdge:'#8cc3e6',park:'#c9e8b4',parkEdge:'#b4d89c',bld:'#e9e5dd',bldEdge:'#d9d4ca',bldSh:'#00000012',casing:'#d6d3cc',csSc:'#e2c98e',csMw:'#e8975a',csPr:'#e5b95f',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff6dc',pr:'#ffe9a8',mw:'#ffc07a',mwIn:'#f7a35c',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',route:'#4285f4',routeEdge:'#f5a623'},
+ night:{bg:'#1a2030',water:'#16344d',waterEdge:'#1f4767',park:'#1d3329',parkEdge:'#244035',bld:'#252d3f',bldEdge:'#2f384d',bldSh:'#00000030',casing:'#0e121a',csSc:'#5a4d2c',csMw:'#80532a',csPr:'#6a5b32',sv:'#323b52',rs:'#3b4560',tr:'#444f6d',sc:'#59577a',pr:'#675f7e',mw:'#8a6a5a',mwIn:'#9c7660',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',route:'#5b94f7',routeEdge:'#c98a2b'}};
 // VEC-PURE-START
 function parseMax(v){
   v=String(v).trim().toLowerCase();let m;
@@ -1201,20 +1201,23 @@ function paintVec(cam){
     const D=vecData,P=D.P,ox=(cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(cam.lat-D.lat)*111195;
     c.save();c.translate(S/2,S/2);c.scale(s,-s);c.translate(-ox,-oy);
     c.lineCap='round';c.lineJoin='round';
-    if(P.park){c.fillStyle=pal.park;c.fill(P.park)}
-    if(P.water){c.fillStyle=pal.water;c.fill(P.water)}
-    if(P.bld&&s>=.5){c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
-    if(P.wline){c.strokeStyle=pal.water;c.lineWidth=8/s;c.stroke(P.wline)}
+    if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.park)}
+    if(P.water){c.fillStyle=pal.water;c.fill(P.water);c.strokeStyle=pal.waterEdge;c.lineWidth=1.2/s;c.stroke(P.water)}
+    if(P.wline){c.strokeStyle=pal.water;c.lineWidth=7/s;c.stroke(P.wline)}
+    if(P.bld&&s>=.5){
+      if(s>=.8){c.save();c.translate(1.6/s,-1.6/s);c.fillStyle=pal.bldSh;c.fill(P.bld);c.restore()}   // delikatny cień budynków
+      c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
     const order=['sv','rs','tr','sc','pr','mw'];
-    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:pal.casing;c.lineWidth=(VC[k].w+2.5)/s;c.stroke(P[k])}
-    for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].w/s;c.stroke(P[k])}
+    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(VC[k].w+3)/s;c.stroke(P[k])}
+    for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].w/s;c.stroke(P[k])
+      if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=VC[k].w*.45/s;c.stroke(P[k])}}
     if(P.rail){
-      c.strokeStyle=pal.rail;c.lineWidth=4/s;c.stroke(P.rail);
-      c.strokeStyle=pal.railDash;c.lineWidth=2/s;c.setLineDash([8/s,8/s]);c.stroke(P.rail);c.setLineDash([]);
+      c.strokeStyle=pal.rail;c.lineWidth=4.5/s;c.stroke(P.rail);
+      c.strokeStyle=pal.railDash;c.lineWidth=2.2/s;c.setLineDash([9/s,9/s]);c.stroke(P.rail);c.setLineDash([]);
     }
     c.restore();
     if(D.LB&&s>=.3){
-      c.font='600 12px Inter,system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=3.5;c.lineJoin='round';
+      c.font='600 12.5px Inter,system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=4;c.lineJoin='round';
       const used=new Set(),rr=rad(curRot);let n=0;
       for(const l of D.LB){
         const sx=S/2+s*(l.x-ox),sy=S/2-s*(l.y-oy);
@@ -1223,7 +1226,7 @@ function paintVec(cam){
         let a=Math.atan2(-l.ny,l.ex);if(Math.cos(a+rr)<0)a+=Math.PI;
         used.add(key);
         c.save();c.translate(sx,sy);c.rotate(a);
-        c.strokeStyle=pal.halo;c.strokeText(l.n,0,0);c.fillStyle=pal.lbl;c.fillText(l.n,0,0);c.restore();
+        c.strokeStyle=pal.halo;c.strokeText(l.n,0,0);c.fillStyle=(l.c==='mw'||l.c==='pr')?pal.lblMw:pal.lbl;c.fillText(l.n,0,0);c.restore();
         if(++n>70)break;
       }
     }
