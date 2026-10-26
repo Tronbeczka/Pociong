@@ -554,7 +554,7 @@ body.night #intro .card{background:#202228;color:#e8eaed}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij">✕</button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 84</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 85</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1479,11 +1479,11 @@ function gpsNow(){return new Promise((ok,no)=>{
 
 // --- podpowiedzi adresów (Photon, dane OpenStreetMap) ---
 const F={from:{el:$('from'),pt:null},via:{el:$('via'),pt:null},via2:{el:$('via2'),pt:null},via3:{el:$('via3'),pt:null},to:{el:$('to'),pt:null}};
-var places={home:null,work:null,recent:[]},viaPt=null,viaList=[],depTime=null,opts={mw:false,toll:false,x:true};
-try{places=Object.assign(places,JSON.parse(localStorage.getItem('places')||'{}'));opts=Object.assign(opts,JSON.parse(localStorage.getItem('opts')||'{}'))}catch(e){}
+var places={home:null,work:null,recent:[]},viaPt=null,viaList=[],depTime=null,opts={mw:false,toll:false,x:false};
+try{places=Object.assign(places,JSON.parse(localStorage.getItem('places')||'{}'));opts=Object.assign(opts,JSON.parse(localStorage.getItem('opts')||'{}'));if(!localStorage.getItem('xoff84')){opts.x=false;localStorage.setItem('xoff84','1');localStorage.setItem('opts',JSON.stringify(opts))}}catch(e){}
 const savePlaces=()=>{try{localStorage.setItem('places',JSON.stringify(places))}catch(e){}};
 $('avMw').checked=!!opts.mw;$('avToll').checked=!!opts.toll;
-$('avX').checked=opts.x!==false;
+$('avX').checked=opts.x===true;
 ['avMw','avToll','avX'].forEach(id=>$(id).onchange=()=>{opts.mw=$('avMw').checked;opts.toll=$('avToll').checked;opts.x=$('avX').checked;try{localStorage.setItem('opts',JSON.stringify(opts))}catch(e){}});
 function pickDest(pt){F.to.el.value=pt.label;F.to.pt={lat:pt.lat,lon:pt.lon,label:pt.label};$('sug').innerHTML='';$('rinfo').textContent='';renderChips()}
 function renderChips(){
@@ -1549,7 +1549,7 @@ async function planRoute(){
     info('Wyznaczanie najszybszej trasy…');
     let r;try{r=await fetchRoute(a,b)}finally{const dt=depTime;depTime=null;planRoute.dt=dt}
     let pickNote='';
-    if(opts.x!==false&&r.alts&&r.alts.length>1){info('Porównuję trasy pod kątem przejazdów kolejowych…');try{const q=await pickFewerCrossings(r);r=q.r;pickNote=q.note}catch(e){}}
+    if(opts.x===true&&r.alts&&r.alts.length>1){info('Porównuję trasy pod kątem przejazdów kolejowych…');try{const q=await pickFewerCrossings(r);r=q.r;pickNote=q.note}catch(e){}}
     if(!(r.distance>30)||!r.geometry||r.geometry.coordinates.length<2)throw new Error('start i cel są w tym samym miejscu – wybierz inny start (pole A) lub cel');
     endPt=b;setRoute(r.geometry.coordinates,r.duration,r.steps,r.jam,r.delay,r.inc);
     places.recent=[{label:F.to.el.value,lat:b.lat,lon:b.lon}].concat(places.recent.filter(x=>x.label!==F.to.el.value)).slice(0,6);savePlaces();
