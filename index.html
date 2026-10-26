@@ -582,12 +582,12 @@ $('tilt').onclick=()=>{if(freeCam){recenter();return}tiltDeg=tiltDeg?0:50;$('til
 function follow(p){
   const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   updLimit(p);
-  scaleTgt=kmh>110?.3:kmh>80?.4:kmh>50?.55:kmh>25?.75:1;
+  scaleTgt=kmh>110?.6:kmh>80?.8:kmh>50?1.1:kmh>25?1.5:2.1;   // px na metr: im wolniej, tym bliżej ulicy
   if(vec){
     camFix(p,p.heading!=null&&!isNaN(p.heading)?p.heading:lastH);
     const cp=vecCam(performance.now())||p;   // mapę doczytujemy wokół kamery (też po ręcznym przesunięciu)
     if((!vecData||dist(vecData.lat,vecData.lon,cp.lat,cp.lon)>600)&&Date.now()>vecNext)loadVec(cp.lat,cp.lon);
-  }else if(!freeCam)map.setView([p.lat,p.lon],kmh>90?15:kmh>50?16:17,{animate:false});
+  }else if(!freeCam)map.setView([p.lat,p.lon],kmh>90?16:kmh>50?17:18,{animate:false});
   // kierunek jazdy: 1) trasa (jeśli jedziemy po niej) 2) kierunek z GPS 3) ruch z ostatnich metrów
   let h=null;
   if(route&&route.pts.length>1&&route.off<60&&!demo){const a=routeAt(route,route.along+8),b=routeAt(route,route.along+45);if(dist(a[0],a[1],b[0],b[1])>10)h=bear(a[0],a[1],b[0],b[1])}
@@ -1113,7 +1113,8 @@ function updInfo(p){
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
-const VC={sv:{w:5},rs:{w:10},tr:{w:12},sc:{w:14},pr:{w:17},mw:{w:19}};
+const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mw:{w:19,m:14}};   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
+const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s);
 const PAL={
  day:{bg:'#e8e5dc',water:'#a8d6f5',waterEdge:'#8cc3e6',park:'#c9e8b4',parkEdge:'#b4d89c',bld:'#e9e5dd',bldEdge:'#d9d4ca',bldSh:'#00000012',casing:'#a9a496',csSc:'#c9a24d',csMw:'#d9722f',csPr:'#cf9c33',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',route:'#4285f4',routeEdge:'#f5a623'},
  night:{bg:'#141926',water:'#16344d',waterEdge:'#1f4767',park:'#1d3329',parkEdge:'#244035',bld:'#252d3f',bldEdge:'#2f384d',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#4a5472',rs:'#5b6788',tr:'#66739a',sc:'#7a78a3',pr:'#8c82a6',mw:'#c48a62',mwIn:'#d99d72',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',route:'#5b94f7',routeEdge:'#c98a2b'}};
@@ -1420,9 +1421,9 @@ function paintVec(cam){
       if(s>=.8){c.save();c.translate(1.6/s,-1.6/s);c.fillStyle=pal.bldSh;c.fill(P.bld);c.restore()}   // delikatny cień budynków
       c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
     const order=['sv','rs','tr','sc','pr','mw'];
-    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(VC[k].w+4)/s;c.stroke(P[k])}
-    for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].w/s;c.stroke(P[k])
-      if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=VC[k].w*.45/s;c.stroke(P[k])}}
+    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rw(k,s)+4)/s;c.stroke(P[k])}
+    for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=rw(k,s)/s;c.stroke(P[k])
+      if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=rw(k,s)*.45/s;c.stroke(P[k])}}
     if(P.rail){
       c.strokeStyle=pal.rail;c.lineWidth=4.5/s;c.stroke(P.rail);
       c.strokeStyle=pal.railDash;c.lineWidth=2.2/s;c.setLineDash([9/s,9/s]);c.stroke(P.rail);c.setLineDash([]);
