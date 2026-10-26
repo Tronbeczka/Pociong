@@ -1040,10 +1040,10 @@ function updInfo(p){
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null;
-const VC={sv:{w:4},rs:{w:8},tr:{w:10},sc:{w:12},pr:{w:14},mw:{w:16}};
+const VC={sv:{w:5},rs:{w:10},tr:{w:12},sc:{w:14},pr:{w:17},mw:{w:19}};
 const PAL={
- day:{bg:'#f2f0ea',water:'#a8d6f5',waterEdge:'#8cc3e6',park:'#c9e8b4',parkEdge:'#b4d89c',bld:'#e9e5dd',bldEdge:'#d9d4ca',bldSh:'#00000012',casing:'#d6d3cc',csSc:'#e2c98e',csMw:'#e8975a',csPr:'#e5b95f',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff6dc',pr:'#ffe9a8',mw:'#ffc07a',mwIn:'#f7a35c',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',route:'#4285f4',routeEdge:'#f5a623'},
- night:{bg:'#1a2030',water:'#16344d',waterEdge:'#1f4767',park:'#1d3329',parkEdge:'#244035',bld:'#252d3f',bldEdge:'#2f384d',bldSh:'#00000030',casing:'#0e121a',csSc:'#5a4d2c',csMw:'#80532a',csPr:'#6a5b32',sv:'#323b52',rs:'#3b4560',tr:'#444f6d',sc:'#59577a',pr:'#675f7e',mw:'#8a6a5a',mwIn:'#9c7660',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',route:'#5b94f7',routeEdge:'#c98a2b'}};
+ day:{bg:'#e8e5dc',water:'#a8d6f5',waterEdge:'#8cc3e6',park:'#c9e8b4',parkEdge:'#b4d89c',bld:'#e9e5dd',bldEdge:'#d9d4ca',bldSh:'#00000012',casing:'#a9a496',csSc:'#c9a24d',csMw:'#d9722f',csPr:'#cf9c33',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',route:'#4285f4',routeEdge:'#f5a623'},
+ night:{bg:'#141926',water:'#16344d',waterEdge:'#1f4767',park:'#1d3329',parkEdge:'#244035',bld:'#252d3f',bldEdge:'#2f384d',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#4a5472',rs:'#5b6788',tr:'#66739a',sc:'#7a78a3',pr:'#8c82a6',mw:'#c48a62',mwIn:'#d99d72',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',route:'#5b94f7',routeEdge:'#c98a2b'}};
 // VEC-PURE-START
 function parseMax(v){
   v=String(v).trim().toLowerCase();let m;
@@ -1347,7 +1347,7 @@ function paintVec(cam){
       if(s>=.8){c.save();c.translate(1.6/s,-1.6/s);c.fillStyle=pal.bldSh;c.fill(P.bld);c.restore()}   // delikatny cień budynków
       c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
     const order=['sv','rs','tr','sc','pr','mw'];
-    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(VC[k].w+3)/s;c.stroke(P[k])}
+    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(VC[k].w+4)/s;c.stroke(P[k])}
     for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].w/s;c.stroke(P[k])
       if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=VC[k].w*.45/s;c.stroke(P[k])}}
     if(P.rail){
