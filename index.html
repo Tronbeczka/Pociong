@@ -789,7 +789,7 @@ function routeUpdate(p){
   const n=route.pts.length-2;
   let r=projRoute(route,p.lat,p.lon,Math.max(0,route.idx-3),Math.min(n,route.idx+400));
   if(r.off>120)r=projRoute(route,p.lat,p.lon,0,n);
-  route.idx=r.i;route.along=r.along;route.off=r.off;navUpdate();
+  route.idx=r.i;route.along=r.along;route.off=r.off;navUpdate();routeSignsUpdate();
   const lim=r.along+6000,seg=[[p.lat,p.lon]];  // rysujemy tylko najbliższe ~6 km
   for(let i=r.i+1;i<route.pts.length&&route.cum[i]<=lim;i++)seg.push(route.pts[i]);
   if(seg.length<2)seg.push(route.pts[route.pts.length-1]);
@@ -1001,13 +1001,14 @@ async function loadSigns(lat,lon){
   if(signsBusy||Date.now()<signsNext)return;signsBusy=true;
   try{
     const R=1500,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
-    const j=await fetchOverpass('[out:json][timeout:20];node["highway"~"^(stop|give_way)$"]'+bb+'->.s;.s out body;way(bn.s)["highway"];out geom qt;');
-    const byNode=new Map(),list=[];
+    const j=await fetchOverpass('[out:json][timeout:20];node["highway"~"^(stop|give_way|traffic_signals)$"]'+bb+'->.s;.s out body;way(bn.s)["highway"];out geom qt;');
+    const byNode=new Map(),list=[],lights=[];
     for(const w of j.elements)if(w.type==='way'&&w.nodes&&w.geometry)w.nodes.forEach((id,i)=>{let a=byNode.get(id);if(!a)byNode.set(id,a=[]);a.push([w,i])});
     const brg=(a,b)=>bear(a.lat,a.lon,b.lat,b.lon);
     for(const n of j.elements){
       if(n.type!=='node'||n.lat==null)continue;
       const t=n.tags||{},ws=byNode.get(n.id)||[],hs=[],dir=t.direction||'';
+      if(t.highway==='traffic_signals'){lights.push({id:n.id,lat:n.lat,lon:n.lon,kind:'lights'});continue}
       for(const [w,i] of ws){
         const g=w.geometry,last=g.length-1;if(last<1)continue;
         if(i>0&&i<last){                       // znak w środku drogi
@@ -1019,7 +1020,7 @@ async function loadSigns(lat,lon){
       }
       if(hs.length)list.push({id:n.id,lat:n.lat,lon:n.lon,kind:t.highway==='stop'?'stop':'give_way',hs});
     }
-    signs={lat,lon,list};
+    signs={lat,lon,list,lights};
   }catch(e){signsNext=Date.now()+30000}
   finally{signsBusy=false}
 }
@@ -1034,6 +1035,54 @@ function chime(kind){   // dwie miękkie, ciche nutki
       o.connect(g);g.connect(audio.destination);o.start(t0);o.stop(t0+.6);
     });
   }catch(e){}
+}
+// znaki i światła tylko dla wyznaczonej trasy (stop, ustąp pierwszeństwa – tylko te dotyczące naszego kierunku jazdy)
+var rSigns=[];
+function routeSignsUpdate(){
+  rSigns=[];
+  if(!route||!signs||!(route.len>0))return;
+  const memo=route.sm||(route.sm=new Map()),all=signs.list.concat(signs.lights||[]);
+  for(const sg of all){
+    let r=memo.get(sg.id);
+    if(r===undefined){
+      r=projRoute(route,sg.lat,sg.lon,0,route.pts.length-2);
+      if(r.off>16)r=null;
+      else{const a=routeAt(route,Math.max(0,r.along-12)),b=routeAt(route,Math.min(route.len,r.along+12));r.brg=bear(a[0],a[1],b[0],b[1]);
+        if(sg.hs&&!sg.hs.some(x=>angDiff(x,r.brg)<50))r=null}   // znak skierowany do przeciwnego ruchu
+      memo.set(sg.id,r);
+    }
+    if(!r)continue;
+    const d=r.along-route.along;
+    if(d>-8&&d<900)rSigns.push({kind:sg.kind,lat:sg.lat,lon:sg.lon,brg:r.brg,d});
+  }
+}
+function drawSignIcon(kind,x,y,u){   // małe oznaczenia: u = promień w px
+  mx.save();mx.translate(x,y);mx.lineJoin='round';
+  if(kind==='stop'){
+    mx.beginPath();for(let i=0;i<8;i++){const a=Math.PI/8+i*Math.PI/4;mx.lineTo(Math.cos(a)*u*1.05,Math.sin(a)*u*1.05)}mx.closePath();
+    mx.fillStyle='#d32f2f';mx.fill();mx.lineWidth=Math.max(1.5,u*.18);mx.strokeStyle='#fff';mx.stroke();
+    mx.fillStyle='#fff';mx.fillRect(-u*.58,-u*.16,u*1.16,u*.32);
+  }else if(kind==='give_way'){
+    mx.beginPath();mx.moveTo(-u*1.05,-u*.8);mx.lineTo(u*1.05,-u*.8);mx.lineTo(0,u*.95);mx.closePath();
+    mx.fillStyle='#fff';mx.fill();mx.lineWidth=Math.max(2,u*.34);mx.strokeStyle='#d32f2f';mx.stroke();
+  }else{
+    const w=u*1.15,h=u*1.85;
+    mx.beginPath();mx.roundRect?mx.roundRect(-w/2,-h/2,w,h,w*.3):mx.rect(-w/2,-h/2,w,h);mx.fillStyle='#263238';mx.fill();mx.lineWidth=Math.max(1,u*.12);mx.strokeStyle='#fff';mx.stroke();
+    [['#ef5350',-.52],['#ffca28',0],['#66bb6a',.52]].forEach(([c,k])=>{mx.beginPath();mx.arc(0,k*u*.9,u*.2,0,6.2832);mx.fillStyle=c;mx.fill()});
+  }
+  mx.restore();
+}
+function drawRouteSigns(){
+  if(!rSigns.length||!route)return;
+  const W=window.innerWidth,H=window.innerHeight;
+  for(const sg of rSigns.slice().sort((a,b)=>b.d-a.d)){   // dalsze najpierw
+    const q=proj(sg.lat,sg.lon);if(!q)continue;
+    const ang=rad(sg.brg+curRot),k=q.k,off=26*Math.max(.55,Math.min(1.2,k)),u=Math.max(8,Math.min(12.5,10.5*k));
+    // przesunięcie na prawo od osi drogi (na ekranie), żeby nie zasłaniać niebieskiej trasy
+    const x=q.x+Math.cos(ang)*off,y=q.y+Math.sin(ang)*off;
+    if(x<-30||x>W+30||y<-30||y>H+30)continue;
+    drawSignIcon(sg.kind,x,y,u);
+  }
 }
 function signCheck(p){
   const el=$('sig');
@@ -1515,6 +1564,7 @@ function drawMarkers(){
   mx.clearRect(0,0,W,H);
   if(vec)drawVec();const P=proj;
   drawRouteTop();
+  drawRouteSigns();
   if(freeCam){   // samochód jako niebieski znacznik z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
     if(q&&q.x>-40&&q.x<W+40&&q.y>-40&&q.y<H+40){
