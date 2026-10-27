@@ -1349,7 +1349,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 123</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 124</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -4459,7 +4459,7 @@ try{
 {
   const sp=$('splash'),t0=Date.now();let done=false;
   const hide=()=>{if(done)return;done=true;sp.classList.add('out');setTimeout(()=>sp.remove(),900)};
-  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>(window.__spMin||900)&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)||(provCam&&vecData)))){clearInterval(tick);hide()}},150);
+  const tick=setInterval(()=>{const dt=Date.now()-t0;if(dt>7000||(dt>(window.__spMin||3200)&&(window.gpsErr||(typeof last!=='undefined'&&last&&typeof vecData!=='undefined'&&vecData)||(provCam&&vecData)))){clearInterval(tick);hide()}},150);
 }
 // ---- Ekran informacyjny (raz) i ostrzeżenie o pracy w tle ----
 {
