@@ -579,7 +579,7 @@ body.night #speed.over #spd{color:#ff8a80}
 #tmeta2,#tmeta{font-size:.76rem}
 #nextStrip span{background:rgba(22,26,34,.9);border-radius:999px;padding:5px 12px;font-weight:600;font-size:.95rem;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 3px 10px rgba(0,0,0,.28)}
 #nextStrip span.w{background:rgba(190,38,30,.95)}
-#nextStrip{justify-content:flex-end}
+#nextStrip{justify-content:flex-start}
 #sig{font-weight:600;font-size:1.02rem}
 #sig,body.night #sig{background:var(--u-surf);color:var(--u-ink);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1)}
 #evToast{border-radius:20px;background:rgba(26,30,38,.96);box-shadow:0 0 0 1px rgba(255,255,255,.10),0 14px 34px rgba(0,0,0,.45)}
@@ -730,6 +730,9 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
   #tcard{left:90px;right:70px}
   #pick h1{font-size:1.4rem}
 }
+#pick,body.night #pick{inset:0;top:0;bottom:0;height:100%;max-height:none;border-radius:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:none;z-index:3000}
+#pick .box{max-width:640px;width:100%;margin:0 auto}
+#pickx,#pickset{top:calc(env(safe-area-inset-top,0px) + 12px)}
 @media (max-width:340px),(max-height:600px) and (orientation:portrait){
   body.ui1 #banner,body.ui1 #strip,body.ui1 #bar,body.ui1 #speed,body.ui1 #tcard,body.ui1 #nextStrip,body.ui1 #xBoard,body.ui1 #evToast,body.ui1 #repSheet,body.ui1 #srchBox{zoom:1.07}
   body.ui2 #banner,body.ui2 #strip,body.ui2 #bar,body.ui2 #speed,body.ui2 #tcard,body.ui2 #nextStrip,body.ui2 #xBoard,body.ui2 #evToast,body.ui2 #repSheet,body.ui2 #srchBox{zoom:1.14}
@@ -889,7 +892,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 111</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 112</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -2568,8 +2571,7 @@ $('pickx').onclick=()=>{$('pick').style.display='none';$('sug').innerHTML=''};
 $('planfab').onclick=showPlanner;
 setInterval(()=>{
   const busy=!!route||demo||!!sim;
-  if(!plannerShown&&!busy&&((last&&(vecData||Date.now()-t0load>10000))||Date.now()-t0load>8000))showPlanner();
-  $('planfab').style.display=(plannerShown&&!busy&&$('pick').style.display==='none')?'flex':'none';
+  $('planfab').style.display=(!busy&&$('pick').style.display==='none'&&!window.preview)?'flex':'none';   // panel trasy otwiera się dopiero po dotknięciu przycisku
 },500);
 setTimeout(()=>{if(navigator.geolocation&&watchId==null&&!demo)startGps(true)},400);
 
