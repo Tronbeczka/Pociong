@@ -517,8 +517,7 @@ input,select,textarea,button{font-family:inherit}
 /* górny pas przepuszcza dotyk do mapy (znaki przejazdów tuż pod banerem dają się dotknąć); reagują tylko baner i przyciski */
 #top{pointer-events:none}
 #banner,#compass,#setfab,#repfab{pointer-events:auto}
-@media (max-height:700px){#sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}   /* niski ekran: krótszy baner, żeby przyciski nie nachodziły na przybliżanie */
-@media (max-height:600px) and (orientation:portrait){#repfab,#setfab{display:none}}
+@media (max-height:700px){#sub{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}}
 /* --- baner: znak przejazdu z dwiema lampami (gasną, świecą ciągle albo mrugają na przemian) --- */
 .lmA,.lmB{transition:opacity .25s}
 #banner .lmA,#banner .lmB,#hud .lmA,#hud .lmB{opacity:.34}
@@ -713,6 +712,32 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
   #xBoard,#repSheet{left:auto;right:0;width:min(560px,62%);border-radius:24px 0 0 0;max-height:94vh}
   #sig{top:calc(env(safe-area-inset-top,0px) + 100px)}
 }
+
+/* ===== Wersja 111: kolumny przycisków dopasowują się do wysokości ekranu (skalowanie, a w ostateczności ukrywanie mniej ważnych) ===== */
+#lfab{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 262px);z-index:900;display:flex;flex-direction:column;align-items:flex-start;gap:14px;transform-origin:left bottom;pointer-events:none}
+#rfab{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:900;display:flex;flex-direction:column;align-items:flex-end;gap:12px;transform-origin:right bottom;pointer-events:none}
+#lfab>#srchfab,#lfab>#planfab,#lfab>#mic,#rfab>#zoomb,#rfab>#recenter,#rfab>#tilt{position:static;left:auto;right:auto;top:auto;bottom:auto;margin:0;pointer-events:auto;flex:none}
+.fh{display:none!important}
+@media (max-width:370px){
+  #bl{width:92px;padding-left:4px;padding-right:4px}
+  #bicon{width:40px;height:40px}
+  #dist{font-size:1.3rem}
+  #big{font-size:1.5rem}
+  #sub{font-size:.92rem}
+  #bt{padding-left:12px;padding-right:12px}
+  #bmain{font-size:1.4rem}
+  #bsub{font-size:.9rem}
+  #tcard{left:90px;right:70px}
+  #pick h1{font-size:1.4rem}
+}
+@media (max-width:340px),(max-height:600px) and (orientation:portrait){
+  body.ui1 #banner,body.ui1 #strip,body.ui1 #bar,body.ui1 #speed,body.ui1 #tcard,body.ui1 #nextStrip,body.ui1 #xBoard,body.ui1 #evToast,body.ui1 #repSheet,body.ui1 #srchBox{zoom:1.07}
+  body.ui2 #banner,body.ui2 #strip,body.ui2 #bar,body.ui2 #speed,body.ui2 #tcard,body.ui2 #nextStrip,body.ui2 #xBoard,body.ui2 #evToast,body.ui2 #repSheet,body.ui2 #srchBox{zoom:1.14}
+}
+@media (orientation:landscape) and (max-height:540px){
+  #lfab{left:10px;bottom:130px;gap:6px}
+  #rfab{right:10px;bottom:10px;gap:6px}
+}
 </style>
 </head>
 <body>
@@ -864,7 +889,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 110</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 111</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -903,6 +928,55 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <div id="attr"></div>
 <script>
 const $=id=>document.getElementById(id);
+
+// ---- kolumny przycisków: opakowanie w kontenery i dopasowanie do wysokości ekranu ----
+(function(){
+  const mk=(id,ids)=>{const c=document.createElement('div');c.id=id;document.body.appendChild(c);ids.forEach(i=>{const e=document.getElementById(i);if(e)c.appendChild(e)});return c};
+  const L=mk('lfab',['srchfab','planfab','mic']),R=mk('rfab',['zoomb','recenter','tilt']);
+  const fit=(c,top,order)=>{
+    const kids=[...c.children];kids.forEach(k=>k.classList.remove('fh'));c.style.transform='none';
+    const avail=c.getBoundingClientRect().bottom-top,calc=()=>{const n=c.offsetHeight;return n>0?Math.min(1,avail/n):1};
+    const hide=e=>{if(!e||e.classList.contains('fh')||getComputedStyle(e).display==='none')return false;e.classList.add('fh');return true};
+    let sc=calc();
+    for(const id of order){if(sc>=.82)break;if(hide(document.getElementById(id)))sc=calc()}
+    for(const k of kids.slice().reverse()){if(sc>=.7)break;if(hide(k))sc=calc()}   // zupełna ostateczność: brak miejsca na kolejne przyciski
+    sc=Math.max(.7,Math.min(1,sc));c.style.transform=sc<.995?'scale('+sc.toFixed(3)+')':'none';
+  };
+  // pionowy układ lewej/prawej kolumny od dołu: położenie wynika z faktycznej wysokości paska dolnego i powiększenia interfejsu (ui1/ui2),
+  // dzięki temu prędkość, znak ograniczenia, karta pociągu i przyciski nie nachodzą na siebie przy żadnym rozmiarze
+  const restack=()=>{
+    const g=id=>document.getElementById(id),shown=e=>e&&getComputedStyle(e).display!=='none';
+    const cl=document.body.classList,zc=parseFloat(getComputedStyle(g('bar')).zoom),z=isFinite(zc)&&zc>0?zc:(cl.contains('ui2')?1.3:cl.contains('ui1')?1.15:1);
+    const H=innerHeight,land=matchMedia('(orientation:landscape) and (max-height:540px)').matches;
+    const put=(e,k,v,zz)=>{if(e)e.style[k]=(v/(zz||1)).toFixed(1)+'px'};
+    const bar=g('bar'),br=bar.getBoundingClientRect(),bt=shown(bar)&&br.height>0?H-br.top:(land?56:76);
+    const sp=g('speed'),lim=g('lim'),ln=g('limn'),tc=g('tcard'),lf=g('lfab'),rf=g('rfab');
+    const base=bt+(land?10:16),sr=sp.getBoundingClientRect();
+    const sw=shown(sp)&&sr.width>0?sr.width:(land?58:74)*z,sh=shown(sp)&&sr.height>0?sr.height:(land?58:74)*z;
+    const lw=land?50:60,lh=land?50:60;
+    put(sp,'bottom',base,z);put(sp,'left',land?10:12,z);
+    let limL,limB,limT;
+    if(land){limL=10+sw+8;limB=base;limT=limB+lh}else{limL=12+sw/2-lw/2;limB=base+sh+10;limT=limB+lh}
+    put(lim,'left',limL);put(lim,'bottom',limB);
+    put(ln,'left',limL+lw/2-35);put(ln,'bottom',limT+(land?4:8));
+    put(lf,'bottom',land?base+sh+6:limT+8+19+2);
+    if(land)rf.style.bottom='';else put(rf,'bottom',base);
+    const rw=rf.offsetWidth||(land?42:54);
+    put(tc,'left',land?limL+lw+10:12+sw+10,z);put(tc,'right',(land?10:12)+rw+8,z);put(tc,'bottom',base,z);
+  };
+  window.fitUI=()=>{
+    try{restack()}catch(e){}
+    try{
+      const tb=document.getElementById('top').getBoundingClientRect().bottom,ns=document.getElementById('nextStrip');
+      const nb=ns&&ns.style.display==='flex'?ns.getBoundingClientRect().bottom:0;
+      fit(L,Math.max(tb,nb)+8,['mic','srchfab']);
+      let tg=tb;for(const id of ['compass','setfab','repfab']){const e=document.getElementById(id);if(e&&getComputedStyle(e).display!=='none')tg=Math.max(tg,e.getBoundingClientRect().bottom)}
+      fit(R,tg+8,['tilt','recenter']);
+    }catch(e){}
+  };
+  setInterval(window.fitUI,400);window.addEventListener('resize',()=>setTimeout(window.fitUI,50));window.addEventListener('orientationchange',()=>setTimeout(window.fitUI,300));
+  setTimeout(window.fitUI,200);
+})();
 const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
 function dist(a,b,c,d){const R=6371000,dl=rad(c-a),dn=rad(d-b);
   const x=Math.sin(dl/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
@@ -3395,7 +3469,7 @@ $('brwGo').onclick=()=>{
   H.addEventListener('pointerdown',showCtl);
   const ui=LSget('uiSize',0);$('uiSize').value=String(ui);
   const apply=v=>{document.body.classList.toggle('ui1',v===1);document.body.classList.toggle('ui2',v===2)};apply(+ui);
-  $('uiSize').onchange=()=>{const v=+$('uiSize').value;LSput('uiSize',v);apply(v)};
+  $('uiSize').onchange=()=>{const v=+$('uiSize').value;LSput('uiSize',v);apply(v);setTimeout(()=>window.fitUI&&window.fitUI(),60)};
 }
 // ================= Auto elektryczne: ładowarki i zasięg =================
 function evUI(){
