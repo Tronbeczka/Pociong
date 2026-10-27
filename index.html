@@ -580,6 +580,7 @@ body.night #speed.over #spd{color:#ff8a80}
 #tmeta2,#tmeta{font-size:.76rem}
 #nextStrip span{background:rgba(22,26,34,.9);border-radius:999px;padding:5px 12px;font-weight:600;font-size:.95rem;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 3px 10px rgba(0,0,0,.28)}
 #nextStrip span.w{background:rgba(190,38,30,.95)}
+#nextStrip{justify-content:flex-end}
 #sig{font-weight:600;font-size:1.02rem}
 #sig,body.night #sig{background:var(--u-surf);color:var(--u-ink);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1)}
 #evToast{border-radius:20px;background:rgba(26,30,38,.96);box-shadow:0 0 0 1px rgba(255,255,255,.10),0 14px 34px rgba(0,0,0,.45)}
@@ -690,7 +691,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
   #compass{top:8px;right:10px;width:40px;height:40px}
   #setfab{top:54px;right:10px;width:40px;height:40px}
   #repfab{top:100px;right:10px;width:40px;height:40px;font-size:20px}
-  #nextStrip{top:calc(env(safe-area-inset-top,0px) + 98px);right:auto;max-width:58%}
+  #nextStrip{top:calc(env(safe-area-inset-top,0px) + 98px);right:auto;max-width:58%;justify-content:flex-start}
   #nextStrip span{padding:3px 8px;font-size:.78rem}
   #bar{right:auto;width:min(58%,560px);left:10px;bottom:8px;padding:5px 8px;border-radius:22px}
   #bar button{width:38px;height:38px}
@@ -863,7 +864,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 109</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 110</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -3181,6 +3182,7 @@ setInterval(()=>{
   }
   el.innerHTML=chips.join('');el.style.display=chips.length?'flex':'none';
 },3000);
+setInterval(()=>{const el=$('nextStrip'),chips=el.style.display==='flex'?[1]:[];{const tb=$('top').getBoundingClientRect().bottom;el.style.top=(tb+8)+'px';const et=$('evToast');if(et)et.style.top=(chips.length?el.getBoundingClientRect().bottom+8:tb+8)+'px'}},400);
 // ================= Pobieranie mapy okolicy (offline) =================
 $('dlarea').onclick=async()=>{
   const b=$('dlarea'),st=t=>{$('dlast').textContent=t};
