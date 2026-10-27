@@ -1129,6 +1129,19 @@ body.night #pick #go{background:linear-gradient(180deg,#4a90f5,#2f78e0)}
 #carIcon{transition:opacity .5s,filter .5s}
 body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!important}
 /* ===== END Wersja 119 ===== */
+/* v122: ustawienia w zakładkach (lista kategorii → wybrana kategoria) */
+#setHome{max-width:620px;margin:0 auto 18px;background:var(--card);border-radius:20px;box-shadow:0 0 0 1px var(--line),0 1px 3px rgba(16,24,40,.05);overflow:hidden}
+#setHome .setRow{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;margin:0;border:0;border-radius:0;background:none;color:var(--tx);text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#setHome .setRow+.setRow{border-top:1px solid var(--line)}
+#setHome .setRow:active{background:var(--bg)}
+#setHome .setRow>i{flex:0 0 auto;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:1.25rem;background:var(--bg);box-shadow:0 0 0 1px var(--line)}
+#setHome .setRow>span{flex:1;min-width:0;display:block}
+#setHome .setRow b{display:block;font-size:1.02rem;font-weight:700}
+#setHome .setRow small{display:block;margin-top:2px;color:var(--mut);font-size:.8rem;line-height:1.3;font-weight:500}
+#setHome .setRow svg{flex:0 0 auto;width:20px;height:20px;color:var(--mut)}
+#settings section.one>h3{display:none}
+#settings[data-cat]:not([data-cat=""]) #achOpen{display:none}
+#settings .sHead h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1315,7 +1328,7 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 121</span> · Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
+  <p class="pkFoot"><span id="ver">wersja 122</span> · Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -3337,6 +3350,7 @@ function showAlarm(s,m,id){
 $('alOk').onclick=()=>{alarm.dis=alarm.id;$('alarm').style.display='none'};
 setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-alarm.last>2000)el.style.display='none';if(alarm.dis!=null&&Date.now()-alarm.last>8000)alarm.dis=null},500);
 
+var setCat;   // przełącza kategorię ustawień ('' = lista)
 // ================= Ekran ustawień (przenosi istniejące kontrolki w czytelne grupy) =================
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
@@ -3352,17 +3366,48 @@ setInterval(()=>{const el=$('alarm');if(el.style.display==='flex'&&Date.now()-al
   G('adv').appendChild($('cfg'));
   // tytuły nad przełącznikami bez własnego opisu
   const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
+
+  // ---- v122: ustawienia w zakładkach ----
+  const S=$('settings'),SB=S.querySelector('.sBody'),SH=S.querySelector('.sHead h2');
+  const CATS=[
+    ['look','🎨','Wygląd i mapa','Motyw, noc, rozmiar interfejsu, radar opadów',/^(Wygląd|Radar)/],
+    ['snd','🔊','Głos i dźwięk','Głos, rodzaj komunikatów, własne nagrania',/^(Głos|Własne)/],
+    ['car','🚗','Samochód','Model, lakier, tablica, ślad, wygląd pociągów',/^Samochód/],
+    ['drive','🔋','Jazda i bateria','Tryb HUD, oszczędzanie baterii, log jazdy',/^Jazda/],
+    ['comm','📣','Społeczność','Zgłoszenia kierowców, znajomi na mapie',/^(Zgłoszenia|Znajomi)/],
+    ['data','📊','Historia i dane','Historia, przejazdy, parking, mapa offline, eksport',/^Historia/],
+    ['adv','🔧','Zaawansowane','Serwery, klucze i źródła danych',/^Źródła/],
+    ['about','ℹ️','O aplikacji','Informacje i dokładność danych',/^O aplikacji/]];
+  const secs=[...SB.querySelectorAll(':scope>section')],home=document.createElement('div');home.id='setHome';
+  const chev='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+  for(const c of CATS){
+    const mine=secs.filter(x=>{const h=x.querySelector('h3'),t=h&&h.lastChild?h.lastChild.textContent.trim():'';return c[4].test(t)});
+    mine.forEach(x=>{x.dataset.cat=c[0];x.classList.toggle('one',mine.length===1)});
+    const b=document.createElement('button');b.type='button';b.className='setRow';b.dataset.cat=c[0];
+    b.innerHTML='<i aria-hidden="true">'+c[1]+'</i><span><b>'+c[2]+'</b><small>'+c[3]+'</small></span>'+chev;
+    b.onclick=()=>setCat(c[0]);home.appendChild(b);c.title=c[2];
+  }
+  SB.insertBefore(home,secs[0]);
+  setCat=k=>{
+    S.dataset.cat=k||'';
+    secs.forEach(x=>{x.style.display=(k&&x.dataset.cat===k)?'':'none'});
+    home.style.display=k?'none':'';
+    const c=CATS.find(x=>x[0]===k);SH.textContent=c?c.title:'Ustawienia';
+    const v=$('setVer');if(v)v.style.display=k?'none':'';
+    SB.scrollTop=0;
+  };
+  setCat('');
 }
 function openSettings(){
   $('start').classList.add('sec');$('start').textContent='Uruchom GPS (Start)';
   $('menu').classList.remove('open');$('setVer').textContent=($('ver')||{}).textContent||'';
-  $('settings').classList.add('open');$('settings').querySelector('.sBody').scrollTop=0;
+  try{setCat('')}catch(e){}$('settings').classList.add('open');$('settings').querySelector('.sBody').scrollTop=0;
 }
 function closeSettings(){$('settings').classList.remove('open')}
 $('start').addEventListener('click',closeSettings);
 $('menu').style.display='none';   // dawne menu ⋮ zostało przeniesione do ustawień
-$('setfab').onclick=openSettings;$('pickset').onclick=openSettings;$('setBack').onclick=closeSettings;
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings()});
+$('setfab').onclick=openSettings;$('pickset').onclick=openSettings;$('setBack').onclick=()=>{if($('settings').dataset.cat)setCat('');else closeSettings()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('settings').classList.contains('open')&&$('settings').dataset.cat)setCat('');else closeSettings()}});
 
 // ================= Własne nagrania komunikatów (zamiast głosu lektora) =================
 const CLIP_SLOTS=[
