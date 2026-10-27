@@ -205,14 +205,17 @@ html,body{height:100%;margin:0;overflow:hidden;font-family:system-ui,-apple-syst
 body.night{background:#10141a}
 #view{position:absolute;inset:0;overflow:hidden;perspective:900px;perspective-origin:50% 45%;background:#e8eaed}
 body.night #view{background:#10141a}
-#rot{position:absolute;left:50%;top:68%;width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;will-change:transform;transform-origin:50% 50%}
+#rot{position:absolute;left:50%;top:var(--cy,68%);width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;will-change:transform;transform-origin:50% 50%}
 #vmap{opacity:0;position:absolute;left:0;top:0;width:100%;height:100%;display:none;transform-origin:50% 50%;will-change:transform}
 #sky{position:absolute;left:0;right:0;top:0;height:40%;z-index:400;pointer-events:none;background:linear-gradient(var(--sky,#e8eaed) 12%,transparent)}
 body.night #sky{background:linear-gradient(var(--sky,#10141a) 12%,transparent)}
 body.flat #sky{display:none}
+/* widok kierowcy: mgła na horyzoncie – daleka mapa płynnie wtapia się w niebo (maska zamiast gradientu do przezroczystości: bez „szarej szyby”) */
+body.dm #sky{height:50%;background:radial-gradient(90% 55% at 50% 38%,rgba(255,250,235,.55),rgba(255,250,235,0) 72%),var(--sky,#e8eaed);-webkit-mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%);mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%)}
+body.dm.night #sky{height:50%;background:radial-gradient(90% 55% at 50% 38%,rgba(80,110,190,.32),rgba(80,110,190,0) 72%),var(--sky,#10141a);-webkit-mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%);mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%)}
 #map{position:absolute;inset:0;background:transparent}
 body.night .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.8)}
-#carIcon{position:absolute;left:50%;top:68%;width:96px;height:77px;transform:translate(-50%,-80%);z-index:500;pointer-events:none;filter:drop-shadow(0 5px 5px #0009)}
+#carIcon{position:absolute;left:50%;top:var(--cy,68%);width:96px;height:77px;transform:translate(-50%,-80%);z-index:500;pointer-events:none;filter:drop-shadow(0 5px 5px #0009)}
 #carIcon svg{width:100%;height:100%;display:block}
 #carIcon svg{transform-origin:50% 85%}
 #carIcon.mv svg{animation:carBob .8s ease-in-out infinite}
@@ -1244,6 +1247,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="vcNav" checked> Głos: skręty i pasy</label>
   <label style="font-size:.9rem"><input type="checkbox" id="vcRoad" checked> Głos: znaki, korki, limity</label>
   <label style="font-size:.9rem"><input type="checkbox" id="eco"> Tryb oszczędny baterii</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="dmCb" checked> Widok kierowcy podczas trasy (szersze drogi, mgła, strzałki na trasie)</label>
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
@@ -1352,7 +1356,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 128</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 129</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1982,6 +1986,8 @@ if(gmKey)useGoogle();
 
 // ---- Widok jak w nawigacji samochodowej ----
 function setDist(t){$('dist').textContent=t}
+var dmPref=true,dmOn=false,dmK=1,tiltDyn=0,tiltDynT=0,cyCur=.68,dmSp=0,dmTurn=false;   // „widok kierowcy”: immersyjna mapa podczas wybranej trasy (dmOn = włączony teraz)
+const tiltE=()=>tiltDeg>8?Math.max(8,tiltDeg+tiltDyn):tiltDeg;   // nachylenie kamery = wybór użytkownika + dopasowanie do prędkości
 let hAnch=null, tiltDeg=50, curRot=0, tgtRot=0, rotInit=true, lastH=0, night=(()=>{const h=new Date().getHours();return h>=19||h<6})();
 function applyNight(){document.body.classList.toggle('night',night);$('night').textContent=night?'Przełącz na tryb dzienny':'Przełącz na tryb nocny'}
 $('night').onclick=()=>{night=!night;applyNight();autoNight=false;$('autonight').checked=false;try{localStorage.setItem('autonight','0')}catch(e){}};
@@ -2043,7 +2049,7 @@ $('zin').onclick=()=>setZoom(zoomMul*1.45);
 $('zout').onclick=()=>setZoom(zoomMul/1.45);
 $('compass').onclick=()=>{rotOff=0;tgtRot=freeCam?0:-lastH;updRecenter()};   // kompas: powrót do kierunku jazdy (przy przesuniętej mapie – północ u góry)
 const tiltLbl=()=>{$('tilt').textContent=tiltDeg>=60?'2D':tiltDeg?'3D+':'3D'};
-$('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot()};
+$('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltDyn=0;tiltLbl();applyRot()};
 {
   const vw=$('view'),ptrs=new Map();let pan=null,g0=null,lpT=null;
   const pair=()=>{const a=[...ptrs.values()];return {d:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y)||1,ang:Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)*180/Math.PI}};
@@ -2062,7 +2068,7 @@ $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltLbl();applyRot
     }
     if(!pan||pan.held)return;
     if(!pan.moved){if(Math.hypot(e.clientX-pan.x0,e.clientY-pan.y0)<8)return;pan.moved=true;clearTimeout(lpT);enterFree()}
-    const R=rad(curRot),dyv=dy/Math.max(.35,Math.cos(rad(tiltDeg))),cx=dx*Math.cos(R)+dyv*Math.sin(R),cy=-dx*Math.sin(R)+dyv*Math.cos(R);   // przesunięcie palca w układzie mapy
+    const R=rad(curRot),dyv=dy/Math.max(.35,Math.cos(rad(tiltE()))),cx=dx*Math.cos(R)+dyv*Math.sin(R),cy=-dx*Math.sin(R)+dyv*Math.cos(R);   // przesunięcie palca w układzie mapy
     if(vec){panE-=cx/scaleCur;panN+=cy/scaleCur}else map.panBy([-cx,-cy],{animate:false});
   });
   ['pointerup','pointercancel'].forEach(t=>vw.addEventListener(t,e=>{clearTimeout(lpT);const tap=t==='pointerup'&&pan&&!pan.moved&&!pan.held&&ptrs.size===1;ptrs.delete(e.pointerId);g0=null;pan=null;if(ptrs.size===2)g0=pair();if(tap&&window.mapTap)window.mapTap(e.clientX,e.clientY)}));
@@ -2078,6 +2084,7 @@ function follow(p){
   const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=window.preview?(window.pvTxt||''):kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   updLimit(p);
   scaleBase=kmh>110?.85:kmh>80?1.1:kmh>50?1.5:kmh>25?2.05:2.8;if(nav&&nav.i>0&&nav.d<170&&nav.d>5)scaleBase*=1.25;   // przed skrętem kamera zbliża się do skrzyżowania
+  dmSp=kmh;dmTurn=!!(nav&&nav.i>0&&nav.d<170&&nav.d>5);   // dane dla widoku kierowcy (nachylenie kamery)
   scaleTgt=clampS(scaleBase*zoomMul);   // px na metr: im wolniej, tym bliżej ulicy (× ręczne zbliżenie)
   if(vec){
     camFix(p,p.heading!=null&&!isNaN(p.heading)?p.heading:lastH);
@@ -2917,6 +2924,7 @@ $('report').onclick=()=>{
   let manual=LSget('eco',false),bat=null;
   const upd=()=>{ecoOn=manual||(bat&&!bat.charging&&bat.level<.2);$('eco').checked=manual;document.body.classList.toggle('eco',!!ecoOn)};
   $('eco').onchange=()=>{manual=$('eco').checked;LSput('eco',manual);upd()};
+  {dmPref=LSget('dmPref',true)!==false;const e=$('dmCb');if(e){e.checked=dmPref;e.onchange=()=>{dmPref=e.checked;LSput('dmPref',dmPref)}}}   // widok kierowcy – domyślnie włączony
   try{if(navigator.getBattery)navigator.getBattery().then(b=>{bat=b;b.addEventListener('levelchange',upd);b.addEventListener('chargingchange',upd);upd()})}catch(e){}
   upd();
 }
@@ -3454,7 +3462,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn']);
+  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
   mv('snd',['vsel','vbose','sndsel','volTrain','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
@@ -4803,7 +4811,7 @@ function updInfo(p){
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null, provCam=null;   // provCam: ostatnia znana pozycja – mapa pokazuje się od razu, jeszcze przed pierwszym odczytem GPS
 const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mw:{w:19,m:14}};   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
-const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4);   // z bliska drogi są szerokie na tyle, by auto mieściło się na pasie
+const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4)*dmK;   // z bliska drogi są szerokie na tyle, by auto mieściło się na pasie
 const PAL={
  day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623'},
  night:{tun:'#3d4866',bg:'#141926',water:'#173a57',waterEdge:'#21507a',park:'#1f3d2e',parkEdge:'#285040',farm:'#18202b',grass:'#1c3528',wood:'#173226',wet:'#1a2f31',sand:'#212633',resi:'#191f2f',ind:'#1b1e2f',inst:'#1c2234',sport:'#1d3829',cem:'#1b2f24',rland:'#1b202c',bld:'#273046',bldEdge:'#34405c',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#444e6b',rs:'#546082',tr:'#5f6c91',sc:'#6f6d98',pr:'#7f779c',mw:'#b98259',mwIn:'#cf9569',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',plbl:'#aab3c8',wnl:'#6fa4d6',route:'#5b94f7',routeEdge:'#c98a2b'}};
@@ -5311,6 +5319,7 @@ function paintVec(cam){
   $('view').style.background=pal.bg;document.documentElement.style.setProperty('--sky',pal.bg);
   c.setTransform(vq,0,0,vq,0,0);
   c.fillStyle=pal.bg;c.fillRect(0,0,S,S);
+  const dm=dmOn;   // widok kierowcy: szersze drogi, cień jezdni, chodniki, wyraźne pasy, nocą poświata latarni
   const terr=Q=>{for(const k of TERR)if(Q[k]&&pal[k]){c.fillStyle=pal[k];c.fill(Q[k])}};
   // przy oddaleniu minimalna szerokość małych ulic maleje, a najmniejsze znikają – zamiast białych plam zostaje czytelna siatka
   const zq=Math.max(0,Math.min(1,(s-.1)/.4)),ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mw:.56},rwz=k=>Math.max(1.6,rw(k,s)*(ZF[k]+(1-ZF[k])*zq)),cwz=2.4+1.6*zq;
@@ -5342,7 +5351,15 @@ function paintVec(cam){
     if(P.bld&&s>=.5){
       if(s>=.8){c.save();c.translate(1.6/s,-1.6/s);c.fillStyle=pal.bldSh;c.fill(P.bld);c.restore()}   // delikatny cień budynków
       c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
-    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rwz(k)+cwz)/s;c.stroke(P[k])}
+    if(dm&&s>=.7){
+      const shw=night?'rgba(0,0,0,.30)':'rgba(70,58,35,.16)',wk=night?'rgba(130,145,190,.16)':'rgba(255,255,255,.7)',gl='rgba(255,208,150,.09)';
+      if(night)for(const k of ['tr','sc','pr','mw'])if(P[k]){c.strokeStyle=gl;c.lineWidth=(rwz(k)+cwz+18)/s;c.stroke(P[k])}   // poświata latarni przy głównych drogach
+      if(s>=1.2)for(const k of ['rs','tr','sc'])if(P[k]){c.strokeStyle=wk;c.lineWidth=(rwz(k)+cwz+9)/s;c.stroke(P[k])}   // chodnik wzdłuż ulicy
+      c.save();c.translate(2.4/s,-2.4/s);c.strokeStyle=shw;   // miękki cień jezdni (głębia)
+      for(const k of order)if(P[k]&&k!=='sv'){c.lineWidth=(rwz(k)+cwz+2)/s;c.stroke(P[k])}
+      c.restore();
+    }
+    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rwz(k)+cwz+(dm?1.2:0))/s;c.stroke(P[k])}
     const lm=night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)',le=night?'rgba(215,225,255,.32)':'rgba(105,95,75,.30)';
     for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=rwz(k)/s;c.stroke(P[k])
       const w=rwz(k);
@@ -5352,8 +5369,8 @@ function paintVec(cam){
         c.strokeStyle=k==='mw'?pal.mw:pal[k];c.lineWidth=(w-5)/s;c.stroke(P[k]);
         if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
       }}
-    if(s>=.7){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
-      if(P.cl){c.strokeStyle=lm;c.lineWidth=Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash([9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
+    if(s>=(dm?.5:.7)){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
+      if(P.cl){c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
     if(P.rail){
@@ -5370,7 +5387,7 @@ function paintVec(cam){
     if(D.LB&&s>=.3){   // nazwy ulic: ważniejsze drogi pierwsze, bez nakładania się i bez powtórzeń tej samej nazwy tuż obok siebie
       c.font='600 13px '+FONT_UI;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4;c.lineJoin='round';
       const rr=rad(curRot),rk={mw:0,pr:1,sc:2,tr:3,rs:4},cand=[],cr=Math.cos(rr),sr=Math.sin(rr),Wd=window.innerWidth,Hd=window.innerHeight,tl=tiltDeg>8?2.2:1;
-      for(const l of D.LB){
+      for(const l of D.LB){if(dm&&l.c==='rs'&&s<1.4)continue;
         const sx=S/2+s*(l.x-ox),sy=S/2-s*(l.y-oy),dx=sx-S/2,dy=sy-S/2;
         const u=dx*cr-dy*sr,v=dx*sr+dy*cr;   // położenie na ekranie względem środka obrotu mapy (z zapasem, bo mapa przerysowuje się rzadko)
         if(Math.abs(u)>Wd/2+240||v<-.68*Hd*tl-240||v>.32*Hd+240)continue;
@@ -5387,11 +5404,11 @@ function paintVec(cam){
         (sn||seen.set(l.n,[]).get(l.n)).push([q.sx,q.sy]);placed.push([q.sx,q.sy,hw,hh]);
         c.save();c.translate(q.sx,q.sy);c.rotate(a);
         c.strokeStyle=pal.halo;c.strokeText(l.n,0,0);c.fillStyle=(l.c==='mw'||l.c==='pr')?pal.lblMw:pal.lbl;c.fillText(l.n,0,0);c.restore();
-        if(++n>(s<.5?24:44))break;
+        if(++n>(dm?22:s<.5?24:44))break;
       }
     }
   }
-  vd={cam,s,kx,night,rot:curRot,data:vecData,wide:wideD};
+  vd={cam,s,kx,night,dm,rot:curRot,data:vecData,wide:wideD};
   $('vmap').style.opacity=1;
 }
 
@@ -5420,7 +5437,7 @@ function drawVec(){
   if(scaleCur<.3)loadWide(cam);
   if(!vctx||$('vmap').width!==Math.round(S*vq))sizeV();
   if(!vctx)return;
-  let need=!vd||vd.data!==vecData||vd.wide!==wideD||vd.night!==night;
+  let need=!vd||vd.data!==vecData||vd.wide!==wideD||vd.night!==night||vd.dm!==dmOn;
   if(!need){
     const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s,dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);
     if(Math.hypot(e,n)*vd.s*k>S*.12||k<.8||k>1.25||dr>25)need=true;
@@ -5445,6 +5462,14 @@ function routeAhead(R,car,sc,lim){
     if(c>lim)break;
   }
   return {pts,jl};
+}
+// kolor zmieszany z kolorem tła (mgła): f=1 – bez zmian, f→0 – kolor tła; kolory pozostają kryjące, więc złączenia kawałków linii nie ciemnieją
+const FCM=new Map(),hx3=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+function fcol(h,f,bg){
+  if(f>=.97||h[0]!=='#'||h.length!==7||bg[0]!=='#'||bg.length!==7)return h;
+  const q=Math.max(0,Math.round(f*12)),key=h+bg+q;let v=FCM.get(key);if(v)return v;
+  const a=hx3(h),b=hx3(bg),t=q/12;v='rgb('+a.map((x,i)=>Math.round(b[i]+(x-b[i])*t)).join(',')+')';
+  if(FCM.size>400)FCM.clear();FCM.set(key,v);return v;
 }
 function drawRouteTop(){
   if(!(vec&&route&&route.pts.length>1&&route.len>0&&vf))return;
@@ -5481,13 +5506,42 @@ function drawRouteTop(){
     else{cur={lv:pc.lv,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   mx.lineCap='round';mx.lineJoin='round';
+  const dm=dmOn,fadeA=r=>dm?Math.max(.22,Math.min(1,(r.ks/r.n-.26)/.5)):1;   // widok kierowcy: daleka część trasy blednie w mgle
+  if(dm&&!ecoOn){   // „dywan” trasy: miękka poświata pod linią (w kolorze natężenia ruchu)
+    mx.lineCap='butt';   // przezroczyste kawałki nie mogą nakładać się zaokrąglonymi końcami (ciemniejsze kropki na złączeniach)
+    for(const [wm,al] of [[3.3,.10],[2.2,.16]])for(const r of runs){
+      mx.globalAlpha=al*fadeA(r);mx.strokeStyle=r.lv?JC[r.lv]:pal.route;
+      mx.beginPath();mx.moveTo(r.xy[0],r.xy[1]);for(let i=2;i<r.xy.length;i+=2)mx.lineTo(r.xy[i],r.xy[i+1]);
+      mx.lineWidth=lw*wm*Math.max(.3,Math.min(1.25,r.ks/r.n));mx.stroke();
+    }
+    mx.globalAlpha=1;mx.lineCap='round';
+  }
   for(const [w,col] of [[lw*1.55,'#0b0b0d'],[lw*1.02,pal.route]]){   // niebieska linia z czarnymi paskami po bokach
     for(const r of runs){
       const jc=r.lv&&w<lw*1.2;   // natężenie ruchu: kolor drogi zależy od korka
-      mx.strokeStyle=jc?JC[r.lv]:col;
+      mx.strokeStyle=fcol(jc?JC[r.lv]:col,fadeA(r),pal.bg);
       mx.beginPath();mx.moveTo(r.xy[0],r.xy[1]);for(let i=2;i<r.xy.length;i+=2)mx.lineTo(r.xy[i],r.xy[i+1]);
       mx.lineWidth=(w+(jc?2:0))*Math.max(.3,Math.min(1.25,r.ks/r.n));mx.stroke();
     }
+  }
+  mx.globalAlpha=1;
+  if(dm&&!ecoOn){   // białe strzałki kierunku jazdy przyklejone do drogi (co 26 m): płyną ku autu, bledną z odległością
+    let ca=R.along||0;
+    try{const q=projRoute(R,car[0],car[1],Math.max(0,(R.idx|0)-1),Math.min(R.pts.length-2,(R.idx|0)+2));if(q&&q.off<40)ca=q.along}catch(e){}
+    const SP=26;let d=Math.ceil((ca+9)/SP)*SP-ca,j=0;
+    mx.strokeStyle='#fff';
+    for(;d<230&&j<pr.length-1;d+=SP){
+      while(j<pr.length-2&&dcum[j+1]<d)j++;
+      const A=pr[j],B=pr[j+1];if(!A||!B)break;
+      const L=dcum[j+1]-dcum[j];if(L<=.01)continue;
+      const t=Math.max(0,Math.min(1,(d-dcum[j])/L)),x=A.x+(B.x-A.x)*t,y=A.y+(B.y-A.y)*t,kc=Math.max(.3,Math.min(1.25,A.k+(B.k-A.k)*t));
+      const u=Math.max(1.8,Math.min(8,lw*.4*kc));
+      mx.globalAlpha=Math.max(0,1-d/230)*.92;
+      mx.save();mx.translate(x,y);mx.rotate(Math.atan2(B.y-A.y,B.x-A.x));
+      mx.lineWidth=Math.max(1.3,u*.55);mx.beginPath();mx.moveTo(-u*.7,-u);mx.lineTo(u*.6,0);mx.lineTo(-u*.7,u);mx.stroke();
+      mx.restore();
+    }
+    mx.globalAlpha=1;
   }
 }
 function setVec(on){
@@ -5514,10 +5568,10 @@ window.addEventListener('resize',()=>{sizeMk();if(typeof sizeV==='function')size
 function proj(lat,lon,hm){
   if(vec&&!vf)return null;
   const W=window.innerWidth,H=window.innerHeight,S=$('rot').clientWidth,q=vec?{x:S/2+vf.s*(lon-vf.cam.lon)*vf.kx,y:S/2-vf.s*(lat-vf.cam.lat)*111195}:map.latLngToContainerPoint([lat,lon]);
-  const u=q.x-S/2,v=q.y-S/2,R=rad(curRot),T=rad(tiltDeg),D=900;
+  const u=q.x-S/2,v=q.y-S/2,R=rad(curRot),T=rad(tiltE()),D=900;
   const h=hm||0,x1=u*Math.cos(R)-v*Math.sin(R),y1=u*Math.sin(R)+v*Math.cos(R),z=y1*Math.sin(T)+h*Math.cos(T);
   if(z>=D-50)return null;
-  const k=D/(D-z),Px=W*.5,Py=H*.45,Cx=W*.5,Cy=H*.68;
+  const k=D/(D-z),Px=W*.5,Py=H*.45,Cx=W*.5,Cy=H*cyCur;
   return {x:Px+(Cx+x1-Px)*k,y:Py+(Cy+y1*Math.cos(T)-h*Math.sin(T)-Py)*k,k};
 }
 // auto na jezdni: na wyznaczonej trasie ikona jest „przyklejona” do drogi i jedzie prawym pasem
@@ -5589,6 +5643,16 @@ function updCarSnap(){
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
 const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
 let wallKey='',wallCol=null,bldCache=null,bldTick=0,wallH=[],shc=null,shx=null;
+// widok kierowcy: dalekie budynki wtapiają się w tło tak samo jak mapa pod mgłą (kolor tła nakładany tylko na narysowane piksele)
+var fogG=null,fogKey='';
+function fogBuild(){
+  if(ecoOn||!(vec&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
+  const H=window.innerHeight,W=window.innerWidth,pal=themePal(PAL[night?'night':'day']),bg=pal.bg;
+  if(!/^#[0-9a-f]{6}$/i.test(bg))return;
+  const key=(night?'n':'d')+bg+H;
+  if(key!==fogKey||!fogG){fogKey=key;const r=parseInt(bg.slice(1,3),16),g=parseInt(bg.slice(3,5),16),b=parseInt(bg.slice(5,7),16),f=a=>'rgba('+r+','+g+','+b+','+a+')',G=mx.createLinearGradient(0,0,0,H*.5);G.addColorStop(0,f(1));G.addColorStop(.08,f(1));G.addColorStop(.28,f(.74));G.addColorStop(.58,f(.34));G.addColorStop(1,f(0));fogG=G}
+  mx.save();mx.globalCompositeOperation='source-atop';mx.fillStyle=fogG;mx.fillRect(0,0,W,H*.5);mx.restore();
+}
 function drawBuildings3D(){
   if(ecoOn||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
   const D=vecData,pal=PAL[night?'night':'day'],S=$('rot').clientWidth,s=vf.s;
@@ -5710,7 +5774,7 @@ function drawMarkers(){
   if(vec)drawVec();const P=proj;
   drawRadar();
   updCarSnap();carShadow();
-  drawBuildings3D();
+  drawBuildings3D();if(dmOn)fogBuild();
   drawHeat();
   drawAlts();drawRouteTop();drawLaneArrow();drawJunction();
   drawRouteSigns();
@@ -5794,14 +5858,25 @@ function drawPlaces(){
 }
 var ecoOn=false,fcnt=0;
 var lastFt=0;
+// widok kierowcy: włączany automatycznie, gdy jest wybrana trasa i jedziemy (nie w podglądzie trasy); kamera schodzi niżej za auto, nachylenie płynnie zależy od prędkości
+function dmStep(fk){
+  const on=!!(dmPref&&vec&&route&&route.len>0&&!window.preview);
+  if(on!==dmOn){dmOn=on;dmK=on?1.14:1;document.body.classList.toggle('dm',on);vd=null;if(!on){cyCur=.68;document.documentElement.style.removeProperty('--cy')}}
+  // nachylenie: szybciej = bardziej „na wprost” i dalej, wolno albo tuż przed skrętem = bardziej z góry; po ręcznym przesunięciu mapy zostaje bez zmian
+  tiltDynT=(dmOn&&tiltDeg>=40&&tiltDeg<60)?Math.max(-3,Math.min(12,(dmSp-35)*.2))-(dmTurn?4:0):0;
+  if(!freeCam||!dmOn){tiltDyn+=(tiltDynT-tiltDyn)*fk*.5;if(!dmOn&&Math.abs(tiltDyn)<.02)tiltDyn=0}
+  const cyT=dmOn&&tiltDeg>8?.715:.68;
+  if(Math.abs(cyT-cyCur)>.0004){cyCur+=(cyT-cyCur)*fk*.7;if(Math.abs(cyT-cyCur)<.0004)cyCur=cyT;document.documentElement.style.setProperty('--cy',(cyCur*100).toFixed(2)+'%')}
+}
 function frame(){
   if(ecoOn&&(fcnt++&1)){requestAnimationFrame(frame);return}
   const fnow=performance.now(),fdt=Math.min(.12,Math.max(.004,(fnow-(lastFt||fnow-16))/1000));lastFt=fnow;
   const fk=1-Math.pow(1-.08,fdt*60),fr=1-Math.pow(1-.15,fdt*60);   // wygładzanie niezależne od liczby klatek na sekundę
   scaleCur+=(scaleTgt-scaleCur)*fk;
+  dmStep(fk);
   const d=((tgtRot-curRot)%360+540)%360-180;
   curRot=Math.abs(d)<.05?tgtRot:curRot+d*fr;
-  $('rot').style.transform='rotateX('+tiltDeg+'deg) rotate('+curRot+'deg)';
+  $('rot').style.transform='rotateX('+tiltE().toFixed(2)+'deg) rotate('+curRot+'deg)';
   {const t0=performance.now();drawMarkers();fpsRec(fnow,performance.now()-t0)}
   $('compass').style.transform='rotate('+curRot+'deg)';
   requestAnimationFrame(frame);
