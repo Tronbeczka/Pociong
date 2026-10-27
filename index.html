@@ -741,6 +741,25 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
   #lfab{left:10px;bottom:130px;gap:6px}
   #rfab{right:10px;bottom:10px;gap:6px}
 }
+/* ===== Wersja 114: mniejsze powiadomienia u góry, przenoszenie ikon po przytrzymaniu ===== */
+#bl{width:84px;gap:2px;padding-left:4px;padding-right:4px}
+#bicon{width:34px;height:34px}
+#dist{font-size:1.2rem}
+#bt{padding:calc(env(safe-area-inset-top,0px) + 6px) 12px 6px 12px}
+#big{font-size:1.3rem;line-height:1.08}
+#sub{font-size:.84rem;line-height:1.2;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#strip,body.night #strip{padding-top:6px}
+#info{font-size:.68rem;padding:3px 10px}
+#nextStrip span{font-size:.8rem;padding:3px 10px}
+#evToast{padding:8px 12px;border-radius:16px}
+#evToast b{font-size:1rem}
+#evToast span{font-size:.84rem}
+#evToast button{padding:7px;font-size:.88rem}
+#evToast .evb{margin-top:7px}
+#sig{font-size:.9rem;padding:6px 12px}
+.dragIco{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.dragging{transform:scale(1.14)!important;box-shadow:0 0 0 3px #1a73e8,0 12px 30px rgba(0,0,0,.4)!important;opacity:.95;transition:none!important;z-index:3500!important}
+.moved{position:fixed!important;right:auto!important;bottom:auto!important;margin:0!important;z-index:900}
 </style>
 </head>
 <body>
@@ -825,6 +844,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
   <button id="hudBtn" class="sec">🪟 Tryb HUD (odbicie na szybie)</button>
+  <button id="icoReset" class="sec" type="button" style="width:100%">Przywróć domyślne ułożenie ikon (przenosisz je, przytrzymując)</button>
   <select id="uiSize" class="sec"><option value="0">Rozmiar paska, kart i okien: normalny</option><option value="1">Rozmiar paska, kart i okien: większy</option><option value="2">Rozmiar paska, kart i okien: największy</option></select>
   <button id="parkSave" class="sec">🅿️ Zapamiętaj miejsce parkowania</button>
   <button id="parkShow" class="sec">🅿️ Pokaż zaparkowane auto</button>
@@ -892,7 +912,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 113</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 114</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -976,12 +996,49 @@ const $=id=>document.getElementById(id);
       const tb=document.getElementById('top').getBoundingClientRect().bottom,ns=document.getElementById('nextStrip');
       const nb=ns&&ns.style.display==='flex'?ns.getBoundingClientRect().bottom:0;
       fit(L,Math.max(tb,nb)+8,['mic','srchfab']);
-      let tg=tb;for(const id of ['compass','setfab','repfab']){const e=document.getElementById(id);if(e&&getComputedStyle(e).display!=='none')tg=Math.max(tg,e.getBoundingClientRect().bottom)}
+      let tg=tb;for(const id of ['compass','setfab','repfab']){const e=document.getElementById(id);if(e&&!e.dataset.moved&&getComputedStyle(e).display!=='none')tg=Math.max(tg,e.getBoundingClientRect().bottom)}
       fit(R,tg+8,['tilt','recenter']);
     }catch(e){}
   };
   setInterval(window.fitUI,400);window.addEventListener('resize',()=>setTimeout(window.fitUI,50));window.addEventListener('orientationchange',()=>setTimeout(window.fitUI,300));
   setTimeout(window.fitUI,200);
+})();
+// ---- przenoszenie ikon: przytrzymaj ikonę (ok. 0,5 s), przeciągnij w wybrane miejsce i puść ----
+(function(){
+  const IDS=['srchfab','planfab','mic','zoomb','recenter','tilt','setfab','repfab','compass'];
+  const KEY='ico_pos_v1',HOME={srchfab:'lfab',planfab:'lfab',mic:'lfab',zoomb:'rfab',recenter:'rfab',tilt:'rfab'};
+  const ORDER={lfab:['srchfab','planfab','mic'],rfab:['zoomb','recenter','tilt']};
+  let pos={};try{pos=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){pos={}}
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(pos))}catch(e){}};
+  const clamp=(e,x,y)=>{const w=e.offsetWidth||44,h=e.offsetHeight||44;return[Math.max(4,Math.min(innerWidth-w-4,x)),Math.max(4,Math.min(innerHeight-h-4,y))]};
+  const place=(e,x,y)=>{if(!e.classList.contains('moved')){e.classList.add('moved');e.dataset.moved='1';if(e.parentNode!==document.body)document.body.appendChild(e)}
+    const c=clamp(e,x,y);e.style.left=c[0]+'px';e.style.top=c[1]+'px'};
+  const apply=()=>{for(const id of IDS){const e=document.getElementById(id),p=pos[id];if(e&&p)place(e,p[0]*innerWidth,p[1]*innerHeight)}};
+  const home=e=>{e.classList.remove('moved');delete e.dataset.moved;e.style.left=e.style.top='';
+    const h=HOME[e.id];if(h){const c=document.getElementById(h),ord=ORDER[h],k=ord.indexOf(e.id);let nx=null;for(let j=k+1;j<ord.length&&!nx;j++){const n=document.getElementById(ord[j]);if(n&&n.parentNode===c)nx=n}c.insertBefore(e,nx)}else document.getElementById('top').appendChild(e)};
+  window.resetIcons=()=>{pos={};save();IDS.forEach(id=>{const e=document.getElementById(id);if(e&&e.classList.contains('moved'))home(e)});setTimeout(()=>window.fitUI&&window.fitUI(),50)};
+  IDS.forEach(id=>{
+    const e=document.getElementById(id);if(!e)return;e.classList.add('dragIco');
+    let t=null,sx=0,sy=0,ox=0,oy=0,drag=false,pid=null;
+    e.addEventListener('contextmenu',ev=>ev.preventDefault());
+    e.addEventListener('pointerdown',ev=>{
+      if(ev.button>0)return;sx=ev.clientX;sy=ev.clientY;pid=ev.pointerId;drag=false;clearTimeout(t);
+      t=setTimeout(()=>{const r=e.getBoundingClientRect();ox=sx-r.left;oy=sy-r.top;drag=true;
+        if(!e.classList.contains('moved')){e.classList.add('moved');e.dataset.moved='1';document.body.appendChild(e);e.style.left=r.left+'px';e.style.top=r.top+'px'}
+        e.classList.add('dragging');try{e.setPointerCapture(pid)}catch(x){}try{navigator.vibrate&&navigator.vibrate(25)}catch(x){}},500);
+    });
+    e.addEventListener('pointermove',ev=>{
+      if(!drag){if(t&&Math.hypot(ev.clientX-sx,ev.clientY-sy)>10){clearTimeout(t);t=null}return}
+      ev.preventDefault();const c=clamp(e,ev.clientX-ox,ev.clientY-oy);e.style.left=c[0]+'px';e.style.top=c[1]+'px';
+    });
+    const end=()=>{clearTimeout(t);t=null;if(!drag)return;drag=false;e.classList.remove('dragging');
+      pos[id]=[parseFloat(e.style.left)/innerWidth,parseFloat(e.style.top)/innerHeight];save();
+      const stop=ev=>{ev.stopPropagation();ev.preventDefault()};window.addEventListener('click',stop,{capture:true,once:true});setTimeout(()=>window.removeEventListener('click',stop,true),400);
+      setTimeout(()=>window.fitUI&&window.fitUI(),30)};
+    e.addEventListener('pointerup',end);e.addEventListener('pointercancel',end);
+  });
+  apply();window.addEventListener('resize',()=>setTimeout(apply,80));
+  const rb=document.getElementById('icoReset');if(rb)rb.onclick=()=>{window.resetIcons();try{evToast('Ikony wróciły na swoje miejsca','',[],3000)}catch(e){}};
 })();
 const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
 function dist(a,b,c,d){const R=6371000,dl=rad(c-a),dn=rad(d-b);
