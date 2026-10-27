@@ -2,7 +2,7 @@ name: Opóźnienia pociągów (GTFS-RT, kopia dla aplikacji)
 
 on:
   schedule:
-    - cron: '*/10 * * * *'    # co ok. 10 minut (GitHub bywa opóźniony)
+    - cron: '*/5 * * * *'     # najczęściej, jak pozwala GitHub (w praktyce zaplanowane zadania bywają opóźniane lub pomijane – to tylko kopia awaryjna; aplikacja woli źródło na żywo)
   workflow_dispatch:
   push:
     paths:

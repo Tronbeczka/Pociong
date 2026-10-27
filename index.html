@@ -1268,6 +1268,8 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="dimOn" checked> Przyciemnij ekran w nocy</label>
   <button id="logan" class="sec">Analiza i odtworzenie logu jazdy</button><input id="logFile" type="file" accept="application/json" style="display:none">
   <button id="about" class="sec">O dokładności danych</button>
+  <div id="liveDiag" class="sInfo" style="white-space:pre-line"></div>
+  <button id="liveChk" class="sec">Sprawdź źródła opóźnień pociągów</button>
   <button id="expSet" class="sec">Eksport ustawień</button>
   <button id="impSet" class="sec">Import ustawień</button><input id="impFile" type="file" accept="application/json" style="display:none">
   <div id="cfg">
@@ -1350,7 +1352,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 127</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 128</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -3459,7 +3461,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['hudBtn','eco']);
-  mv('diag',['logon','fpsOn','logdl','logan','logFile','expSet','impSet','impFile']);
+  mv('diag',['liveDiag','liveChk','logon','fpsOn','logdl','logan','logFile','expSet','impSet','impFile']);
   mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow']);
   mv('about',['about','report']);
   G('adv').appendChild($('cfg'));
@@ -4759,6 +4761,7 @@ function updTrainCard(p){
       if(r&&!r.passed&&r.along<80000&&(!best||r.eta<best.eta))best={t,along:r.along,eta:r.eta,a,kind:'x',r};
     }
   }
+  window.liveHot=best?best.eta:null;window.liveHotAt=Date.now();   // za ile sekund najbliższy pociąg dojedzie do przejazdu na trasie – od tego zależy, jak często odświeżamy opóźnienia
   if(!best){card.style.display='none';nearTrainId=null;return}
   card.style.display='flex';
   {
@@ -6569,18 +6572,115 @@ function buildIdx(){
   gtfsIdx=new Map();gtfsNum=new Map();liveOk=false;liveStamp='';liveFor=null;
   if(gtfs)for(const tr of gtfs){if(tr.id)gtfsIdx.set(tr.id+'|'+tr.dy,tr);if(tr.ag&&tr.pn)gtfsNum.set(tr.ag+'|'+tr.pn+'|'+tr.dy,tr)}
 }
-async function loadLive(){
-  if(!gtfs||!gtfsIdx.size||demo)return;
+// Odświeżanie opóźnień. Źródło na żywo ma ok. 30 MB, więc „czy jest nowsza wersja?” sprawdzamy tanio: (1) nagłówkami (HEAD), (2) znacznikiem czasu
+// z pierwszych kilobajtów pliku (resztę pobierania przerywamy). Cały plik pobieramy dopiero przy nowszej wersji. Starsze dane nigdy nie nadpisują nowszych.
+const LV={busy:false,at:0,chk:0,ok:0,fails:0,src:'',news:0,last:'',gap:0,stamps:[],bytes:0,ms:0,parseAt:0,cool:0,probe:''};
+const LIVE_SRC=[{id:'mk',name:'mkuran.pl (na żywo)',heavy:true},{id:'gh',name:'kopia na GitHubie',heavy:false}];
+LIVE_SRC.forEach(S=>Object.assign(S,{lm:'',len:'',noHead:false,fails:0,nextAt:0,peekAt:0,reg:null,ok:0,err:''}));
+const STAMP_RE=/"timestamp"\s*:\s*"([^"]+)"/;
+const LIVE_EVERY={hot:10000,drive:20000,idle:60000},LIVE_MINGAP={hot:25000,drive:45000,idle:60000};   // co ile sprawdzamy / jak rzadko wolno pobierać duży plik w całości
+const liveK=()=>window.__lvK||1;   // skala czasu (tylko testy)
+function liveUrl(S){
+  const o=window.__lvUrl;if(o&&o[S.id])return o[S.id];   // adres podmieniany w testach
+  if(S.id==='mk')return 'https://mkuran.pl/gtfs/polish_trains/updates.json';
   const m=location.hostname.match(/^([^.]+)\.github\.io$/),user=m?m[1]:'Tronbeczka',repo=m?(location.pathname.split('/')[1]||'Pociong'):'Pociong';
-  const urls=['https://mkuran.pl/gtfs/polish_trains/updates.json','https://raw.githubusercontent.com/'+user+'/'+repo+'/gtfs-live/updates.json'];
-  for(const u of urls){
-    try{
-      const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
-      const txt=await r.text(),mt=txt.slice(0,800).match(/"timestamp"\s*:\s*"([^"]+)"/);
-      if(mt&&mt[1]===liveStamp&&liveFor===gtfsIdx)return;   // te same dane co przed chwilą – nie przetwarzamy ich drugi raz
-      applyLive(JSON.parse(txt));liveStamp=mt?mt[1]:'';liveFor=gtfsIdx;return;
-    }catch(e){}
-  }
+  // parametr omija 5-minutową pamięć podręczną serwerów GitHuba (raz na 2,5 min nowy adres); sprawdzenia w jego obrębie wracają z pamięci podręcznej
+  return 'https://raw.githubusercontent.com/'+user+'/'+repo+'/gtfs-live/updates.json?v='+Math.floor(Date.now()/150000);
+}
+function liveSaver(){try{const c=navigator.connection;return !!(c&&(c.saveData||/(^|-)2g$/.test(c.effectiveType||'')))}catch(e){return false}}
+// tryb: „hot” = pociąg dojedzie do przejazdu na trasie w ciągu 15 min (liczy updTrainCard), „drive” = jest trasa albo jedziemy, „idle” = stoimy bez trasy
+function liveMode(){
+  const n=Date.now();
+  if(window.liveHot!=null&&n-(window.liveHotAt||0)<20000&&window.liveHot<900)return 'hot';
+  return route||(gpsOk&&n-gpsOk.t<20000&&(gpsOk.speed||0)>2)?'drive':'idle';
+}
+function liveEvery(){
+  let e=LIVE_EVERY[liveMode()]*liveK();if(liveSaver())e*=3;
+  if(LV.fails)e=Math.min(300000*liveK(),Math.max(e,15000*liveK()*Math.pow(2,Math.min(LV.fails,6)-1)));   // po błędach coraz rzadziej
+  return e;
+}
+// 'same' = to samo, co już mamy; 'older' = starsze niż mamy (ignorujemy); 'new' = do pobrania/zastosowania
+function liveJudge(S,stamp){
+  if(!stamp||liveFor!==gtfsIdx)return 'new';
+  if(stamp===liveStamp)return 'same';
+  const t=isoSec(stamp)*1000;
+  if(!(t<liveTs))return 'new';
+  // starszy znacznik niż nasz: ignorujemy, chyba że to samo źródło, z którego mamy dane, uparcie podaje starszy (np. cofnięty zegar serwera)
+  if(S.id!==LV.src)return 'older';
+  if(S.reg&&S.reg.s===stamp){if(++S.reg.n>=4&&Date.now()-S.reg.t>=90000*liveK()){S.reg=null;return 'new'}}else S.reg={s:stamp,n:1,t:Date.now()};
+  return 'older';
+}
+async function liveCheck(S,force){
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),window.__lvTo||(S.heavy?70000:25000)),url=liveUrl(S),mode=liveMode();
+  const hdr=r=>[r.headers.get('last-modified')||'',r.headers.get('content-length')||''];
+  // zbyt częste pełne pobrania dużego pliku blokujemy (źródło i tak odświeża się co kilkadziesiąt sekund); wolne łącze = rzadziej
+  const thr=()=>{if(!S.heavy||force)return false;const dt=Date.now()-LV.parseAt;return dt>=0&&dt<Math.max(LIVE_MINGAP[mode]*liveK(),LV.cool)};
+  try{
+    let chg=false;
+    // tanio: same nagłówki. Co 3 min i tak zaglądamy do pliku, gdyby serwer podawał stałe nagłówki mimo zmian
+    if(S.heavy&&S.lm&&!S.noHead&&!force&&Date.now()-S.peekAt<180000*liveK()){
+      let h=null,hf=false;
+      try{h=await fetch(url,{method:'HEAD',cache:'no-store',signal:ctl.signal})}catch(e){if(ctl.signal.aborted)throw e;hf=true}   // błąd sieci/CORS przy HEAD nie oznacza, że HEAD jest niedostępny na stałe
+      if(!hf){
+        if(!h.ok){if(h.status===405||h.status===501)S.noHead=true;else throw new Error('HTTP '+h.status)}   // HEAD niewspierany = pomijamy go; inny błąd = zwykła awaria źródła
+        else{
+          const [lm,len]=hdr(h);
+          if(!lm)S.noHead=true;                        // bez daty modyfikacji sama długość nic nie mówi (nowa wersja może mieć ten sam rozmiar) – sprawdzamy początkiem pliku
+          else if(lm===S.lm&&len===S.len)return {st:'same'};
+          else chg=true;
+        }
+      }
+    }
+    if(chg&&thr())return {st:'wait'};
+    S.peekAt=Date.now();
+    const r=await fetch(url,{cache:S.heavy?'no-store':'no-cache',signal:ctl.signal});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const [lm,len]=hdr(r),t0=Date.now(),dec=new TextDecoder(),parts=[];
+    let head='',judged=false,st='new',stamp='',bytes=0;
+    const judge=s=>{judged=true;stamp=s;st=liveJudge(S,s);if(st==='new'&&thr())st='wait';return st!=='new'};
+    const stop=()=>{if(st!=='wait'){S.lm=lm;S.len=len}ctl.abort();return {st,stamp}};   // znamy już wersję – resztę pliku odrzucamy
+    const rd=r.body&&r.body.getReader?r.body.getReader():null;
+    if(rd){
+      for(;;){
+        const q=await rd.read();if(q.done)break;
+        bytes+=q.value.length;const s=dec.decode(q.value,{stream:true});parts.push(s);
+        if(!judged){head+=s;const m=STAMP_RE.exec(head);if((m||head.length>8000)&&judge(m?m[1]:''))return stop()}
+      }
+      parts.push(dec.decode());
+    }else{const x=await r.text();parts.push(x);bytes=x.length}
+    const txt=parts.join('');
+    if(!judged){const m=STAMP_RE.exec(txt.slice(0,8000));if(judge(m?m[1]:''))return stop()}
+    const j=JSON.parse(txt);
+    if(!j||typeof j!=='object')throw new Error('zły format pliku');
+    if(!(j.trip_updates&&j.trip_updates.length)&&liveN>0)throw new Error('plik bez kursów');   // pusty plik nie kasuje tego, co już wiemy
+    applyLive(j);
+    liveStamp=typeof j.timestamp==='string'?j.timestamp:'';liveFor=gtfsIdx;
+    S.lm=lm;S.len=len;LV.src=S.id;LV.parseAt=Date.now();LV.bytes=bytes;LV.ms=Date.now()-t0;LV.news++;LV.cool=S.heavy?Math.round(LV.ms*2.5):0;
+    LV.stamps.push(liveTs);if(LV.stamps.length>7)LV.stamps.shift();   // rytm źródła (mediana odstępów między wersjami) – tylko do podglądu
+    const dd=[];for(let i=1;i<LV.stamps.length;i++)if(LV.stamps[i]>LV.stamps[i-1])dd.push(LV.stamps[i]-LV.stamps[i-1]);
+    dd.sort((a,b)=>a-b);LV.gap=dd.length?dd[dd.length>>1]:0;
+    return {st:'new',stamp};
+  }finally{clearTimeout(to)}
+}
+async function loadLive(force){
+  if(LV.busy||!gtfs||!gtfsIdx.size||demo)return;
+  LV.busy=true;LV.at=Date.now();
+  let got=false;
+  try{
+    for(const S of LIVE_SRC){
+      if(S.nextAt>Date.now()||(S.heavy&&liveSaver()))continue;
+      try{
+        const r=await liveCheck(S,force);
+        S.fails=0;S.nextAt=0;S.err='';S.ok=Date.now();LV.chk=Date.now();LV.last=r.st;got=true;
+        break;   // źródło odpowiedziało – kopii (zawsze starszej od źródła na żywo) nie sprawdzamy
+      }catch(e){
+        const ab=e&&e.name==='AbortError';
+        S.fails++;S.err=ab?'brak odpowiedzi w limicie czasu':e&&e.name==='TypeError'?'brak połączenia lub blokada przeglądarki (CORS)':String(e&&e.message||e).slice(0,80);
+        S.nextAt=Date.now()+(ab&&S.heavy?600000:Math.min(S.heavy?600000:120000,30000*Math.pow(2,Math.min(S.fails,5)-1)))*liveK();
+      }
+    }
+  }finally{LV.busy=false}
+  if(got){LV.fails=0;LV.ok=Date.now()}else LV.fails++;
 }
 const isoSec=x=>{if(!x)return NaN;const t=Date.parse(String(x).replace(/(\.\d{3})\d+/,'$1'));return isNaN(t)?NaN:t/1000};   // także czas z 7 cyframi ułamka sekundy
 function applyLive(j){
@@ -6590,8 +6690,8 @@ function applyLive(j){
     let tr=gtfsIdx.get(u.trip_id+'|'+dy);
     if(!tr&&u.agency_id&&u.numbers&&u.numbers.length)tr=gtfsNum.get(u.agency_id+'|'+u.numbers.join('/')+'|'+dy);   // trip_id bywa niestabilny – wtedy po numerze pociągu
     if(!tr)continue;
-    tr.liveAt=ts;
-    if(u.cancelled||u.detour){tr.cx=u.cancelled?1:2;tr.dly=null;tr.cl=-1;tr.lo=0;tr.hi=tr.st.length-1;n++;continue}   // odwołany / jedzie objazdem
+    // „świeżość” kursu ustawiamy dopiero, gdy naprawdę przyjęliśmy jego dane (pusty wpis nie może udawać aktualnych opóźnień)
+    if(u.cancelled||u.detour){tr.cx=u.cancelled?1:2;tr.dly=null;tr.cl=-1;tr.lo=0;tr.hi=tr.st.length-1;tr.liveAt=ts;n++;continue}   // odwołany / jedzie objazdem
     const N=tr.st.length,by=new Map();for(const x of u.stop_times||[])by.set(x.stop_sequence,x);
     if(!by.size)continue;
     const ga=new Float64Array(N).fill(NaN),gd=new Float64Array(N).fill(NaN),can=new Uint8Array(N);let cl=-1,known=0;
@@ -6604,7 +6704,7 @@ function applyLive(j){
       if(x.confirmed)cl=i;
     }
     let lo=0,hi=N-1;while(lo<N&&can[lo])lo++;while(hi>=0&&can[hi])hi--;   // odwołane pierwsze/ostatnie stacje = kurs skrócony
-    if(lo>hi){tr.cx=1;tr.dly=null;tr.cl=-1;tr.lo=0;tr.hi=N-1;n++;continue}
+    if(lo>hi){tr.cx=1;tr.dly=null;tr.cl=-1;tr.lo=0;tr.hi=N-1;tr.liveAt=ts;n++;continue}
     if(!known)continue;
     let prev=NaN,first=-1;   // brakujące stacje: opóźnienie z poprzedniej, a przed pierwszą znaną – z pierwszej znanej
     for(let i=0;i<N;i++){
@@ -6621,11 +6721,54 @@ function applyLive(j){
       dd=Math.max(dd,da-(sdp-sa));                // odjazd nie wcześniej niż przyjazd + postój
       a[i]=da;d[i]=dd;pdep=tr.t0+sdp+dd;
     }
-    tr.cx=0;tr.dly={a,d};tr.cl=cl;tr.lo=lo;tr.hi=hi;n++;
+    tr.cx=0;tr.dly={a,d};tr.cl=cl;tr.lo=lo;tr.hi=hi;tr.liveAt=ts;n++;
   }
   liveN=n;const age=(Date.now()-ts)/60000;liveOk=n>0&&age<40;liveTs=ts;
 }
-setInterval(loadLive,60000);
+// harmonogram: co sekundę sprawdzamy, czy minął czas na kolejne sprawdzenie (10 s przy pociągu blisko, 20 s w jeździe, 60 s na postoju); ukryta karta = pauza
+setInterval(()=>{
+  if(document.hidden||LV.busy||!gtfs||demo)return;
+  const dt=Date.now()-LV.at;
+  if(dt<0||dt>=liveEvery())loadLive().catch(()=>{});
+},1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-LV.at>3000*liveK())loadLive().catch(()=>{})});   // po powrocie do aplikacji od razu świeże dane
+window.addEventListener('online',()=>{LV.fails=0;LIVE_SRC.forEach(S=>{S.nextAt=0});loadLive().catch(()=>{})});
+// podgląd w Diagnostyce (tylko właściciel)
+const liveAgo=ms=>{const s=Math.max(0,Math.round(ms/1000));return s<90?s+' s':Math.round(s/60)+' min'};
+const liveMB=b=>b>=1e6?(b/1e6).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(b/1e3))+' KB';
+function liveDiagText(){
+  if(!gtfs)return 'Rozkład jazdy jeszcze niewczytany.';
+  const n=Date.now(),L=[],sn=(LIVE_SRC.find(x=>x.id===LV.src)||{}).name;
+  L.push(liveN?'Opóźnienia: '+liveN+' kursów · źródło: '+(sn||'?')+' · wersja z '+new Date(liveTs).toLocaleTimeString('pl-PL')+' (sprzed '+liveAgo(n-liveTs)+')':'Opóźnienia: brak danych');
+  L.push('Sprawdzanie: '+(LV.chk?'ostatnio '+liveAgo(n-LV.chk)+' temu':'jeszcze nie było')+' · tryb: '+({hot:'pociąg blisko',drive:'jazda',idle:'postój'})[liveMode()]+' (co '+Math.round(liveEvery()/1000)+' s)'+(LV.last?' · wynik: '+({new:'nowsza wersja',same:'bez zmian',older:'źródło ma starsze dane',wait:'nowsza czeka na pobranie'})[LV.last]:''));
+  L.push('Pełnych pobrań: '+LV.news+(LV.bytes?' · ostatnie '+liveMB(LV.bytes)+' w '+(LV.ms/1000).toFixed(1).replace('.',',')+' s':'')+(LV.gap?' · rytm źródła ok. '+Math.round(LV.gap/1000)+' s':''));
+  for(const S of LIVE_SRC)L.push(S.name+': '+(S.err?'błąd – '+S.err+(S.nextAt>n?' (ponowię za '+liveAgo(S.nextAt-n)+')':''):S.ok?'działa (sprawdzono '+liveAgo(n-S.ok)+' temu)':'jeszcze nie sprawdzano'));
+  if(LV.probe)L.push('',LV.probe);
+  return L.join('\n');
+}
+async function liveProbeAll(){   // jednorazowy test obu źródeł: czy odpowiadają, jak szybko, jak duże i jak stare są dane (nic nie zmienia w aplikacji)
+  const L=[];
+  for(const S of LIVE_SRC){
+    const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),15000),t0=performance.now();
+    try{
+      const r=await fetch(liveUrl(S),{cache:'no-store',signal:ctl.signal}),t1=performance.now();
+      let head='',m=null;
+      if(r.ok&&r.body&&r.body.getReader){const rd=r.body.getReader(),dec=new TextDecoder();while(head.length<8000&&!m){const q=await rd.read();if(q.done)break;head+=dec.decode(q.value,{stream:true});m=STAMP_RE.exec(head)}}
+      ctl.abort();
+      const len=+r.headers.get('content-length')||0,t=m?isoSec(m[1])*1000:NaN;
+      L.push((r.ok?'✓ ':'✗ ')+S.name+': HTTP '+r.status+' po '+((t1-t0)/1000).toFixed(1).replace('.',',')+' s'+(len?' · rozmiar '+liveMB(len):' · rozmiar nieznany')+(isNaN(t)?' · brak znacznika czasu':' · dane sprzed '+liveAgo(Date.now()-t)));
+    }catch(e){L.push('✗ '+S.name+': '+(ctl.signal.aborted?'brak odpowiedzi w 15 s':'brak połączenia lub blokada przeglądarki (CORS)'))}
+    clearTimeout(to);
+  }
+  return 'Test źródeł ('+new Date().toLocaleTimeString('pl-PL')+'):\n'+L.join('\n');
+}
+{
+  const el=$('liveDiag'),btn=$('liveChk');
+  if(el&&btn){
+    setInterval(()=>{try{if(OWNER&&el.offsetParent!==null)el.textContent=liveDiagText()}catch(e){}},1000);
+    btn.onclick=async()=>{if(!OWNER)return;btn.disabled=true;LV.probe='Sprawdzam źródła…';try{LV.probe=await liveProbeAll()}catch(e){LV.probe='Nie udało się sprawdzić źródeł'}btn.disabled=false;try{el.textContent=liveDiagText()}catch(e){}};
+  }
+}
 const lateOf=(tr,seg)=>tr.dly?Math.round(tr.dly.a[Math.max(0,Math.min(tr.st.length-1,(seg||0)+1))]/60):null;   // opóźnienie wg prognozy na następnej stacji
 let idbP=null;   // jedno połączenie z bazą na całą sesję (wcześniej każdy odczyt otwierał nowe)
 function idb(){if(idbP)return idbP;idbP=new Promise((ok,no)=>{const r=indexedDB.open('przejazdy',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{const d=r.result;d.onclose=d.onversionchange=()=>{idbP=null;try{d.close()}catch(e){}};ok(d)};r.onerror=()=>{idbP=null;no(r.error)}});return idbP}
