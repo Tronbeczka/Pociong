@@ -763,6 +763,17 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 .dragIco{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .dragging{transform:scale(1.14)!important;box-shadow:0 0 0 3px #1a73e8,0 12px 30px rgba(0,0,0,.4)!important;opacity:.95;transition:none!important;z-index:3500!important}
 .moved{position:fixed!important;right:auto!important;bottom:auto!important;margin:0!important;z-index:900}
+/* ===== Wersja 117: porządki w układzie ===== */
+#pick .grab{display:none}
+#goRow{position:sticky;bottom:0;z-index:3;margin:0 -2px;padding:10px 2px calc(env(safe-area-inset-bottom,0px) + 6px);background:linear-gradient(to top,var(--u-surf) 72%,rgba(255,255,255,0))}
+body.night #goRow{background:linear-gradient(to top,var(--u-surf) 72%,rgba(32,34,40,0))}
+#settings select{padding-left:0;padding-right:0}
+#histbox{bottom:auto;max-height:calc(100% - 70px - 100px)}
+#intro .card{display:flex;flex-direction:column;overflow:hidden;max-height:min(90vh,100%)}
+#intro .card>h2{flex:none}
+#intro .card>ul{flex:1 1 auto;min-height:0;overflow:auto;margin:0;-webkit-overflow-scrolling:touch}
+#intro .card>#introOk{flex:none}
+#histbox>button:last-child{position:sticky;bottom:0;margin-top:10px;box-shadow:0 -12px 10px -2px var(--u-surf,#fff)}
 </style>
 </head>
 <body>
@@ -848,7 +859,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
   <button id="hudBtn" class="sec">🪟 Tryb HUD (odbicie na szybie)</button>
   <button id="icoReset" class="sec" type="button" style="width:100%">Przywróć domyślne ułożenie ikon (przenosisz je, przytrzymując)</button>
-  <select id="uiSize" class="sec"><option value="0">Rozmiar paska, kart i okien: normalny</option><option value="1">Rozmiar paska, kart i okien: większy</option><option value="2">Rozmiar paska, kart i okien: największy</option></select>
+  <select id="uiSize" class="sec"><option value="0">Rozmiar interfejsu: normalny</option><option value="1">Rozmiar interfejsu: większy</option><option value="2">Rozmiar interfejsu: największy</option></select>
   <button id="parkSave" class="sec">🅿️ Zapamiętaj miejsce parkowania</button>
   <button id="parkShow" class="sec">🅿️ Pokaż zaparkowane auto</button>
   <button id="dlarea" class="sec">Pobierz mapę okolicy (offline)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
@@ -915,7 +926,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 116</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 117</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -943,7 +954,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
     <div id="rinfo"></div><div id="altlist"></div><div id="fuelInfo"></div><div id="rxinfo"></div><div id="evinfo"></div><div id="wxinfo"></div>
     <button id="dlmap" class="sec" style="display:none;margin-top:6px">Pobierz mapę trasy (offline)</button><small id="dlst"></small>
   </div>
-  <div class="row"><button id="go">Jedź</button></div>
+  <div class="row" id="goRow"><button id="go">Jedź</button></div>
   <div id="ttstat"></div>
   <p style="font-size:.7rem;opacity:.55;margin-top:6px">Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
 </div></div>
@@ -998,6 +1009,7 @@ const $=id=>document.getElementById(id);
     try{
       const tb=document.getElementById('top').getBoundingClientRect().bottom,ns=document.getElementById('nextStrip');
       const nb=ns&&ns.style.display==='flex'?ns.getBoundingClientRect().bottom:0;
+      {const et=document.getElementById('evToast');uiTopLim=Math.max(tb,nb,et&&et.style.display==='block'?et.getBoundingClientRect().bottom:0)+4}
       const jq=document.getElementById('jp'),jb=jq&&jq.style.display==='block'&&!matchMedia('(orientation:landscape) and (max-height:540px)').matches?jq.getBoundingClientRect().bottom:0;
       fit(L,Math.max(tb,nb,jb)+8,['mic','srchfab']);
       let tg=tb;for(const id of ['compass','setfab','repfab']){const e=document.getElementById(id);if(e&&!e.dataset.moved&&getComputedStyle(e).display!=='none')tg=Math.max(tg,e.getBoundingClientRect().bottom)}
@@ -1108,7 +1120,8 @@ $('save').onclick=()=>{
   if(ws){const w=ws;ws=null;w.onclose=null;w.close();gTraj={};gBox=null}
   gConnect();$('cfg').style.display='none'};
 
-function setBanner(level,big,sub){const b=$('banner');b.className=level==='ok'?'':level;$('carIcon').classList.toggle('bad',level==='bad');$('bar').className=level==='ok'?'':level;$('bmain').textContent=big;$('big').textContent=big;$('sub').textContent=sub;
+function nbsp(t){return String(t).replace(/(\d) (?=(km\/h|km|m|min|s|h|godz\.)(?![\p{L}]))/gu,'$1\u00a0')}
+function setBanner(level,big,sub){sub=nbsp(sub);const b=$('banner');b.className=level==='ok'?'':level;$('carIcon').classList.toggle('bad',level==='bad');$('bar').className=level==='ok'?'':level;$('bmain').textContent=big;$('big').textContent=big;$('sub').textContent=sub;
   if(level==='ok'&&nav){$('bicon').innerHTML=nav.icon;$('big').textContent=nav.txt;$('sub').textContent=nav.then||sub;$('dist').textContent=nav.dist}
   else $('bicon').innerHTML=ICON_X}
 var nav=null,navSaid={},rerouting=false;
@@ -1302,22 +1315,22 @@ function evaluate(p){
     window._thr={id:threat.a.c.id,eta:s,d:m};
     if(s<=45&&threat.a.d<400&&!((p.speed||0)<1&&threat.a.d<120))showAlarm(s,m,threat.a.c.id);
     const R=threat.r,weak=R&&R.q==='sched',old=R&&(R.q==='old'||R.q==='stale');
-    setBanner('bad','Nadjeżdża pociąg',`Przejazd za ${m} m · pociąg ${fmtTE(s)}${bar}${(p.speed||0)<2&&threat.a.d<250?' · otwarcie ok. '+Math.round((s+200/Math.max(8,(threat.t.speed||60)/3.6)+15)/5)*5+' s':''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}${R?dataNote(R):''}${nTr>=2?' · drugi pociąg: sprawdź drugi tor':''}`);
+    setBanner('bad','Nadjeżdża pociąg',`Pociąg ${fmtTE(s)}${bar}${(p.speed||0)<2&&threat.a.d<250?' · otwarcie ok. '+Math.round((s+200/Math.max(8,(threat.t.speed||60)/3.6)+15)/5)*5+' s':''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}${R?dataNote(R):''}${nTr>=2?' · drugi pociąg: sprawdź drugi tor':''}`);
     say('t'+threat.a.c.id,`${weak?'Proszę uważać, według rozkładu jazdy nadjeżdża pociąg.':'Proszę uważać, nadjeżdża pociąg.'} Przejazd kolejowy za ${m} metrów. Proszę zwolnić.${old?' Dane o opóźnieniach nie są aktualne.':''}`,[300,120,300],'Nadjeżdża pociąg, proszę zwolnić');
   }else if(recent){
-    const m=Math.round(recent.a.d/10)*10, ago=Math.max(5,Math.round(-recent.r.eta/5)*5);
+    const ago=Math.max(5,Math.round(-recent.r.eta/5)*5);
     if((p.speed||0)<1&&recent.a.d<120)showWait(recent,0,0,ago);
-    setBanner('warn','Pociąg powinien już minąć',`Przejazd za ${m} m · według danych minął go ok. ${ago} s temu, ale rogatki mogą być jeszcze opuszczone${dataNote(recent.r)}`);
+    setBanner('warn','Pociąg powinien już minąć',`Według danych minął go ok. ${ago} s temu, ale rogatki mogą być jeszcze opuszczone${dataNote(recent.r)}`);
     say('p'+recent.a.c.id,'Pociąg powinien już minąć przejazd, ale dane mogą się spóźniać. Proszę uważać na rogatki.',[200,100,200],'Proszę uważać na rogatki');
   }else if(maybe){
     const m=Math.round(maybe.a.d/10)*10, td=Math.round(maybe.td/10)*10;
-    setBanner(maybe.td<800?'bad':'warn','Pociąg w pobliżu',`Przejazd za ${m} m · pociąg ok. ${td} m od przejazdu (kierunek nieznany)`);
+    setBanner(maybe.td<800?'bad':'warn','Pociąg w pobliżu',`Pociąg ok. ${td} m od przejazdu (kierunek nieznany)`);
     say('m'+maybe.a.c.id,`Proszę uważać, w pobliżu przejazdu kolejowego może być pociąg. Przejazd za ${m} metrów.`,[250,120,250],'W pobliżu przejazdu może być pociąg');
   }else if(near.d<warnDist){
     let tn;   // informacja o pociągach przy najbliższym przejeździe
-    if(gtfs&&!gKey&&!feedUrl){const nx=xNextInfo(near.c);tn=nx==null?' · rozkład się wczytuje':nx.m==null?' · brak pociągów w najbliższych 3 godzinach'+dataNote(nx):' · najbliższy pociąg '+(nx.m<1?'za chwilę':'za ok. '+(nx.m<60?nx.m+' min':Math.floor(nx.m/60)+' h '+(nx.m%60)+' min'))+dataNote(nx)}
+    if(gtfs&&!gKey&&!feedUrl){const nx=xNextInfo(near.c);tn=nx==null?' · rozkład się wczytuje':nx.m==null?' · brak pociągów w najbliższych 3 godzinach'+dataNote(nx,1):' · najbliższy pociąg '+(nx.m<1?'za chwilę':'za ok. '+(nx.m<60?nx.m+' min':Math.floor(nx.m/60)+' h '+(nx.m%60)+' min'))+dataNote(nx,1)}
     else tn=nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu';
-    setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',`za ${n} m`+(crossRisk(near.c)>=3&&!near.c.nb?' · wymaga szczególnej uwagi':'')+tn+feedNote);
+    setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',((crossRisk(near.c)>=3&&!near.c.nb?'Wymaga szczególnej uwagi':'')+tn+feedNote).replace(/^\s*·\s*/,'').replace(/^./,ch=>ch.toUpperCase()));
     say('x'+near.c.id,(near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`)+(crossRisk(near.c)>=3&&!near.c.nb?' Ten przejazd wymaga szczególnej uwagi.':''),near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy');
   }else setBanner('ok','Przejazd w oddali',`za ${n} m`);
 }
@@ -1331,9 +1344,9 @@ function liveStatus(){   // krótki opis jakości danych o opóźnieniach (pusty
 }
 const fmtAge=min=>min<90?Math.max(1,Math.round(min))+' min':String(Math.round(min/6)/10).replace('.',',')+' godz.';
 // dopisek o jakości danych: wg rozkładu (brak opóźnień z sieci) albo opóźnienia sprzed wielu minut
-function dataNote(R){
+function dataNote(R,short){
   if(!R)return '';
-  if(R.q==='sched')return ' · wg rozkładu (brak danych o opóźnieniu)';
+  if(R.q==='sched')return short?' · wg rozkładu':' · wg rozkładu (brak danych o opóźnieniu)';   // short: gdy pasek pod banerem już mówi o braku opóźnień
   if(R.q==='old'||R.q==='stale')return ' · opóźnienia sprzed '+fmtAge(R.age/60);
   return '';
 }
@@ -2638,7 +2651,7 @@ function replayLog(d){
 
 // ---- Planer: mapa i pozycja najpierw, panel wyboru trasy dopiero potem ----
 let plannerShown=false;const t0load=Date.now();
-function showPlanner(){plannerShown=true;$('pick').style.display='flex';$('planfab').style.display='none'}
+function showPlanner(){$('evToast').style.display='none';plannerShown=true;$('pick').style.display='flex';$('planfab').style.display='none'}
 $('pickx').onclick=()=>{$('pick').style.display='none';$('sug').innerHTML=''};
 $('planfab').onclick=showPlanner;
 setInterval(()=>{
@@ -3011,6 +3024,14 @@ function uiBusy(){
   if($('settings').classList.contains('open'))return true;
   return /\b(bad|warn)\b/.test($('banner').className);
 }
+// podpowiedź czeka, aż zamknie się plan trasy, ustawienia i wyszukiwarka (nie przykrywa ich)
+function evToastModal(t1,t2,btns,ms,n){
+  n=n||0;const on=id=>{const e=$(id);return !!e&&getComputedStyle(e).display!=='none'};
+  if((on('pick')||on('srchBox')||on('intro')||$('settings').classList.contains('open'))&&n<24){setTimeout(()=>evToastModal(t1,t2,btns,ms,n+1),2500);return}
+  evToast(t1,t2,btns,ms);
+}
+// otwarcie panelu (ustawienia, historia, wyszukiwarka…) chowa wcześniej wyświetloną podpowiedź – nie leży na panelu
+['setfab','pickset','srchfab','planfab','hist','xstat','xwatch','achOpen'].forEach(id=>{const e=$(id);if(e)e.addEventListener('click',()=>{const t=$('evToast');if(t&&!$('evB').children.length)t.style.display='none'},true)});
 // komunikaty „z własnej inicjatywy” aplikacji (podpowiedzi, wyzwania) czekają, aż ekran będzie wolny (najwyżej ok. 30 s)
 function evToastQ(t1,t2,btns,ms,n){
   n=n||0;
@@ -3642,7 +3663,7 @@ function drawRadar(){
 setInterval(()=>{const B=$('xBoard');if(!B||B.style.display!=='block'||!B.dataset.c)return;const c=xAll.get(+B.dataset.c)||xAll.get(B.dataset.c);if(c)showBoard(c)},10000);
 setInterval(()=>{
   if(LSget('xhint',false)||!vf||!vf.car||!xAll.size||window.__xhintBusy||uiBusy())return;
-  const car=vf.car;for(const c of xAll.values()){if(dist(car.lat,car.lon,c.lat,c.lon)<1500){LSput('xhint',true);evToast('💡 Dotknij znaku przejazdu na mapie','Zobaczysz pociągi, które nadjeżdżają, oraz rozkład na najbliższe 3 godziny.',[],9000);break}}
+  const car=vf.car;for(const c of xAll.values()){if(dist(car.lat,car.lon,c.lat,c.lon)<1500){LSput('xhint',true);evToastModal('💡 Dotknij znaku przejazdu na mapie','Zobaczysz pociągi, które nadjeżdżają, oraz rozkład na najbliższe 3 godziny.',[],9000);break}}
 },4000);
 
 // ---- szybszy start mapy: kafelki wokół ostatniej znanej pozycji ładują się, zanim złapie GPS ----
@@ -3986,8 +4007,8 @@ let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr=
 const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mw:{w:19,m:14}};   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
 const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4);   // z bliska drogi są szerokie na tyle, by auto mieściło się na pasie
 const PAL={
- day:{bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623'},
- night:{bg:'#141926',water:'#173a57',waterEdge:'#21507a',park:'#1f3d2e',parkEdge:'#285040',farm:'#18202b',grass:'#1c3528',wood:'#173226',wet:'#1a2f31',sand:'#212633',resi:'#191f2f',ind:'#1b1e2f',inst:'#1c2234',sport:'#1d3829',cem:'#1b2f24',rland:'#1b202c',bld:'#273046',bldEdge:'#34405c',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#444e6b',rs:'#546082',tr:'#5f6c91',sc:'#6f6d98',pr:'#7f779c',mw:'#b98259',mwIn:'#cf9569',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',plbl:'#aab3c8',wnl:'#6fa4d6',route:'#5b94f7',routeEdge:'#c98a2b'}};
+ day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623'},
+ night:{tun:'#3d4866',bg:'#141926',water:'#173a57',waterEdge:'#21507a',park:'#1f3d2e',parkEdge:'#285040',farm:'#18202b',grass:'#1c3528',wood:'#173226',wet:'#1a2f31',sand:'#212633',resi:'#191f2f',ind:'#1b1e2f',inst:'#1c2234',sport:'#1d3829',cem:'#1b2f24',rland:'#1b202c',bld:'#273046',bldEdge:'#34405c',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#444e6b',rs:'#546082',tr:'#5f6c91',sc:'#6f6d98',pr:'#7f779c',mw:'#b98259',mwIn:'#cf9569',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',plbl:'#aab3c8',wnl:'#6fa4d6',route:'#5b94f7',routeEdge:'#c98a2b'}};
 // VEC-PURE-START
 function parseMax(v){
   v=String(v).trim().toLowerCase();let m;
@@ -4160,7 +4181,11 @@ function buildMvt(tiles,lat0,lon0){
       const pr=f.p,k=T/f.e;let cls=null,fill=false,cut=3000;
       switch(f.l){
         case 'transportation':
-          if(f.t!==2||pr.brunnel==='tunnel')continue;
+          if(f.t!==2)continue;
+          if(pr.brunnel==='tunnel'){   // tunel: tylko blada, kreskowana linia (ciągłość drogi), bez udziału w wykrywaniu przejazdów i w przyciąganiu do dróg
+            if((pr.class==='rail'&&!pr.service&&pr.subclass!=='subway'&&pr.subclass!=='funicular')||pr.class==='motorway'||pr.class==='trunk'||pr.class==='primary'||pr.class==='secondary'||pr.class==='tertiary')cls='tun';
+            break;
+          }
           if(pr.class==='transit'&&(pr.subclass==='tram'||pr.subclass==='light_rail'))cls='tram';   // tramwaje: cienka, jasna kreska (bez „podkładów”)
           else if(pr.class==='rail')cls=(pr.subclass==='subway'||pr.subclass==='funicular')?null:'rail';
           else{cls=MV_ROAD[pr.class]||null;if(cls==='sv'&&(pr.service==='parking_aisle'||pr.service==='driveway'||pr.service==='drive-through'))cls=null}
@@ -4471,6 +4496,7 @@ function paintVec(cam){
     if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.park)}
     if(P.water){c.fillStyle=pal.water;c.fill(P.water);c.strokeStyle=pal.waterEdge;c.lineWidth=1.2/s;c.stroke(P.water)}
     if(P.wline){c.strokeStyle=pal.water;c.lineWidth=7/s;c.stroke(P.wline)}
+    if(P.tun&&s>=.18){c.save();c.setLineDash([7/s,6/s]);c.lineCap='butt';c.strokeStyle=pal.tun;c.lineWidth=Math.max(2,Math.min(9,rw('sc',s)*.5))/s;c.stroke(P.tun);c.restore()}   // tunele
     if(P.bld&&s>=.5){
       if(s>=.8){c.save();c.translate(1.6/s,-1.6/s);c.fillStyle=pal.bldSh;c.fill(P.bld);c.restore()}   // delikatny cień budynków
       c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
@@ -4492,7 +4518,7 @@ function paintVec(cam){
       if(s<.3){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(P.rail)}   // oddalenie: cienka ciągła linia
       else if(s<.6){c.strokeStyle=night?'#8f9bb8':'#6b7380';c.lineWidth=Math.max(1.6,rlw*.6)/s;c.stroke(P.rail)}   // średnio: ciągła linia bez „podkładów” (stacje nie robią zebry)
       else{
-        c.strokeStyle=night?'#b8c4e0':'#4a5260';c.lineWidth=rlw/s;c.stroke(P.rail);   // tory: ciemna kreska z jasnymi „podkładami”
+        c.strokeStyle=night?'#a3aecb':'#4a5260';c.lineWidth=rlw/s;c.stroke(P.rail);   // tory: ciemna kreska z jasnymi „podkładami”
         c.strokeStyle=night?'#1a2030':'#f4f4f2';c.lineWidth=rlw*.53/s;c.setLineDash([8/s,8/s]);c.lineCap='butt';c.stroke(P.rail);c.setLineDash([]);c.lineCap='round';
       }
     }
@@ -4785,6 +4811,7 @@ function drawXMark(o,rank){
 // etykiety przejazdów rysujemy po wszystkich znakach: najbliższe pierwsze, a etykieta, która nachodziłaby na wcześniejszą, jest pomijana
 const XLAB=[],XNC={'#8f1d1d':'#ff9d94','#c62828':'#ff7a6e','#37474f':'#cfd8dc'};   // XNC: jaśniejsze litery w nocy
 var xTapped=(()=>{try{return localStorage.getItem('xtap')==='1'}catch(e){return false}})();
+var uiTopLim=0;   // dolna krawędź górnych elementów (baner, chipy, podpowiedź) – aktualizuje fitUI
 function drawXLabels(){
   if(!XLAB.length)return;
   XLAB.sort((a,b)=>a.d-b.d);
@@ -4792,7 +4819,7 @@ function drawXLabels(){
   const W=window.innerWidth;
   mx.save();mx.textAlign='center';mx.textBaseline='top';mx.lineWidth=4;mx.lineJoin='round';
   for(const L of XLAB){
-    if(L.x<-20||L.x>W+20)continue;   // znak poza ekranem
+    if(L.x<-20||L.x>W+20||L.y<uiTopLim)continue;   // poza ekranem albo pod banerem/chipami   // znak poza ekranem
     const lh=Math.round(L.fs*1.25);mx.font='700 '+L.fs+'px '+FONT_UI;
     let w=0;for(const [t] of L.lines)w=Math.max(w,mx.measureText(t).width);
     const cx=Math.max(w/2+6,Math.min(W-w/2-6,L.x));   // przy brzegu ekranu napis się przesuwa, zamiast być ucięty
