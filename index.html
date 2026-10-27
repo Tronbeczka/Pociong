@@ -774,6 +774,8 @@ body.night #goRow{background:linear-gradient(to top,var(--u-surf) 72%,rgba(32,34
 #intro .card>ul{flex:1 1 auto;min-height:0;overflow:auto;margin:0;-webkit-overflow-scrolling:touch}
 #intro .card>#introOk{flex:none}
 #histbox>button:last-child{position:sticky;bottom:0;margin-top:10px;box-shadow:0 -12px 10px -2px var(--u-surf,#fff)}
+/* ===== Wersja 118: znak z domyślnym limitem (przerywany) ma czytelną „plakietkę ~” zamiast czerwonej kreski ===== */
+#lim.imp::after{content:"~";right:-5px;top:-5px;width:16px;height:16px;box-sizing:border-box;border-radius:50%;background:#fff;border:2px solid #d93025;color:#d93025;font:800 11px/11px Barlow,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.28)}
 </style>
 </head>
 <body>
@@ -926,7 +928,7 @@ body.night #goRow{background:linear-gradient(to top,var(--u-surf) 72%,rgba(32,34
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 117</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 118</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1195,6 +1197,7 @@ async function cachedOverpass(key,q){
   catch(e){let c=null;try{c=await idbGet('op|'+key)}catch(_){}if(c&&c.j)return c.j;throw e}
 }
 var xOk=null;   // gdzie ostatnio udało się pobrać przejazdy (do czasu odpowiedzi nie mówimy „droga wolna”)
+var arrivedAt=0,arrivedSub='';   // chwila dojazdu do celu: baner „Dojechaliśmy” zostaje na ok. 12 s (ostrzeżenie o przejeździe ma zawsze pierwszeństwo)
 const xReady=p=>demo||!!(xOk&&dist(xOk.lat,xOk.lon,p.lat,p.lon)<3200);
 async function loadCrossings(lat,lon){
   lastFetch={lat,lon};
@@ -1269,7 +1272,8 @@ function evaluate(p){
   aheadList=ahead.slice(0,6);
   {const n2=ahead[1];$('then').style.display=n2?'flex':'none';if(n2)$('then').textContent='Potem '+fmtD(n2.d)}
   if(!ahead.length){window._nearX=null;setDist('');$('then').style.display='none';
-    if(!xReady(p))setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych');   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
+    if(arrivedAt&&!route&&Date.now()-arrivedAt<12000)setBanner('ok','Dojechaliśmy',arrivedSub);
+    else if(!xReady(p))setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych');   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
     else setBanner('ok','Droga wolna',wide?'Brak przejazdów kolejowych w najbliższych '+fmtKm(Math.max(warnDist,1200)):'Brak przejazdu kolejowego w pobliżu');
     return}
 
@@ -1630,6 +1634,7 @@ function routeAt(R,d){
 }
 // ROUTE-PURE-END
 function setRoute(coords,dur,steps,jam,delay,inc){
+  arrivedAt=0;
   route=makeRoute(coords,dur);route.inc=inc||[];route.jam0=(jam&&jam.length>=route.pts.length-1)?jam:null;route.jam=route.jam0;route.fsAt=0;route.fsTo=0;route.delay=delay||0;routeSeg=route.pts;routeSegI=0;navSaid={};
   let o=0;route.steps=(steps||[]).map(x=>{const y={...x,off:o};o+=x.dist;return y});
   rCase.setLatLngs(route.pts);rLine.setLatLngs(route.pts);
@@ -1650,14 +1655,14 @@ function navIcon(k){
    arrive:'<path d="M20 5a9 9 0 0 0-9 9c0 8 9 21 9 21s9-13 9-21a9 9 0 0 0-9-9z" fill="#fff"/><circle cx="20" cy="14" r="3.5" fill="#1a7f45"/>'
   })[k]||'';
 }
-function navStep(st){
+function navStep(st,far){   // far: do tego manewru jest jeszcze kawałek drogi (dla dojazdu: „Cel podróży” zamiast „Dojechałeś”)
   const m=st.mod||'',L=m.includes('left'),R=m.includes('right'),sharp=m.includes('sharp'),slight=m.includes('slight');
   const side=L?'w lewo':R?'w prawo':'';
   const adv=(slight?'lekko ':sharp?'ostro ':'')+side;
   let txt,ic;
   switch(st.type){
    case 'depart':txt='Ruszaj prosto';ic='straight';break;
-   case 'arrive':txt='Dojechałeś do celu'+(L?' (po lewej)':R?' (po prawej)':'');ic='arrive';break;
+   case 'arrive':txt=far?'Cel podróży'+(L?' po lewej':R?' po prawej':''):'Dojechałeś do celu'+(L?' (po lewej)':R?' (po prawej)':'');ic='arrive';break;
    case 'roundabout':case 'rotary':txt='Na rondzie zjedź '+(st.exit||1)+'. zjazdem';ic='round';break;
    case 'roundabout turn':txt='Na rondzie skręć '+adv;ic='round';break;
    case 'exit roundabout':case 'exit rotary':txt='Zjedź z ronda';ic='straight';break;
@@ -1752,20 +1757,29 @@ function navUpdate(){
   if(!route||!route.steps||route.steps.length<2)return;
   const st=route.steps;let i=1;
   while(i<st.length-1&&st[i].off<route.along-8)i++;
-  const cur=navStep(st[i]),d=Math.max(0,st[i].off-route.along);
+  const d=Math.max(0,st[i].off-route.along),cur=navStep(st[i],d>40);
   if(st[i].type==='arrive'&&i<st.length-1){cur.txt='Przystanek po drodze'}
-  nav={txt:cur.txt,icon:navIcon(cur.ic),dist:fmtD(d),d,i,then:i+1<st.length?'Potem: '+navStep(st[i+1]).txt:''};
+  nav={txt:cur.txt,icon:navIcon(cur.ic),dist:fmtD(d),d,i,then:i+1<st.length?'Potem: '+(st[i+1].type==='arrive'&&i+1<st.length-1?'przystanek po drodze':navStep(st[i+1],true).txt):''};
   laneUpdate(st,i,d);
   if(d<300&&!navSaid[i]){navSaid[i]=1;
     const t=navSay(st[i]),dm=Math.max(50,Math.round(d/50)*50),sl=navSlot(st[i]);
+    if(st[i].type==='arrive'){   // do celu jeszcze kawałek drogi: „dojechaliśmy” mówimy dopiero na miejscu (arriveSay)
+      say('n'+i,'Za '+dm+' metrów dojedziemy do '+(i<st.length-1?'przystanku':'celu'),[120],'Cel za '+dm+' metrów');return}
     if(clips[sl]&&$('voice').checked&&!voiceMuted&&!vcOff.Nav&&!window.preview){   // własne nagranie manewru
       spoken['n'+i]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}
-      const a=[];if(st[i].type!=='arrive'&&st[i].type!=='depart')a.push({tts:'Za '+dm+' metrów'});
-      a.push({clip:sl});if(st[i].name&&st[i].type!=='arrive'&&st[i].type!=='depart')a.push({tts:st[i].name});
+      const a=[];if(st[i].type!=='depart')a.push({tts:'Za '+dm+' metrów'});
+      a.push({clip:sl});if(st[i].name&&st[i].type!=='depart')a.push({tts:st[i].name});
       speakSeq(a,.9);return;
     }
-    say('n'+i,st[i].type==='arrive'?t:'Za '+dm+' metrów '+t.charAt(0).toLowerCase()+t.slice(1),[120],t);
+    say('n'+i,'Za '+dm+' metrów '+t.charAt(0).toLowerCase()+t.slice(1),[120],t);
   }
+}
+// dojazd na miejsce (do 40 m od celu): własne nagranie „arrive”, a bez niego głos
+function arriveSay(){
+  if(window.preview||!route)return;
+  const k='n'+((route.steps&&route.steps.length)||1)+'z';
+  if(clips.arrive&&$('voice').checked&&!voiceMuted&&!vcOff.Nav){spoken[k]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}if(playClip('arrive',.9))return}
+  say(k,'Dojechaliśmy do celu',[120],'Jesteśmy na miejscu');
 }
 // ---- Ograniczenie prędkości z danych OSM (maxspeed) ----
 let limShow=0,limV=null;
@@ -1922,7 +1936,7 @@ function routeUpdate(p){
   const rem=Math.max(0,route.len-r.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
   const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   $('bsub').textContent=mins+' min · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
-  if(rem<40){const cmp=finishTrip();setBanner('ok','Dojechaliśmy','Jesteśmy u celu'+cmp);clearRoute();setTimeout(()=>{try{evToast('🅿️ Dojechałeś na miejsce','Zapisać, gdzie zaparkowałeś?',[['Zapisz',saveParking],['Nie',()=>{}]],20000)}catch(e){}},2500);return}
+  if(rem<40){const cmp=finishTrip();try{arriveSay()}catch(e){}arrivedAt=Date.now();arrivedSub='Jesteśmy u celu'+cmp;setBanner('ok','Dojechaliśmy',arrivedSub);clearRoute();setTimeout(()=>{try{evToast('🅿️ Dojechałeś na miejsce','Zapisać, gdzie zaparkowałeś?',[['Zapisz',saveParking],['Nie',()=>{}]],20000)}catch(e){}},2500);return}
   // zjechanie z trasy (zły skręt): po ~3 s poza trasą liczymy nową, najszybszą od bieżącej pozycji
   route.offN=(r.off>45&&(p.speed||0)>2)?route.offN+1:0;
   if((route.offN>=3||(route.offN>=2&&r.off>150))&&endPt&&!rerouting&&Date.now()-route.lastRr>8000){
@@ -4518,8 +4532,8 @@ function paintVec(cam){
       if(s<.3){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(P.rail)}   // oddalenie: cienka ciągła linia
       else if(s<.6){c.strokeStyle=night?'#8f9bb8':'#6b7380';c.lineWidth=Math.max(1.6,rlw*.6)/s;c.stroke(P.rail)}   // średnio: ciągła linia bez „podkładów” (stacje nie robią zebry)
       else{
-        c.strokeStyle=night?'#a3aecb':'#4a5260';c.lineWidth=rlw/s;c.stroke(P.rail);   // tory: ciemna kreska z jasnymi „podkładami”
-        c.strokeStyle=night?'#1a2030':'#f4f4f2';c.lineWidth=rlw*.53/s;c.setLineDash([8/s,8/s]);c.lineCap='butt';c.stroke(P.rail);c.setLineDash([]);c.lineCap='round';
+        c.strokeStyle=night?'#a3aecb':'#566070';c.lineWidth=rlw/s;c.stroke(P.rail);   // tory: ciemna kreska z jasnymi „podkładami”
+        c.strokeStyle=night?'#1a2030':'#eceef1';c.lineWidth=rlw*.53/s;c.setLineDash([8/s,8/s]);c.lineCap='butt';c.stroke(P.rail);c.setLineDash([]);c.lineCap='round';
       }
     }
     if(P.tram&&s>=.3){c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(P.tram)}
@@ -6086,7 +6100,7 @@ setInterval(()=>{
   if(el>100){dr=null;drOn=false;return}
   const slow=Math.max(0,el-60),d=dr.v*Math.min(el,60)+dr.v*slow*(1-slow/80),v=el>60?dr.v*Math.max(0,1-slow/40):dr.v;
   const al=Math.min(route.len-5,dr.al+d),a=routeAt(route,al),b=routeAt(route,al+15);
-  if(!drOn){drOn=true;try{evToast('📡 Brak sygnału GPS','Szacuję pozycję na trasie – ostrzeżenia działają dalej.',null,5000)}catch(e){}}
+  if(!drOn){drOn=true;try{evToast('📡 Brak sygnału GPS','Szacuję pozycję – ostrzeżenia mniej dokładne.',null,5000)}catch(e){}}
   last={lat:a[0],lon:a[1],t:now};
   evaluate({lat:a[0],lon:a[1],speed:v,heading:bear(a[0],a[1],b[0],b[1])});
 },1000);
