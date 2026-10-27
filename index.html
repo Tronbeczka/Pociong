@@ -1356,7 +1356,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 130</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 131</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -5478,6 +5478,11 @@ function drawRouteTop(){
   const cd=freeCam?dist(vf.cam.lat,vf.cam.lon,vf.car.lat,vf.car.lon):0,vis=Math.hypot(window.innerWidth,window.innerHeight)*(tiltDeg>8?2.4:1.15)/scaleCur+cd;
   const {pts,jl}=routeAhead(R,car,scaleCur,(R.along||0)+Math.max(6000,vis));
   if(pts.length<2)return;
+  // auto rysujemy z wyprzedzeniem (przewidywanie ruchu), więc kilka pierwszych punktów trasy może już leżeć ZA nim – bez tego linia robi pętlę pod autem
+  while(pts.length>2){
+    const a=pts[0],b=pts[1],c=pts[2],cx=Math.cos(rad(a[0]));
+    if((b[1]-a[1])*cx*(c[1]-b[1])*cx+(b[0]-a[0])*(c[0]-b[0])<0){pts.splice(1,1);jl.splice(0,1)}else break;
+  }
   // niebieska linia tylko na naszym pasie: przesuwamy ją w bok tak jak samochód (blisko auta – jego bieżący pas, dalej – prawy pas albo środek)
   const Rr=rw('tr',scaleCur),def=singleLane?0:Rr/4,lc=laneCur==null?def:laneCur;
   const brg=[],dcum=[0];
@@ -5504,6 +5509,11 @@ function drawRouteTop(){
     const kk=(pc.a.k+pc.b.k)/2;
     if(cur&&cur.lv===pc.lv&&cur.e===pc.a&&Math.abs(kk-cur.k0)<=.035*cur.k0){cur.xy.push(pc.b.x,pc.b.y);cur.e=pc.b;cur.ks+=kk;cur.n++}
     else{cur={lv:pc.lv,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
+  }
+  // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
+  if(runs.length&&runs[0].xy.length>=4){
+    const r0=runs[0],xy=r0.xy,dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy),sh=lw*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));
+    if(L>sh*1.3){xy[0]+=dx/L*sh;xy[1]+=dy/L*sh}
   }
   mx.lineCap='round';mx.lineJoin='round';
   const dm=dmOn,fadeA=r=>dm?Math.max(.22,Math.min(1,(r.ks/r.n-.26)/.5)):1;   // widok kierowcy: daleka część trasy blednie w mgle
@@ -5864,7 +5874,7 @@ function dmStep(fk){
   if(on!==dmOn){dmOn=on;dmK=on?1.14:1;document.body.classList.toggle('dm',on);vd=null;if(!on){cyCur=.68;document.documentElement.style.removeProperty('--cy')}}
   // nachylenie: szybciej = bardziej „na wprost” i dalej, wolno albo tuż przed skrętem = bardziej z góry; po ręcznym przesunięciu mapy zostaje bez zmian
   tiltDynT=(dmOn&&tiltDeg>=40&&tiltDeg<60)?Math.max(-3,Math.min(12,(dmSp-35)*.2))-(dmTurn?4:0):0;
-  if(!freeCam||!dmOn){tiltDyn+=(tiltDynT-tiltDyn)*fk*.5;if(!dmOn&&Math.abs(tiltDyn)<.02)tiltDyn=0}
+  if(!freeCam||!dmOn){tiltDyn+=(tiltDynT-tiltDyn)*fk*(dmOn?.5:1);if(!dmOn&&Math.abs(tiltDyn)<.02)tiltDyn=0}
   const cyT=dmOn&&tiltDeg>8?.715:.68;
   if(Math.abs(cyT-cyCur)>.0004){cyCur+=(cyT-cyCur)*fk*.7;if(Math.abs(cyT-cyCur)<.0004)cyCur=cyT;document.documentElement.style.setProperty('--cy',(cyCur*100).toFixed(2)+'%')}
 }
