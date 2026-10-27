@@ -1350,7 +1350,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 126</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 127</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1677,10 +1677,11 @@ function say(key,text,vib,short){if(window.preview)return;const now=Date.now();i
   speak(vbose==='short'&&short?short:text,cat==='Train'?volTrain:.9)}
 
 // zapytanie Overpass z pamięcią podręczną: bez internetu użyjemy ostatniego wyniku dla tego obszaru
-async function cachedOverpass(key,q){
-  try{const j=await fetchOverpass(q);try{await idbSet('op|'+key,{t:Date.now(),j})}catch(e){}return j}
+async function cachedOverpass(key,q,ms){
+  try{const j=await fetchOverpass(q,ms);try{await idbSet('op|'+key,{t:Date.now(),j})}catch(e){}return j}
   catch(e){let c=null;try{c=await idbGet('op|'+key)}catch(_){}if(c&&c.j)return c.j;throw e}
 }
+var xFails=0;
 var xOk=null;   // gdzie ostatnio udało się pobrać przejazdy (do czasu odpowiedzi nie mówimy „droga wolna”)
 var arrivedAt=0,arrivedSub='';   // chwila dojazdu do celu: baner „Dojechaliśmy” zostaje na ok. 12 s (ostrzeżenie o przejeździe ma zawsze pierwszeństwo)
 const xReady=p=>demo||!!(xOk&&dist(xOk.lat,xOk.lon,p.lat,p.lon)<3200);
@@ -1689,14 +1690,16 @@ async function loadCrossings(lat,lon){
   // 1) węzły oznaczone railway=level_crossing, 2) węzły wspólne toru i drogi (przejazdy, których nikt nie opisał tagami)
   const q=`[out:json][timeout:25];way(around:4000,${lat},${lon})["railway"~"^(rail|narrow_gauge|preserved)$"]["service"!~"."][!"bridge"][!"tunnel"]->.r;node(w.r)->.rn;way(bn.rn)["highway"]["highway"!~"^(footway|path|cycleway|steps|pedestrian|bridleway|construction|proposed|corridor|elevator)$"][!"bridge"][!"tunnel"]->.h;node(w.h)->.hn;(node.rn.hn;node(around:4000,${lat},${lon})["railway"="level_crossing"];);out;`;
   const q0=`[out:json][timeout:20];node(around:4000,${lat},${lon})["railway"="level_crossing"];out;`;
-  try{
-    let j;
-    try{j=await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q)}
-    catch(e){j=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q0)}   // zapas: tylko oznaczone przejazdy
-    const seen=new Set();crossings=j.elements.filter(e=>e.lat!=null&&!seen.has(e.id)&&seen.add(e.id)).map(xParse).filter(c=>!xHid(c));xAdd(crossings);xErr=0;xOk={lat,lon};
+  const apply=j=>{
+    const seen=new Set();crossings=j.elements.filter(e=>e.lat!=null&&!seen.has(e.id)&&seen.add(e.id)).map(xParse).filter(c=>!xHid(c));xAdd(crossings);xErr=0;xFails=0;xOk={lat,lon};
     xDerSync();xUserSync();
     xLayer.clearLayers();
-  }catch(e){lastFetch=null;xErr=Date.now();}
+  };
+  let got=false;
+  try{apply(await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q0,12000));got=true}catch(e){}   // szybko: tylko oznaczone przejazdy
+  if(got)try{apply(await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q))}catch(e){}   // potem pełne: także przejazdy bez tagów (gdy szybkie zapytanie nie przeszło, pełne też by nie przeszło)
+  else{try{apply(await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q,1500));got=true}catch(e){}}   // sama pamięć urządzenia: bez sieci pokazujemy to, co zapisano
+  if(!got){lastFetch=null;xErr=Date.now();xFails++}
 }
 async function loadTrains(){
   if(demo||!feedUrl||gKey||gtfs)return;
@@ -1732,7 +1735,7 @@ function evaluate(p){
   signCheck(p);
   routeUpdate(p);
   if(!demo&&gtfsCenter&&!ttBusy&&Date.now()-lastRecentre>600000&&dist(gtfsCenter.lat,gtfsCenter.lon,p.lat,p.lon)>100000){lastRecentre=Date.now();loadTimetable(true)}
-  if(!demo&&(!lastFetch||dist(lastFetch.lat,lastFetch.lon,p.lat,p.lon)>1500)&&Date.now()-xErr>6000)loadCrossings(p.lat,p.lon);
+  if(!demo&&(!lastFetch||dist(lastFetch.lat,lastFetch.lon,p.lat,p.lon)>1500)&&Date.now()-xErr>Math.min(60000,6000*Math.pow(2,Math.max(0,xFails-1))))loadCrossings(p.lat,p.lon);
   if(!demo&&ws&&ws.readyState===1&&(!gBox||dist(gBox.lat,gBox.lon,p.lat,p.lon)>3000))gSend(p.lat,p.lon);
 
   // trains on map
@@ -1758,7 +1761,7 @@ function evaluate(p){
   {const n2=ahead[1];$('then').style.display=n2?'flex':'none';if(n2)$('then').textContent='Potem '+fmtD(n2.d)}
   if(!ahead.length){window._nearX=null;setDist('');$('then').style.display='none';
     if(arrivedAt&&!route&&Date.now()-arrivedAt<12000)setBanner('ok','Dojechaliśmy',arrivedSub);
-    else if(!xReady(p))setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych');   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
+    else if(!xReady(p)){if(xErr&&Date.now()-xErr<180000)setBanner('warn','Brak danych o przejazdach','Nie udało się ich pobrać – ponawiam');else setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych')}   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
     else setBanner('ok','Droga wolna',wide?'Brak przejazdów kolejowych w najbliższych '+fmtKm(Math.max(warnDist,1200)):'Brak przejazdu kolejowego w pobliżu');
     return}
 
@@ -4894,10 +4897,12 @@ function ovQuery(lat,lon,R,full){
   return '[out:json][timeout:25];(way["highway"~"^('+hw+')$"]'+bb+';way["railway"~"^(rail|light_rail|tram|narrow_gauge)$"]'+bb+';way["natural"="water"]'+bb+';way["waterway"~"^(river|canal)$"]'+bb+';way["leisure"~"^(park|garden)$"]'+bb+(full?';way["building"]'+bb:'')+';);out geom qt;';
 }
 // zapytanie idzie równolegle do trzech serwerów, wygrywa najszybszy
-function fetchOverpass(q){
+function fetchOverpass(q,ms){
   const urls=['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
   const ctl=urls.map(()=>new AbortController());
   return new Promise((ok,no)=>{let fails=0,err='';
+    const to=setTimeout(()=>ctl.forEach(c=>c.abort()),window.__ovTo||ms||26000);   // zawieszone połączenie: po 26 s (szybkie zapytania: krócej) rezygnujemy
+    const done=f=>x=>{clearTimeout(to);f(x)};ok=done(ok);no=done(no);
     urls.forEach((u,i)=>{
       fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),signal:ctl[i].signal})
         .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
