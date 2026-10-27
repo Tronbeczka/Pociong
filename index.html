@@ -1142,7 +1142,7 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
 #settings section.one>h3{display:none}
 #settings[data-cat]:not([data-cat=""]) #achOpen{display:none}
 #settings .sHead h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body.noBanner #banner{visibility:hidden;opacity:0;pointer-events:none}   /* bez trasy pasek jest niewidoczny, ale zachowuje miejsce – ikony się nie przesuwają */
+body.noBanner #banner{display:none!important}   /* bez trasy pasek znika, a ikony przesuwają się w górę na jego miejsce */
 /* v123: tryb właściciela – elementy tylko dla właściciela ([data-own]) i wymagające wspólnej bazy ([data-db]) */
 html body:not(.owner) [data-own],html body:not(.owner) #settings [data-own],html body:not(.owner) #settings label[data-own],html body:not(.owner) #settings button[data-own],html body:not(.owner) #settings .sInfo[data-own]{display:none!important}
 html body:not(.owner):not(.hasdb) [data-db],html body:not(.owner):not(.hasdb) #settings [data-db],html body:not(.owner):not(.hasdb) #settings button[data-db]{display:none!important}
@@ -1350,7 +1350,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 125</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 126</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1606,7 +1606,7 @@ $('save').onclick=()=>{
 function nbsp(t){return String(t).replace(/(\d) (?=(km\/h|km|m|min|s|h|godz\.)(?![\p{L}]))/gu,'$1\u00a0')}
 // górny pasek pojawia się dopiero po wybraniu trasy; bez trasy widać go tylko przy ostrzeżeniu (warn/bad)
 let bannerLv='ok';
-function syncBanner(){document.body.classList.toggle('noBanner',!(route||window.preview)&&bannerLv==='ok')}
+function syncBanner(){const h=!(route||window.preview)&&bannerLv==='ok';if(document.body.classList.contains('noBanner')!==h){document.body.classList.toggle('noBanner',h);try{window.fitUI&&setTimeout(window.fitUI,0)}catch(e){}}}
 setInterval(()=>{try{syncBanner()}catch(e){}},400);
 function setBanner(level,big,sub){bannerLv=level;try{syncBanner()}catch(e){}sub=nbsp(sub);const b=$('banner');b.className=level==='ok'?'':level;$('carIcon').classList.toggle('bad',level==='bad');$('bar').className=level==='ok'?'':level;$('bmain').textContent=big;$('big').textContent=big;$('sub').textContent=sub;
   if(level==='ok'&&nav){$('bicon').innerHTML=nav.icon;$('big').textContent=nav.txt;$('sub').textContent=nav.then||sub;$('dist').textContent=nav.dist}
