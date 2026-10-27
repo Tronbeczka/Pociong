@@ -714,7 +714,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 }
 
 /* ===== Wersja 111: kolumny przycisków dopasowują się do wysokości ekranu (skalowanie, a w ostateczności ukrywanie mniej ważnych) ===== */
-#lfab{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 262px);z-index:900;display:flex;flex-direction:column;align-items:flex-start;gap:14px;transform-origin:left bottom;pointer-events:none}
+#lfab{transition:bottom .25s ease;position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 262px);z-index:900;display:flex;flex-direction:column;align-items:flex-start;gap:14px;transform-origin:left bottom;pointer-events:none}
 #rfab{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:900;display:flex;flex-direction:column;align-items:flex-end;gap:12px;transform-origin:right bottom;pointer-events:none}
 #lfab>#srchfab,#lfab>#planfab,#lfab>#mic,#rfab>#zoomb,#rfab>#recenter,#rfab>#tilt{position:static;left:auto;right:auto;top:auto;bottom:auto;margin:0;pointer-events:auto;flex:none}
 .fh{display:none!important}
@@ -915,7 +915,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 115</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 116</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -984,21 +984,22 @@ const $=id=>document.getElementById(id);
     let limL,limB,limT;
     if(land){limL=10+sw+8;limB=base;limT=limB+lh}else{limL=12+sw/2-lw/2;limB=base+sh+10;limT=limB+lh}
     put(lim,'left',limL);put(lim,'bottom',limB);
-    put(ln,'left',limL+lw/2-35);put(ln,'bottom',limT+(land?4:8));
-    put(lf,'bottom',land?base+sh+6:limT+8+19+2);
+    if(land){put(ln,'left',limL+lw/2-35);put(ln,'bottom',limT+4);put(lf,'bottom',base+sh+6)}
+    else{put(ln,'left',limL+lw+6);put(ln,'bottom',limB+(lh-19)/2);put(lf,'bottom',(shown(lim)?limT:base+sh)+12)}
     if(land)rf.style.bottom='';else put(rf,'bottom',base);
     const rw=rf.offsetWidth||(land?42:54);
     put(tc,'left',land?limL+lw+10:12+sw+10,z);put(tc,'right',(land?10:12)+rw+8,z);put(tc,'bottom',base,z);
     // mały podgląd skrzyżowania: obok lewej kolumny przycisków, pod paskiem górnym
     const jp=g('jp'),ns=g('nextStrip'),tb=g('top').getBoundingClientRect().bottom,nb=ns&&ns.style.display==='flex'?ns.getBoundingClientRect().bottom:0;
-    if(jp){jp.style.left=((land?10:12)+lf.offsetWidth+10)+'px';jp.style.top=(Math.max(tb,nb)+8)+'px'}
+    if(jp){jp.style.left=(land?10+lf.offsetWidth+10:10)+'px';jp.style.top=(Math.max(tb,nb)+8)+'px'}
   };
   window.fitUI=()=>{
     try{restack()}catch(e){}
     try{
       const tb=document.getElementById('top').getBoundingClientRect().bottom,ns=document.getElementById('nextStrip');
       const nb=ns&&ns.style.display==='flex'?ns.getBoundingClientRect().bottom:0;
-      fit(L,Math.max(tb,nb)+8,['mic','srchfab']);
+      const jq=document.getElementById('jp'),jb=jq&&jq.style.display==='block'&&!matchMedia('(orientation:landscape) and (max-height:540px)').matches?jq.getBoundingClientRect().bottom:0;
+      fit(L,Math.max(tb,nb,jb)+8,['mic','srchfab']);
       let tg=tb;for(const id of ['compass','setfab','repfab']){const e=document.getElementById(id);if(e&&!e.dataset.moved&&getComputedStyle(e).display!=='none')tg=Math.max(tg,e.getBoundingClientRect().bottom)}
       fit(R,tg+8,['tilt','recenter']);
     }catch(e){}
