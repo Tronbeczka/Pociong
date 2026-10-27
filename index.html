@@ -1130,18 +1130,37 @@ body.night #pick #go{background:linear-gradient(180deg,#4a90f5,#2f78e0)}
 body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!important}
 /* ===== END Wersja 119 ===== */
 /* v122: ustawienia w zakładkach (lista kategorii → wybrana kategoria) */
-#setHome{max-width:620px;margin:0 auto 18px;background:var(--card);border-radius:20px;box-shadow:0 0 0 1px var(--line),0 1px 3px rgba(16,24,40,.05);overflow:hidden}
-#setHome .setRow{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;margin:0;border:0;border-radius:0;background:none;color:var(--tx);text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
-#setHome .setRow+.setRow{border-top:1px solid var(--line)}
-#setHome .setRow:active{background:var(--bg)}
-#setHome .setRow>i{flex:0 0 auto;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:1.25rem;background:var(--bg);box-shadow:0 0 0 1px var(--line)}
-#setHome .setRow>span{flex:1;min-width:0;display:block}
-#setHome .setRow b{display:block;font-size:1.02rem;font-weight:700}
-#setHome .setRow small{display:block;margin-top:2px;color:var(--mut);font-size:.8rem;line-height:1.3;font-weight:500}
-#setHome .setRow svg{flex:0 0 auto;width:20px;height:20px;color:var(--mut)}
+.setList{max-width:620px;margin:0 auto 18px;background:var(--card);border-radius:20px;box-shadow:0 0 0 1px var(--line),0 1px 3px rgba(16,24,40,.05);overflow:hidden}
+.setList .setRow{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;margin:0;border:0;border-radius:0;background:none;color:var(--tx);text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.setList .setRow+.setRow{border-top:1px solid var(--line)}
+.setList .setRow:active{background:var(--bg)}
+.setList .setRow>i{flex:0 0 auto;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:1.25rem;background:var(--bg);box-shadow:0 0 0 1px var(--line)}
+.setList .setRow>span{flex:1;min-width:0;display:block}
+.setList .setRow b{display:block;font-size:1.02rem;font-weight:700}
+.setList .setRow small{display:block;margin-top:2px;color:var(--mut);font-size:.8rem;line-height:1.3;font-weight:500}
+.setList .setRow svg{flex:0 0 auto;width:20px;height:20px;color:var(--mut)}
 #settings section.one>h3{display:none}
 #settings[data-cat]:not([data-cat=""]) #achOpen{display:none}
 #settings .sHead h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v123: tryb właściciela – elementy tylko dla właściciela ([data-own]) i wymagające wspólnej bazy ([data-db]) */
+html body:not(.owner) [data-own],html body:not(.owner) #settings [data-own],html body:not(.owner) #settings label[data-own],html body:not(.owner) #settings button[data-own],html body:not(.owner) #settings .sInfo[data-own]{display:none!important}
+html body:not(.owner):not(.hasdb) [data-db],html body:not(.owner):not(.hasdb) #settings [data-db],html body:not(.owner):not(.hasdb) #settings button[data-db]{display:none!important}
+.setGrp{max-width:620px;margin:20px auto 8px;padding:0 6px;font-size:.8rem;font-weight:700;color:var(--mut);display:flex;align-items:center;gap:6px}
+#setVer{touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;padding:8px 4px}
+body:has(#settings.open) #evToast{z-index:3800}   /* komunikaty widoczne także nad ekranem ustawień */
+#ownDlg{position:fixed;inset:0;z-index:3700;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(8,12,18,.55)}
+#ownDlg.open{display:flex}
+#ownDlg .ownBox{width:100%;max-width:340px;box-sizing:border-box;background:#fff;color:#1a2330;border-radius:22px;padding:20px 18px 14px;box-shadow:0 0 0 1px rgba(16,24,40,.08),0 18px 50px rgba(0,0,0,.35)}
+body.night #ownDlg .ownBox{background:#1e222a;color:#edf0f5;box-shadow:0 0 0 1px rgba(255,255,255,.09),0 18px 50px rgba(0,0,0,.6)}
+#ownDlg h3{margin:0 0 4px;font-size:1.15rem;font-weight:800}
+#ownDlg p{margin:0 0 12px;font-size:.9rem;opacity:.7}
+#ownDlg input{width:100%;box-sizing:border-box;padding:13px 12px;border-radius:12px;border:1px solid rgba(128,138,152,.45);background:rgba(128,138,152,.12);color:inherit;font:inherit;font-size:1.05rem;letter-spacing:.12em}
+#ownDlg #ownMsg{min-height:20px;margin:8px 2px 2px;font-size:.85rem;color:#c62828}
+body.night #ownDlg #ownMsg{color:#ff8a80}
+#ownDlg .ownBtns{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+#ownDlg button{min-height:44px;padding:0 18px;border-radius:12px;border:0;font:inherit;font-weight:700;background:rgba(128,138,152,.18);color:inherit;box-shadow:none}
+#ownDlg #ownOk{background:#1a73e8;color:#fff}
+body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
 </style>
 </head>
 <body>
@@ -1174,19 +1193,19 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
 <div id="settings" role="dialog" aria-label="Ustawienia"><div class="sHead"><button id="setBack" aria-label="Wróć" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h2>Ustawienia</h2><small id="setVer"></small></div>
 <div class="sBody">
 <button id="achOpen" type="button">🏆 Osiągnięcia i nowe samochody <span id="achCnt" style="float:right;color:var(--mut);font-weight:700"></span></button>
-<section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"><label><span>Motyw sezonowy<small style="display:block;font-weight:400;opacity:.65;font-size:.74rem;margin-top:2px">Halloween, Święta, urodziny</small></span><select id="seasonSel"><option value="auto">Automatycznie</option><option value="off">Wyłączony</option><option value="halloween">Halloween (podgląd)</option><option value="xmas">Święta (podgląd)</option><option value="bday">Urodziny Natalki (podgląd)</option></select></label></div></section>
+<section><h3><i>🎨</i>Wygląd</h3><div class="sc" data-g="look"><label><span>Motyw sezonowy<small id="seasonSub" style="display:block;font-weight:400;opacity:.65;font-size:.74rem;margin-top:2px">Halloween, Święta</small></span><select id="seasonSel"><option value="auto">Automatycznie</option><option value="off">Wyłączony</option></select></label></div></section>
 <section><h3><i>🔊</i>Głos i dźwięk</h3><div class="sc" data-g="snd"></div></section>
-<section><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
-<section><h3><i>🧭</i>Własne wskazówki nawigacji</h3><div class="sc" id="clipNav"><div class="sInfo">Nagraj lub wgraj własne „Skręć w prawo”, „Zjedź z ronda” itd. Aplikacja powie wtedy „Za 200 metrów”, odtworzy Twoje nagranie, a po nim przeczyta nazwę ulicy. Manewry bez nagrania są czytane głosem lektora.</div></div></section>
-<section><h3><i>📣</i>Zgłoszenia kierowców</h3><div class="sc" id="evSet">
+<section data-own><h3><i>🎙️</i>Własne nagrania komunikatów</h3><div class="sc" id="clipList"><div class="sInfo">Wgraj własny plik dźwiękowy (mp3, wav, ogg, m4a; do 3 MB) dla wybranego komunikatu. Nagranie zastępuje wtedy głos lektora. Pliki zostają tylko na tym telefonie.</div></div></section>
+<section data-own><h3><i>🧭</i>Własne wskazówki nawigacji</h3><div class="sc" id="clipNav"><div class="sInfo">Nagraj lub wgraj własne „Skręć w prawo”, „Zjedź z ronda” itd. Aplikacja powie wtedy „Za 200 metrów”, odtworzy Twoje nagranie, a po nim przeczyta nazwę ulicy. Manewry bez nagrania są czytane głosem lektora.</div></div></section>
+<section data-db><h3><i>📣</i>Zgłoszenia kierowców</h3><div class="sc" id="evSet">
 <label><span>Pokazuj zgłoszenia innych</span><input type="checkbox" id="evShow" checked></label>
 <label><span>Ostrzegaj głosem o zgłoszeniach</span><input type="checkbox" id="evVoice" checked></label>
-<div class="sInfo">Aby zgłoszenia widzieli też inni kierowcy, potrzebna jest wspólna baza (Firebase Realtime Database – darmowa). Bez niej zgłoszenia widzisz tylko Ty, na tym telefonie. Wszyscy, którzy mają ten sam adres bazy, widzą swoje zgłoszenia.</div>
-<div><input id="evDb" placeholder="https://twoja-baza-default-rtdb.firebaseio.com" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;font-size:.9rem;margin:8px 0"><button id="evTest" class="sec" type="button">Sprawdź połączenie z bazą</button><small id="evStat" style="display:block;color:var(--mut);padding:4px 0 10px"></small></div>
-<div class="sInfo">Jak założyć bazę: console.firebase.google.com → dodaj projekt → Build → Realtime Database → utwórz → w zakładce Reguły wpisz {"rules":{".read":true,".write":true}} → skopiuj adres bazy i wklej powyżej. Uwaga: otwarta baza pozwala każdemu zapisywać dane – używaj jej w zaufanym gronie.</div>
+<div class="sInfo" data-own>Aby zgłoszenia widzieli też inni kierowcy, potrzebna jest wspólna baza (Firebase Realtime Database – darmowa). Bez niej zgłoszenia widzisz tylko Ty, na tym telefonie. Wszyscy, którzy mają ten sam adres bazy, widzą swoje zgłoszenia.</div>
+<div data-own><input id="evDb" placeholder="https://twoja-baza-default-rtdb.firebaseio.com" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;font-size:.9rem;margin:8px 0"><button id="evTest" class="sec" type="button">Sprawdź połączenie z bazą</button><small id="evStat" style="display:block;color:var(--mut);padding:4px 0 10px"></small></div>
+<div class="sInfo" data-own>Jak założyć bazę: console.firebase.google.com → dodaj projekt → Build → Realtime Database → utwórz → w zakładce Reguły wpisz {"rules":{".read":true,".write":true}} → skopiuj adres bazy i wklej powyżej. Uwaga: otwarta baza pozwala każdemu zapisywać dane – używaj jej w zaufanym gronie.</div>
 </div></section>
-<section><h3><i>👥</i>Znajomi na mapie</h3><div class="sc" id="grpSet">
-<div class="sInfo">Podaj ten sam kod grupy co znajomi (np. rodzina w jednej trasie) i włącz udostępnianie – zobaczycie się nawzajem na mapie. Pozycja jest wysyłana tylko, gdy aplikacja jest otwarta i masz włączone udostępnianie. Wymaga adresu bazy z sekcji „Zgłoszenia kierowców”.</div>
+<section data-db><h3><i>👥</i>Znajomi na mapie</h3><div class="sc" id="grpSet">
+<div class="sInfo">Podaj ten sam kod grupy co znajomi (np. rodzina w jednej trasie) i włącz udostępnianie – zobaczycie się nawzajem na mapie. Pozycja jest wysyłana tylko, gdy aplikacja jest otwarta i masz włączone udostępnianie.<span data-own> Wymaga adresu bazy z sekcji „Zgłoszenia kierowców”.</span></div>
 <div><input id="grpName" placeholder="Twoje imię na mapie" maxlength="14" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;font-size:.9rem;margin:6px 0">
 <input id="grpCode" placeholder="Kod grupy (min. 6 znaków)" maxlength="24" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;font-size:.9rem;margin:0 0 6px"></div>
 <button id="grpGen" class="sec" type="button">Wygeneruj losowy kod</button>
@@ -1194,8 +1213,8 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
 <small id="grpStat" style="display:block;color:var(--mut);padding:4px 0 10px"></small>
 </div></section>
 <section><h3><i>🌧️</i>Radar opadów</h3><div class="sc" id="radSet">
-<label><span>Pokazuj radar opadów na mapie (eksperymentalne)</span><input type="checkbox" id="radOn"></label>
-<div class="sInfo">Dane: RainViewer – obraz z ostatnich minut (bez prognozy), niska dokładność przestrzenna (ok. 1–2 km). Jeśli serwis zablokuje dostęp z przeglądarki, radar się nie pokaże.</div>
+<label><span>Pokazuj radar opadów na mapie</span><input type="checkbox" id="radOn"></label>
+<div class="sInfo">Dane: RainViewer – obraz z ostatnich minut (bez prognozy), dokładność ok. 1–2 km.<span data-own> Jeśli serwis zablokuje dostęp z przeglądarki, radar się nie pokaże.</span></div>
 <small id="radStat" style="display:block;color:var(--mut);padding:4px 0 10px"></small>
 </div></section>
 <section><h3><i>🚗</i>Samochód</h3><div class="sc" data-g="car"><label><span>Tablica rejestracyjna na aucie</span><input id="plate" maxlength="8" placeholder="np. DW 1234" autocomplete="off" style="width:120px;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;text-transform:uppercase;text-align:center"></label>
@@ -1203,9 +1222,11 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
 <label><span>Wygląd pociągów na mapie</span><select id="trainSel"></select></label></div></section>
 <section><h3><i>🔋</i>Jazda i bateria</h3><div class="sc" data-g="drive"></div></section>
 <section><h3><i>📊</i>Historia i dane</h3><div class="sc" data-g="data"><label><span>Pokaż przejechane przeze mnie ulice</span><input type="checkbox" id="heatOn"></label>
-<button id="liveShare" class="sec" type="button">📍 Udostępnij dojazd na żywo (link)</button>
+<button id="liveShare" class="sec" type="button" data-db>📍 Udostępnij dojazd na żywo (link)</button>
 <button id="gpxRoute" class="sec" type="button">Eksportuj bieżącą trasę (GPX)</button></div></section>
-<section><h3><i>🔧</i>Źródła danych i klucze</h3><div class="sc" data-g="adv"></div></section>
+<section data-own><h3><i>🔧</i>Źródła danych i klucze</h3><div class="sc" data-g="adv"></div></section>
+<section data-own><h3><i>🛠️</i>Diagnostyka i kopia</h3><div class="sc" data-g="diag"></div></section>
+<section data-own><h3><i>🔐</i>Tryb właściciela</h3><div class="sc" data-g="own"><div class="sInfo">Tryb właściciela jest włączony na tym urządzeniu. Odblokowuje klucze i serwery, własne nagrania, log jazdy, diagnostykę, kopię ustawień oraz podglądy motywów. Zwykły użytkownik tych opcji nie widzi.</div><button id="ownLock" class="sec" type="button">Zablokuj tryb właściciela</button></div></section>
 <section><h3><i>ℹ️</i>O aplikacji</h3><div class="sc" data-g="about"><div class="sInfo">Przejazd – alert kolejowy. Ostrzeżenia o pociągach na przejazdach kolejowych na Twojej trasie. To wsparcie, nie zabezpieczenie – zawsze rozglądaj się na przejeździe.</div></div></section>
 </div></div>
 <div id="menu">
@@ -1328,7 +1349,7 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 122</span> · Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
+  <p class="pkFoot"><span id="ver">wersja 123</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1571,6 +1592,7 @@ try{feedUrl=localStorage.getItem('feed')||'';$('feed').value=feedUrl}catch(e){}
 
 $('gear').onclick=()=>openSettings();
 $('save').onclick=()=>{
+  if(!OWNER)return;
   feedUrl=$('feed').value.trim();gKey=$('gkey').value.trim();
   gmKey=$('gmkey').value.trim();ttKey=$('ttkey').value.trim();flowAt=0;trChk=0;try{localStorage.setItem('ttkey',ttKey)}catch(e){}
   try{localStorage.setItem('feed',feedUrl);localStorage.setItem('gkey',gKey);localStorage.setItem('gmkey',gmKey);localStorage.setItem('tkey',$('tkey').value.trim())}catch(e){}
@@ -2705,6 +2727,69 @@ $('closeNav').onclick=()=>{
 // ================= Rozszerzenia: objazd, statystyki, historia, udostępnianie, oszczędzanie baterii, log jazdy =================
 const LSget=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}};
 const LSput=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+
+// ================= v123: tryb właściciela – opcje tylko dla właściciela aplikacji (kod → PBKDF2, w pliku jest tylko skrót) =================
+const OWN_SALT='664e74bc456ddabba2f300d50389b4eb',OWN_ITER=250000,OWN_HASH='4bd7dbd571c39812495ab06d54819b7a033ce62b3e666d21f8c5d0c1575e154b',OWN_TTL=30*864e5;
+let OWNER=false;
+try{const o=JSON.parse(localStorage.getItem('ownTok')||'null'),a=o?Date.now()-o.t:0;OWNER=!!(o&&o.h===OWN_HASH&&a<OWN_TTL&&a>-864e5)}catch(e){}
+const ownHex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function ownDerive(code){
+  if(!(window.crypto&&crypto.subtle))throw new Error('brak WebCrypto');
+  const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(code),'PBKDF2',false,['deriveBits']);
+  const salt=Uint8Array.from(OWN_SALT.match(/../g).map(h=>parseInt(h,16)));
+  return ownHex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations:OWN_ITER},k,256));
+}
+function ownSame(a,b){if(a.length!==b.length)return false;let r=0;for(let i=0;i<a.length;i++)r|=a.charCodeAt(i)^b.charCodeAt(i);return r===0}
+function ownBody(){
+  document.body.classList.toggle('owner',OWNER);
+  let db='';try{db=JSON.parse(localStorage.getItem('evDb')||'""')||''}catch(e){}
+  document.body.classList.toggle('hasdb',!!db);
+}
+function ownApply(){
+  ownBody();
+  const v=$('setVer');if(v)v.textContent=(($('ver')||{}).textContent||'')+(OWNER?' · właściciel':'');
+  try{fillSeason()}catch(e){}
+  try{seasonCur=seasonNow();sFx.length=0;showCar()}catch(e){}
+  if(!OWNER){   // narzędzia właściciela wyłączone: log jazdy, licznik FPS
+    logOn=false;LSput('logon',false);$('logon').checked=false;$('fpsOn').checked=false;$('fps').style.display='none';
+    const c=$('settings').dataset.cat;if(c&&typeof setCat==='function'&&['adv','clips','diag','own'].includes(c))setCat('');
+  }
+}
+function ownClose(){const d=$('ownDlg');if(d)d.classList.remove('open');const i=$('ownIn');if(i)i.value=''}
+async function ownSubmit(){
+  const msg=$('ownMsg'),btn=$('ownOk'),f=LSget('ownFail',{n:0,until:0}),now=Date.now();
+  if(f.until>now){msg.textContent='Zbyt wiele prób. Spróbuj za '+Math.ceil((f.until-now)/60000)+' min.';return}
+  const code=$('ownIn').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  btn.disabled=true;msg.textContent='Sprawdzam…';
+  let ok=false;
+  try{ok=code.length>=8&&ownSame(await ownDerive(code),OWN_HASH)}catch(e){msg.textContent='Ta przeglądarka nie pozwala sprawdzić kodu.';btn.disabled=false;return}
+  btn.disabled=false;
+  if(ok){
+    try{localStorage.setItem('ownTok',JSON.stringify({t:Date.now(),h:OWN_HASH}))}catch(e){}
+    LSput('ownFail',{n:0,until:0});OWNER=true;ownApply();ownClose();note('Tryb właściciela włączony','Dodatkowe opcje są w Ustawieniach.');return;
+  }
+  const n=(f.n||0)+1,until=n>=5?now+Math.min(864e5,6e4*Math.pow(2,n-5)):0;LSput('ownFail',{n,until});
+  msg.textContent=until?'Zbyt wiele prób. Spróbuj za '+Math.ceil((until-now)/60000)+' min.':'Nieprawidłowy kod.';$('ownIn').value='';
+}
+function ownAsk(){
+  if(OWNER){note('Tryb właściciela jest włączony','Opcje właściciela są w Ustawieniach.');return}
+  let d=$('ownDlg');
+  if(!d){
+    d=document.createElement('div');d.id='ownDlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label','Tryb właściciela');
+    d.innerHTML='<form class="ownBox" autocomplete="off"><h3>Tryb właściciela</h3><p>Podaj kod, aby odblokować dodatkowe opcje.</p><input id="ownIn" type="password" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" aria-label="Kod właściciela"><div id="ownMsg" role="status"></div><div class="ownBtns"><button type="button" id="ownNo">Anuluj</button><button type="submit" id="ownOk">Odblokuj</button></div></form>';
+    document.body.appendChild(d);
+    d.addEventListener('click',e=>{if(e.target===d)ownClose()});
+    $('ownNo').onclick=ownClose;
+    d.querySelector('form').onsubmit=e=>{e.preventDefault();ownSubmit()};
+  }
+  $('ownIn').value='';$('ownMsg').textContent='';d.classList.add('open');setTimeout(()=>{try{$('ownIn').focus()}catch(e){}},60);
+}
+function ownLock(){try{localStorage.removeItem('ownTok')}catch(e){}OWNER=false;ownApply();note('Tryb właściciela wyłączony')}
+{ // siedem szybkich dotknięć numeru wersji otwiera okno z kodem
+  const tap=el=>{if(!el)return;let n=0,t=0;el.addEventListener('click',()=>{const now=Date.now();if(now-t>1500)n=0;t=now;if(++n>=7){n=0;ownAsk()}})};
+  tap($('setVer'));tap($('ver'));
+}
+ownBody();
 const hourKey=d=>{d=d||new Date();return String(d.getDay()*24+d.getHours())};
 // --- dodawanie przystanków ---
 {let shown=0;$('addvia').onclick=()=>{
@@ -2826,9 +2911,9 @@ $('report').onclick=()=>{
   upd();
 }
 // --- log jazdy do kalibracji ostrzeżeń (tylko na tym urządzeniu; pobierasz go sam) ---
-let drivelog=[],logLast=0,logOn=LSget('logon',false);
+let drivelog=[],logLast=0,logOn=OWNER&&LSget('logon',false);
 $('logon').checked=logOn;
-$('logon').onchange=()=>{logOn=$('logon').checked;LSput('logon',logOn)};
+$('logon').onchange=()=>{logOn=OWNER&&$('logon').checked;LSput('logon',logOn)};
 async function logSample(p){
   if(!logOn||demo||sim)return;const now=Date.now();if(now-logLast<2000)return;logLast=now;
   drivelog.push({t:now,lat:+p.lat.toFixed(6),lon:+p.lon.toFixed(6),v:p.speed!=null?+(p.speed*3.6).toFixed(1):null,h:p.heading!=null?Math.round(p.heading):null,
@@ -2837,6 +2922,7 @@ async function logSample(p){
   if(drivelog.length%20===0)try{await idbSet('drivelog',drivelog)}catch(e){}
 }
 $('logdl').onclick=async()=>{
+  if(!OWNER)return;
   $('menu').classList.remove('open');
   let d=drivelog;if(!d.length){try{d=(await idbGet('drivelog'))||[]}catch(e){}}
   if(!d.length){note('Log jest pusty','Włącz „Zapisuj log jazdy” i przejedź trasę.');return}
@@ -2968,22 +3054,24 @@ function showReport(tr,dur){
 }
 // licznik klatek
 const fpsS={f:[],p:[],m:[],t:0};let fpsPrev=0;
-function fpsRec(now,mk){if(!$('fpsOn').checked)return;if(fpsPrev)fpsS.f.push(now-fpsPrev);fpsPrev=now;fpsS.m.push(mk);
+function fpsRec(now,mk){if(!OWNER||!$('fpsOn').checked)return;if(fpsPrev)fpsS.f.push(now-fpsPrev);fpsPrev=now;fpsS.m.push(mk);
   if(now-fpsS.t>1000){fpsS.t=now;const f=fpsS.f,n=f.length||1,avg=f.reduce((a,b)=>a+b,0)/n,mx_=Math.max(0,...f),mk_=fpsS.m.reduce((a,b)=>a+b,0)/(fpsS.m.length||1),pt=fpsS.p;
     const el=$('fps');el.style.display='block';el.textContent='FPS '+Math.round(1000/(avg||16))+' · najdłuższa klatka '+Math.round(mx_)+' ms\nrysowanie '+mk_.toFixed(1)+' ms · mapa '+(pt.length?Math.round(Math.max(...pt))+' ms ×'+pt.length+'/s':'–')+(ecoOn?'\ntryb oszczędny':'');
     fpsS.f=[];fpsS.m=[];fpsS.p=[]}}
-function fpsPaint(ms){if($('fpsOn').checked)fpsS.p.push(ms)}
+function fpsPaint(ms){if(OWNER&&$('fpsOn').checked)fpsS.p.push(ms)}
 $('fpsOn').onchange=()=>{if(!$('fpsOn').checked)$('fps').style.display='none';fpsPrev=0};
 // kopia ustawień
 $('expSet').onclick=()=>{
+  if(!OWNER)return;
   $('menu').classList.remove('open');
   const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!/^(ofm|tile)/.test(k))o[k]=localStorage.getItem(k)}}catch(e){}
   const a=document.createElement('a');let ix={};try{ix={tracks:tracks,vis:[...vis]}}catch(e){}   // przejechane trasy i odwiedzone ulice (IndexedDB)
   a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'przejazd',v:37,data:o,idb:ix})],{type:'application/json'}));
   a.download='przejazd-ustawienia.json';document.body.appendChild(a);a.click();a.remove();
 };
-$('impSet').onclick=()=>{$('menu').classList.remove('open');$('impFile').click()};
+$('impSet').onclick=()=>{if(!OWNER)return;$('menu').classList.remove('open');$('impFile').click()};
 $('impFile').onchange=async e=>{
+  if(!OWNER)return;
   const f=e.target.files[0];if(!f)return;
   try{const j=JSON.parse(await f.text());if(j.app!=='przejazd'||!j.data)throw new Error('to nie jest kopia ustawień');
     if(!confirm('Wczytać kopię ustawień ('+Object.keys(j.data).length+' wpisów: miejsca, historia, statystyki'+(j.idb&&((j.idb.tracks||[]).length||(j.idb.vis||[]).length)?', przejechane trasy':'')+')? Zastąpi bieżące dane o tych samych nazwach.'))return;
@@ -3147,8 +3235,9 @@ $('sndsel').value=sndKind;$('sndsel').onchange=()=>{sndKind=$('sndsel').value;tr
 $('volTrain').value=Math.round(volTrain*10);$('volTrain').onchange=()=>{volTrain=+$('volTrain').value/10;try{localStorage.setItem('volTrain',volTrain)}catch(e){}beep('Train')};
 $('dimOn').checked=dimPref;$('dimOn').onchange=()=>{dimPref=$('dimOn').checked;try{localStorage.setItem('dim',dimPref?'1':'0')}catch(e){}document.body.classList.toggle('dimon',dimPref)};
 // analiza i odtworzenie zapisanego logu jazdy
-$('logan').onclick=()=>{$('menu').classList.remove('open');$('logFile').click()};
+$('logan').onclick=()=>{if(!OWNER)return;$('menu').classList.remove('open');$('logFile').click()};
 $('logFile').onchange=async e=>{
+  if(!OWNER)return;
   const f=e.target.files[0];if(!f)return;
   let d;try{d=JSON.parse(await f.text());if(!Array.isArray(d)||!d.length)throw new Error('pusty log')}catch(err){note('Nie udało się wczytać logu',err.message);return}
   // analiza: pierwsze ostrzeżenie dla każdego przejazdu
@@ -3290,7 +3379,7 @@ function fuelTick(p){
 $('cmpdep').onclick=async()=>{
   const box=$('depcmp'),btn=$('cmpdep');box.innerHTML='';
   if(!F.to.pt){box.textContent='Najpierw wybierz cel.';return}
-  if(!ttKey){box.textContent='Prognoza ruchu wymaga klucza TomTom (ustawienia).';return}
+  if(!ttKey){box.textContent=OWNER?'Prognoza ruchu wymaga klucza TomTom (ustawienia).':'Prognoza ruchu jest chwilowo niedostępna.';return}
   btn.disabled=true;box.textContent='Sprawdzam prognozy ruchu…';
   try{
     const a=F.from.pt||await gpsNow(),b=F.to.pt;
@@ -3361,8 +3450,10 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   mv('snd',['vsel','vbose','sndsel','volTrain','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
-  mv('drive',['hudBtn','eco','logon','fpsOn','logdl','logan','logFile','report']);
-  mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow','expSet','impSet','impFile','about']);
+  mv('drive',['hudBtn','eco']);
+  mv('diag',['logon','fpsOn','logdl','logan','logFile','expSet','impSet','impFile']);
+  mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow']);
+  mv('about',['about','report']);
   G('adv').appendChild($('cfg'));
   // tytuły nad przełącznikami bez własnego opisu
   const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
@@ -3370,28 +3461,35 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   // ---- v122: ustawienia w zakładkach ----
   const S=$('settings'),SB=S.querySelector('.sBody'),SH=S.querySelector('.sHead h2');
   const CATS=[
-    ['look','🎨','Wygląd i mapa','Motyw, noc, rozmiar interfejsu, radar opadów',/^(Wygląd|Radar)/],
-    ['snd','🔊','Głos i dźwięk','Głos, rodzaj komunikatów, własne nagrania',/^(Głos|Własne)/],
-    ['car','🚗','Samochód','Model, lakier, tablica, ślad, wygląd pociągów',/^Samochód/],
-    ['drive','🔋','Jazda i bateria','Tryb HUD, oszczędzanie baterii, log jazdy',/^Jazda/],
-    ['comm','📣','Społeczność','Zgłoszenia kierowców, znajomi na mapie',/^(Zgłoszenia|Znajomi)/],
-    ['data','📊','Historia i dane','Historia, przejazdy, parking, mapa offline, eksport',/^Historia/],
-    ['adv','🔧','Zaawansowane','Serwery, klucze i źródła danych',/^Źródła/],
-    ['about','ℹ️','O aplikacji','Informacje i dokładność danych',/^O aplikacji/]];
-  const secs=[...SB.querySelectorAll(':scope>section')],home=document.createElement('div');home.id='setHome';
+    ['look','🎨','Wygląd i mapa','Motyw, noc, rozmiar interfejsu, radar opadów',/^(Wygląd|Radar)/,''],
+    ['snd','🔊','Głos i dźwięk','Głos, rodzaj komunikatów, sygnały',/^Głos/,''],
+    ['car','🚗','Samochód','Model, lakier, tablica, ślad, wygląd pociągów',/^Samochód/,''],
+    ['drive','🔋','Jazda i bateria','Tryb HUD, oszczędzanie baterii',/^Jazda/,''],
+    ['comm','📣','Społeczność','Zgłoszenia kierowców, znajomi na mapie',/^(Zgłoszenia|Znajomi)/,'db'],
+    ['data','📊','Historia i dane','Historia, przejazdy, parking, mapa offline',/^Historia/,''],
+    ['about','ℹ️','O aplikacji','Informacje, dokładność danych, zgłoszenie błędu mapy',/^O aplikacji/,''],
+    ['adv','🔧','Klucze i serwery','Mapa, rozkład jazdy, ruch, serwery tras',/^Źródła/,'own'],
+    ['clips','🎙️','Własne nagrania','Własne komunikaty i wskazówki nawigacji',/^Własne/,'own'],
+    ['diag','🛠️','Diagnostyka i kopia','Log jazdy, FPS, eksport i import ustawień',/^Diagnostyka/,'own'],
+    ['own','🔐','Tryb właściciela','Blokada trybu właściciela',/^Tryb właściciela/,'own']];
+  const secs=[...SB.querySelectorAll(':scope>section')],home=document.createElement('div'),homeOwn=document.createElement('div'),grpHd=document.createElement('div');
+  home.id='setHome';home.className='setList';homeOwn.id='setHomeOwn';homeOwn.className='setList';homeOwn.dataset.own='';
+  grpHd.className='setGrp';grpHd.dataset.own='';grpHd.textContent='🔒 Tylko dla właściciela';
   const chev='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
   for(const c of CATS){
     const mine=secs.filter(x=>{const h=x.querySelector('h3'),t=h&&h.lastChild?h.lastChild.textContent.trim():'';return c[4].test(t)});
     mine.forEach(x=>{x.dataset.cat=c[0];x.classList.toggle('one',mine.length===1)});
     const b=document.createElement('button');b.type='button';b.className='setRow';b.dataset.cat=c[0];
+    if(c[5]==='db')b.dataset.db='';
     b.innerHTML='<i aria-hidden="true">'+c[1]+'</i><span><b>'+c[2]+'</b><small>'+c[3]+'</small></span>'+chev;
-    b.onclick=()=>setCat(c[0]);home.appendChild(b);c.title=c[2];
+    b.onclick=()=>setCat(c[0]);(c[5]==='own'?homeOwn:home).appendChild(b);c.title=c[2];
   }
-  SB.insertBefore(home,secs[0]);
+  SB.insertBefore(home,secs[0]);SB.insertBefore(grpHd,secs[0]);SB.insertBefore(homeOwn,secs[0]);
   setCat=k=>{
+    if(k&&!OWNER&&(CATS.find(x=>x[0]===k)||[])[5]==='own')k='';
     S.dataset.cat=k||'';
     secs.forEach(x=>{x.style.display=(k&&x.dataset.cat===k)?'':'none'});
-    home.style.display=k?'none':'';
+    home.style.display=homeOwn.style.display=grpHd.style.display=k?'none':'';
     const c=CATS.find(x=>x[0]===k);SH.textContent=c?c.title:'Ustawienia';
     const v=$('setVer');if(v)v.style.display=k?'none':'';
     SB.scrollTop=0;
@@ -3400,13 +3498,13 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
 }
 function openSettings(){
   $('start').classList.add('sec');$('start').textContent='Uruchom GPS (Start)';
-  $('menu').classList.remove('open');$('setVer').textContent=($('ver')||{}).textContent||'';
+  $('menu').classList.remove('open');$('setVer').textContent=(($('ver')||{}).textContent||'')+(OWNER?' · właściciel':'');
   try{setCat('')}catch(e){}$('settings').classList.add('open');$('settings').querySelector('.sBody').scrollTop=0;
 }
 function closeSettings(){$('settings').classList.remove('open')}
 $('start').addEventListener('click',closeSettings);
 $('menu').style.display='none';   // dawne menu ⋮ zostało przeniesione do ustawień
-$('setfab').onclick=openSettings;$('pickset').onclick=openSettings;$('setBack').onclick=()=>{if($('settings').dataset.cat)setCat('');else closeSettings()};
+$('setfab').onclick=openSettings;$('pickset').onclick=openSettings;$('ownLock').onclick=ownLock;$('setBack').onclick=()=>{if($('settings').dataset.cat)setCat('');else closeSettings()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('settings').classList.contains('open')&&$('settings').dataset.cat)setCat('');else closeSettings()}});
 
 // ================= Własne nagrania komunikatów (zamiast głosu lektora) =================
@@ -3619,7 +3717,7 @@ function evToastQ(t1,t2,btns,ms,n){
   const g=$('repGrid');
   for(const k in EV_TYPES){if(EV_TYPES[k].hid)continue;const b=document.createElement('button');b.type='button';b.innerHTML='<span style="--c:'+EV_TYPES[k].col+'">'+icoSvg(EV_TYPES[k].ik)+'</span>'+EV_TYPES[k].n;b.onclick=()=>reportEvent(k);g.appendChild(b)}
 }
-$('repfab').onclick=()=>{$('repSub').textContent=last?'Zgłoszenie dotyczy Twojej obecnej pozycji'+(evDb?' i trafi do innych kierowców.':' (zapisze się tylko na tym telefonie – baza w ustawieniach).'):'Brak pozycji GPS – poczekaj na sygnał.';$('repSheet').style.display='block'};
+$('repfab').onclick=()=>{$('repSub').textContent=last?'Zgłoszenie dotyczy Twojej obecnej pozycji'+(evDb?' i trafi do innych kierowców.':OWNER?' (zapisze się tylko na tym telefonie – baza w ustawieniach).':' (zapisze się tylko na tym telefonie).'):'Brak pozycji GPS – poczekaj na sygnał.';$('repSheet').style.display='block'};
 $('repCancel').onclick=()=>{$('repSheet').style.display='none'};
 async function reportEvent(ty,pos){
   $('repSheet').style.display='none';
@@ -3632,7 +3730,7 @@ async function reportEvent(ty,pos){
   evMine.unshift(e);evMine=evMine.slice(0,30);LSput('evMine',evMine);
   let ok=false;
   if(evDb){try{const r=await fetch(evBase()+'/ev/'+evCell(e.lat,e.lon)+'/'+e.id+'.json',{method:'PUT',body:JSON.stringify(e)});ok=r.ok}catch(x){}}
-  evToast('Dziękuję! '+T.ic+' '+T.n,evDb?(ok?'Zgłoszenie widzą teraz inni kierowcy.':'Nie udało się wysłać – zapisano tylko na tym telefonie.'):'Zapisano na tym telefonie (aby udostępnić innym, dodaj bazę w ustawieniach).',null,5000);
+  evToast('Dziękuję! '+T.ic+' '+T.n,evDb?(ok?'Zgłoszenie widzą teraz inni kierowcy.':'Nie udało się wysłać – zapisano tylko na tym telefonie.'):'Zapisano na tym telefonie'+(OWNER?' (aby udostępnić innym, dodaj bazę w ustawieniach).':'.'),null,5000);
 }
 // pobieranie zgłoszeń z okolicy (3×3 komórki ≈ 20 km)
 async function evPoll(force){
@@ -3684,9 +3782,9 @@ function drawEvents(){
 }
 $('evShow').onchange=()=>LSput('evShow',$('evShow').checked);
 $('evVoice').onchange=()=>LSput('evVoice',$('evVoice').checked);
-$('evDb').onchange=()=>{evDb=$('evDb').value.trim();LSput('evDb',evDb);evRemote=[];evPollAt=0;$('evStat').textContent=evDb?'Zapisano. Sprawdź połączenie.':'Tryb lokalny (bez wspólnej bazy).'};
+$('evDb').onchange=()=>{if(!OWNER)return;evDb=$('evDb').value.trim();LSput('evDb',evDb);ownBody();evRemote=[];evPollAt=0;$('evStat').textContent=evDb?'Zapisano. Sprawdź połączenie.':'Tryb lokalny (bez wspólnej bazy).'};
 $('evTest').onclick=async()=>{
-  evDb=$('evDb').value.trim();LSput('evDb',evDb);const st=$('evStat');
+  if(!OWNER)return;evDb=$('evDb').value.trim();LSput('evDb',evDb);ownBody();const st=$('evStat');
   if(!/^https:\/\//.test(evDb)){st.textContent='Podaj adres zaczynający się od https://';return}
   st.textContent='Sprawdzam…';
   try{const r=await fetch(evBase()+'/ev.json?shallow=true');if(!r.ok)throw new Error('HTTP '+r.status+(r.status===401||r.status===403?' – ustaw reguły .read/.write na true':''));st.textContent='Połączenie działa ✓';evPollAt=0;evPoll(true)}
@@ -4266,7 +4364,7 @@ $('grpCode').onchange=()=>{grpCode=$('grpCode').value.trim().replace(/[^A-Za-z0-
 $('grpGen').onclick=()=>{const a='abcdefghjkmnpqrstuvwxyz23456789';let c='';for(let i=0;i<8;i++)c+=a[Math.floor(Math.random()*a.length)];$('grpCode').value=c;$('grpCode').onchange();grpSt('Kod: '+c+' – przekaż go znajomym.')};
 $('grpShare').onchange=async()=>{
   grpShare=$('grpShare').checked;LSput('grpShare',grpShare);
-  if(grpShare&&!grpOk()){grpSt(!evDb?'Najpierw podaj adres bazy w sekcji „Zgłoszenia kierowców”.':'Najpierw wpisz kod grupy (min. 6 znaków).');$('grpShare').checked=false;grpShare=false;LSput('grpShare',false);return}
+  if(grpShare&&!grpOk()){grpSt(!evDb?(OWNER?'Najpierw podaj adres bazy w sekcji „Zgłoszenia kierowców”.':'Udostępnianie pozycji jest niedostępne.'):'Najpierw wpisz kod grupy (min. 6 znaków).');$('grpShare').checked=false;grpShare=false;LSput('grpShare',false);return}
   if(!grpShare&&evDb&&grpCode){try{await fetch(evBase()+'/grp/'+grpCode+'/'+evUid+'.json',{method:'DELETE'})}catch(e){}grpSt('Udostępnianie wyłączone, Twoja pozycja usunięta z grupy.')}
   else grpSt('Udostępniasz pozycję grupie „'+grpCode+'”.');
 };
@@ -4324,7 +4422,7 @@ async function radUpdate(){
     }
     radSamp=pts;radCam={lat:c.lat,lon:c.lon};radErr='';
     $('radStat').textContent='Radar z '+new Date(radData.time*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · opady w okolicy: '+(pts.length?'tak':'brak');
-  }catch(e){radErr=e.message||'błąd';radSamp=[];radAt=Date.now()-240000;$('radStat').textContent='Radar niedostępny: '+radErr+(/kafelek|tainted|Security/i.test(radErr)?' (przeglądarka blokuje obraz – brak zgody CORS)':'')}
+  }catch(e){radErr=e.message||'błąd';radSamp=[];radAt=Date.now()-240000;$('radStat').textContent=OWNER?'Radar niedostępny: '+radErr+(/kafelek|tainted|Security/i.test(radErr)?' (przeglądarka blokuje obraz – brak zgody CORS)':''):'Radar chwilowo niedostępny'}
   radBusy=false;
 }
 setInterval(()=>{if(radOn){const c=(vf&&vf.cam)||last;if(!c)return;if(!radCam||dist(radCam.lat,radCam.lon,c.lat,c.lon)>9000||Date.now()-radAt>300000)radUpdate()}},15000);
@@ -4687,7 +4785,7 @@ function updInfo(p){
     if(!dq&&xErr&&Date.now()-xErr<180000&&!xReady(p))dq='nie udało się pobrać przejazdów kolejowych – ponawiam';
   }
   $('info').classList.toggle('warn',!!dq);
-  const parts=[dq,src,vec&&vecErr?vecErr:'',route&&ttKey&&bad(ttSt)?'ruch: '+ttSt:'',route&&ttKey&&bad(flSt)?flSt:'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
+  const parts=[dq,src,vec&&vecErr?(OWNER?vecErr:'problem z wczytaniem mapy – ponawiam'):'',route&&ttKey&&bad(ttSt)?(OWNER?'ruch: '+ttSt:'brak danych o ruchu'):'',route&&ttKey&&bad(flSt)?(OWNER?flSt:'brak danych o korkach'):'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
   $('info').textContent=parts.join(' · ');$('info').style.display=parts.length?'':'none';
 }
 
@@ -5928,7 +6026,7 @@ function achCount(){let n=ACHS.filter(achDone).length;for(const k in LOCKS.col)i
 function achXp(){return Math.round((ACH_ST.chd||0)*40+ACH_ST.km*10+ACH_ST.x*20+ACH_ST.tr*15+ACH_ST.rep*30+ACH_ST.days.length*50+achCount()*150)}
 function rankInfo(){const xp=achXp();let i=0;for(let k=0;k<RANKS.length;k++)if(xp>=RANKS[k][0])i=k;const nx=RANKS[i+1];return {xp,name:RANKS[i][1],next:nx?nx[1]:null,pct:nx?Math.round(100*(xp-RANKS[i][0])/(nx[0]-RANKS[i][0])):100,need:nx?nx[0]-xp:0}}
 function seasonNow(){
-  const o=LSget('season','auto');if(o==='off')return {s:null,b:false};
+  let o=LSget('season','auto');if(!OWNER&&o!=='off')o='auto';if(o==='off')return {s:null,b:false};
   const d=new Date(),m=d.getMonth()+1,dd=d.getDate();let s=null;
   if((m===10&&dd>=24)||(m===11&&dd===1))s='halloween';else if(m===12||(m===1&&dd<=6))s='xmas';
   let b=m===12&&dd===6;
@@ -6081,7 +6179,13 @@ function drawSeasonFx(){
   mx.restore();
 }
 window.__rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-$('seasonSel').value=LSget('season','auto');
+function fillSeason(){
+  const sel=$('seasonSel'),opts=[['auto','Automatycznie'],['off','Wyłączony']].concat(OWNER?[['halloween','Halloween (podgląd)'],['xmas','Święta (podgląd)'],['bday','Urodziny Natalki (podgląd)']]:[]);
+  sel.innerHTML='';for(const [v,t] of opts){const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o)}
+  let v=LSget('season','auto');if(!opts.some(o=>o[0]===v))v='auto';sel.value=v;
+  $('seasonSub').textContent=OWNER?'Halloween, Święta, urodziny':'Halloween, Święta';
+}
+fillSeason();
 $('seasonSel').onchange=()=>{LSput('season',$('seasonSel').value);seasonCur=seasonNow();sFx.length=0;showCar();evToast('Motyw sezonowy zmieniony','Mapa i auto już się zmieniły; ekran ładowania zobaczysz po ponownym uruchomieniu aplikacji.')};
 (function decorateSplash(){
   const sp=$('splash');if(!sp||!(seasonCur.s||seasonCur.b))return;
@@ -6150,7 +6254,7 @@ function liveStat(){$('liveShare').innerHTML=icoSvg('pin')+'<span>'+(liveOn?'Udo
 async function liveStop(){liveOn=false;liveStat();if(evDb&&liveCode)try{await fetch(evBase()+'/trk/'+liveCode+'.json',{method:'DELETE'})}catch(e){}}
 $('liveShare').onclick=async()=>{
   if(liveOn){await liveStop();evToast('Udostępnianie zakończone','Link przestał działać.');return}
-  if(!evDb){note('Najpierw podaj adres bazy','W ustawieniach, w sekcji „Zgłoszenia kierowców”.');return}
+  if(!evDb){if(OWNER)note('Najpierw podaj adres bazy','W ustawieniach, w sekcji „Zgłoszenia kierowców”.');else note('Udostępnianie dojazdu jest niedostępne');return}
   liveCode=Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,8);liveOn=true;liveAt=0;liveStat();livePush();
   const link=liveLink();
   try{if(navigator.share){await navigator.share({title:'Śledź mój dojazd',text:'Zobacz, gdzie jestem i kiedy dojadę:',url:link});return}}catch(e){if(e.name==='AbortError')return}
@@ -6539,7 +6643,7 @@ async function fetchZip(st){
   const m=location.hostname.match(/^([^.]+)\.github\.io$/);
   const user=m?m[1]:'Tronbeczka',repo=m?(location.pathname.split('/')[1]||'Pociong'):'Pociong';
   const urls=['https://raw.githubusercontent.com/'+user+'/'+repo+'/gtfs-data/polish_trains.zip'];
-  const man=$('gurl').value.trim();if(man&&!urls.includes(man))urls.push(man);
+  const man=OWNER?$('gurl').value.trim():'';if(man&&!urls.includes(man))urls.push(man);
   let err='';
   for(const u of urls){
     try{st('pobieranie…');const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.arrayBuffer()}
@@ -6551,7 +6655,7 @@ async function loadTimetable(force){
   if(ttBusy)return;ttBusy=true;
   const st=t=>{$('gstat').textContent=t;const e=$('ttstat');if(e)e.textContent='Rozkład jazdy: '+t;if(!last&&!window.gpsErr)setBanner('warn','Import rozkładu',t)};
   try{
-    const today=wToday(), file=$('gfile').files[0];
+    const today=wToday(), file=OWNER?$('gfile').files[0]:null;
     let c=null;try{c=await idbGet('gtfs')}catch(e){}
     if(!file&&!force&&c&&c.ymd===today&&c.ver===3){setTimetable(c);gtfsCenter=c.center||null;st('gotowy, '+c.trips.length+' kursów dziś');return}
     let buf=null;
@@ -6576,7 +6680,7 @@ async function loadTimetable(force){
   }catch(e){const m=String(e&&e.message||e||'');st(/Failed to fetch|NetworkError|Load failed|network|fetch|HTTP|timeout|abort/i.test(m)?'niedostępny – brak połączenia z serwerem rozkładu. Bez rozkładu aplikacja nie ostrzeże o pociągach. Plik zip możesz wskazać w ustawieniach.':'niedostępny ('+m+'). Plik zip możesz wskazać w ustawieniach.')}
   finally{ttBusy=false}
 }
-$('gload').onclick=()=>loadTimetable(!!$('gfile').files[0]);
+$('gload').onclick=()=>{if(OWNER)loadTimetable(!!$('gfile').files[0])};
 idbGet('gtfs').then(c=>{if(c&&c.ymd===wToday()&&c.ver===3){setTimetable(c);gtfsCenter=c.center||null;$('gstat').textContent='Rozkład z pamięci: '+c.trips.length+' kursów dziś';$('ttstat').textContent='Rozkład jazdy: gotowy, '+c.trips.length+' kursów dziś'}}).catch(()=>{});
 setTimeout(()=>{if(!gtfs&&!gKey&&!ttBusy)loadTimetable(false)},1200);
 setInterval(()=>{
@@ -6951,6 +7055,7 @@ setTimeout(()=>{   // w poniedziałek: krótkie podsumowanie minionego tygodnia
     evToastQ('📅 Podsumowanie tygodnia',a.km.toFixed(1).replace('.',',')+' km · '+a.x+' mijanych przejazdów · '+a.tr+' pociągów',[['Pokaż',()=>$('achOpen').click()],['Zamknij',()=>{}]],14000);
   }catch(e){}
 },16000);
+ownApply();
 </script>
 </body>
 </html>
