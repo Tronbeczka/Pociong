@@ -757,6 +757,9 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 #evToast button{padding:7px;font-size:.88rem}
 #evToast .evb{margin-top:7px}
 #sig{font-size:.9rem;padding:6px 12px}
+.icoRst{position:fixed;left:50%;top:44%;transform:translate(-50%,-50%);z-index:3600;display:none;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#202124;color:#fff;font:600 1rem Barlow,system-ui,sans-serif;box-shadow:0 8px 26px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.14);white-space:nowrap}
+.icoRst svg{width:20px;height:20px}
+.icoRst.hot{background:#1a73e8;transform:translate(-50%,-50%) scale(1.1)}
 .dragIco{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .dragging{transform:scale(1.14)!important;box-shadow:0 0 0 3px #1a73e8,0 12px 30px rgba(0,0,0,.4)!important;opacity:.95;transition:none!important;z-index:3500!important}
 .moved{position:fixed!important;right:auto!important;bottom:auto!important;margin:0!important;z-index:900}
@@ -912,7 +915,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 <button id="recenter" aria-label="Wyśrodkuj na samochodzie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>
 <div id="pick" style="display:none"><div class="box"><div class="grab"></div><button id="pickx" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="pickset" aria-label="Ustawienia" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div class="logo"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#16a34a"/><path d="M14 14l20 20M34 14L14 34" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#16a34a" stroke="#fff" stroke-width="2"/></svg></div>
-  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 114</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
+  <h1>Przejazd <span id="ver" style="font-size:.5em;font-weight:600;opacity:.65;white-space:nowrap">wersja 115</span></h1><p>Alerty o nadjeżdżających pociągach na Twojej trasie</p>
   <div class="lbl">Twój samochód</div>
   <div id="pickcars"></div>
   <div id="rt">
@@ -1009,6 +1012,11 @@ const $=id=>document.getElementById(id);
   const KEY='ico_pos_v1',HOME={srchfab:'lfab',planfab:'lfab',mic:'lfab',zoomb:'rfab',recenter:'rfab',tilt:'rfab'};
   const ORDER={lfab:['srchfab','planfab','mic'],rfab:['zoomb','recenter','tilt']};
   let pos={};try{pos=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){pos={}}
+  const rst=document.createElement('button');rst.type='button';rst.className='icoRst';rst.id='icoRst';
+  rst.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>Przywróć ikony';document.body.appendChild(rst);
+  let rstT=null;const showRst=ms=>{rst.style.display='flex';clearTimeout(rstT);if(ms)rstT=setTimeout(()=>{rst.style.display='none';rst.classList.remove('hot')},ms)};
+  const overRst=(x,y)=>{const r=rst.getBoundingClientRect();return x>=r.left-12&&x<=r.right+12&&y>=r.top-12&&y<=r.bottom+12};
+  rst.onclick=()=>{window.resetIcons();rst.style.display='none';rst.classList.remove('hot')};
   const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(pos))}catch(e){}};
   const clamp=(e,x,y)=>{const w=e.offsetWidth||44,h=e.offsetHeight||44;return[Math.max(4,Math.min(innerWidth-w-4,x)),Math.max(4,Math.min(innerHeight-h-4,y))]};
   const place=(e,x,y)=>{if(!e.classList.contains('moved')){e.classList.add('moved');e.dataset.moved='1';if(e.parentNode!==document.body)document.body.appendChild(e)}
@@ -1025,13 +1033,16 @@ const $=id=>document.getElementById(id);
       if(ev.button>0)return;sx=ev.clientX;sy=ev.clientY;pid=ev.pointerId;drag=false;clearTimeout(t);
       t=setTimeout(()=>{const r=e.getBoundingClientRect();ox=sx-r.left;oy=sy-r.top;drag=true;
         if(!e.classList.contains('moved')){e.classList.add('moved');e.dataset.moved='1';document.body.appendChild(e);e.style.left=r.left+'px';e.style.top=r.top+'px'}
-        e.classList.add('dragging');try{e.setPointerCapture(pid)}catch(x){}try{navigator.vibrate&&navigator.vibrate(25)}catch(x){}},500);
+        e.classList.add('dragging');showRst(0);try{e.setPointerCapture(pid)}catch(x){}try{navigator.vibrate&&navigator.vibrate(25)}catch(x){}},500);
     });
     e.addEventListener('pointermove',ev=>{
       if(!drag){if(t&&Math.hypot(ev.clientX-sx,ev.clientY-sy)>10){clearTimeout(t);t=null}return}
-      ev.preventDefault();const c=clamp(e,ev.clientX-ox,ev.clientY-oy);e.style.left=c[0]+'px';e.style.top=c[1]+'px';
+      ev.preventDefault();const c=clamp(e,ev.clientX-ox,ev.clientY-oy);e.style.left=c[0]+'px';e.style.top=c[1]+'px';rst.classList.toggle('hot',overRst(ev.clientX,ev.clientY));
     });
-    const end=()=>{clearTimeout(t);t=null;if(!drag)return;drag=false;e.classList.remove('dragging');
+    const end=ev=>{clearTimeout(t);t=null;if(!drag)return;drag=false;e.classList.remove('dragging');
+      if(ev&&ev.clientX!=null&&overRst(ev.clientX,ev.clientY)){window.resetIcons();rst.style.display='none';rst.classList.remove('hot');
+        const stop0=q=>{q.stopPropagation();q.preventDefault()};window.addEventListener('click',stop0,{capture:true,once:true});setTimeout(()=>window.removeEventListener('click',stop0,true),400);return}
+      showRst(5000);rst.classList.remove('hot');
       pos[id]=[parseFloat(e.style.left)/innerWidth,parseFloat(e.style.top)/innerHeight];save();
       const stop=ev=>{ev.stopPropagation();ev.preventDefault()};window.addEventListener('click',stop,{capture:true,once:true});setTimeout(()=>window.removeEventListener('click',stop,true),400);
       setTimeout(()=>window.fitUI&&window.fitUI(),30)};
