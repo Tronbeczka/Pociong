@@ -1315,7 +1315,7 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 119</span> · Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
+  <p class="pkFoot"><span id="ver">wersja 120</span> · Adresy: Photon / © OpenStreetMap · trasy: OSRM (serwer demo)</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2085,6 +2085,7 @@ function setRoute(coords,dur,steps,jam,delay,inc){
   let o=0;route.steps=(steps||[]).map(x=>{const y={...x,off:o};o+=x.dist;return y});
   rCase.setLatLngs(route.pts);rLine.setLatLngs(route.pts);
   try{saveResume()}catch(e){}   // trasa do wznowienia po odświeżeniu strony
+  try{camRouteAt=Date.now();camRoute(0)}catch(e){}   // fotoradary i odcinkowe pomiary wzdłuż trasy
 }
 
 // ---- Wskazówki dojazdu (kroki z OSRM) ----
@@ -3827,39 +3828,101 @@ $('brwFav').onclick=()=>{
   $('brwFav').innerHTML=icoSvg('check')+'Zapisano';setTimeout(()=>{$('brwFav').innerHTML=icoSvg('star')+'Zapisz to miejsce'},1500);
 };
 
-// ================= Fotoradary na mapie (także bez trasy) =================
+// ================= Fotoradary i odcinkowe pomiary prędkości (na mapie, także bez trasy) =================
+// Dane z OpenStreetMap w komórkach ok. 11×10 km: ładują się wokół auta, wokół środka widocznej mapy i wzdłuż trasy; wynik trafia do pamięci urządzenia (dobry też bez internetu).
 let cams=[],camAt=null,camAl={};
-$('camShow').checked=LSget('camShow',true);$('camShow').onchange=()=>LSput('camShow',$('camShow').checked);
-async function loadCams(lat,lon){
-  camAt={lat,lon};
-  try{
-    const R=4000,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
-    const j=await cachedOverpass('cam|'+Math.round(lat*25)+'|'+Math.round(lon*16),'[out:json][timeout:20];(node["highway"="speed_camera"]'+bb+';node["enforcement"="maxspeed"]'+bb+';);out;');
-    cams=(j.elements||[]).filter(e=>e.lat!=null).map(e=>({id:e.id,lat:e.lat,lon:e.lon,dir:e.tags&&e.tags.direction!=null&&!isNaN(+e.tags.direction)?+e.tags.direction:null,ms:e.tags&&e.tags.maxspeed||''}));
-  }catch(e){camAt=null}
+const camCells=new Map(),camQ=[];let camBusy=0,camRouteAt=-1e9;
+const CAM_DLAT=.1,CAM_DLON=.15;
+$('camShow').checked=LSget('camShow',true);$('camShow').onchange=()=>{LSput('camShow',$('camShow').checked);camRebuild()};
+function camParse(j){
+  const el=(j&&j.elements)||[],roles=new Map();
+  for(const e of el)if(e.type==='relation'&&e.members){   // relacja type=enforcement: węzły from/to/device odcinkowego pomiaru
+    const avg=!!(e.tags&&e.tags.enforcement==='average_speed');
+    for(const m of e.members)if(m.type==='node'){const r=roles.get(m.ref)||{};if(m.role==='from'||m.role==='to')r.role=m.role;if(avg)r.avg=true;roles.set(m.ref,r)}
+  }
+  const out=[];
+  for(const e of el){
+    if(e.type!=='node'||e.lat==null)continue;
+    const t=e.tags||{},r=roles.get(e.id),enf=t.enforcement||'';
+    const tagged=t.highway==='speed_camera'||/^(maxspeed|average_speed|speed_camera)$/.test(enf);
+    if(!tagged&&!(r&&(r.role||r.avg)))continue;
+    const avg=enf==='average_speed'||!!(r&&r.avg)||/average|section|odcink/i.test(String(t['speed_camera']||t.description||t.name||''));
+    out.push({id:e.id,lat:e.lat,lon:e.lon,dir:t.direction!=null&&!isNaN(+t.direction)?+t.direction:null,ms:t.maxspeed||'',avg,role:r&&r.role||''});
+  }
+  return out;
+}
+function camRebuild(){
+  const m=new Map();for(const c of camCells.values())for(const x of c.list)if(!m.has(x.id))m.set(x.id,x);
+  cams=[...m.values()];
+}
+async function camCell(ix,iy,k){
+  const rec={ok:false,next:Date.now()+45000,list:[]};camCells.set(k,rec);
+  const s=iy*CAM_DLAT-.004,w=ix*CAM_DLON-.006,n=(iy+1)*CAM_DLAT+.004,e=(ix+1)*CAM_DLON+.006,bb='('+s.toFixed(4)+','+w.toFixed(4)+','+n.toFixed(4)+','+e.toFixed(4)+')';
+  const q='[out:json][timeout:25];(node["highway"="speed_camera"]'+bb+';node["enforcement"~"^(maxspeed|average_speed|speed_camera)$"]'+bb+';)->.n;rel["type"="enforcement"]["enforcement"~"^(maxspeed|average_speed)$"]'+bb+'->.r;node(r.r)->.rn;(.n;.rn;.r;);out;';
+  const idk='cam3|'+k;let c=null;try{c=await idbGet(idk)}catch(_){}
+  if(c&&c.j){rec.list=camParse(c.j);rec.ok=true;camRebuild();if(Date.now()-c.t<2*864e5)return}   // z pamięci od razu; odświeżenie z sieci tylko, gdy dane starsze niż 2 dni
+  try{const j=await fetchOverpass(q);try{await idbSet(idk,{t:Date.now(),j})}catch(_){}rec.list=camParse(j);rec.ok=true;rec.next=0;camRebuild()}
+  catch(_){rec.next=Date.now()+(rec.ok?6*36e5:45000)}
+}
+function camPump(){
+  while(camBusy<2&&camQ.length){const [ix,iy,k]=camQ.shift();camBusy++;camCell(ix,iy,k).catch(()=>{}).finally(()=>{camBusy--;camPump()})}
+}
+function camWant(lat,lon,pri){
+  const ix=Math.floor(lon/CAM_DLON),iy=Math.floor(lat/CAM_DLAT),k=ix+'|'+iy,c=camCells.get(k);
+  if(c&&(c.ok||Date.now()<c.next))return;
+  const i=camQ.findIndex(q=>q[2]===k);if(i>=0){if(pri&&i>0){const q=camQ.splice(i,1)[0];camQ.unshift(q)}return}
+  if(camQ.length>60)return;
+  const it=[ix,iy,k];pri?camQ.unshift(it):camQ.push(it);camPump();
+}
+function camAround(lat,lon,dLat,dLon,pri){   // komórki pokrywające prostokąt wokół punktu (środek najpierw)
+  camWant(lat,lon,pri);
+  for(const a of [-dLat,dLat])camWant(lat+a,lon,pri);
+  for(const b of [-dLon,dLon]){camWant(lat,lon+b,pri);for(const a of [-dLat,dLat])camWant(lat+a,lon+b,pri)}
+}
+function camRoute(from){   // komórki wzdłuż trasy (do ok. 250 km przed autem)
+  if(!route||!route.pts||route.pts.length<2||!$('camShow').checked)return;
+  const a=Math.max(0,from||0),b=Math.min(route.len,a+250000);
+  for(let d=a;d<=b;d+=4000){const p=routeAt(route,d);camWant(p[0],p[1],false)}
+  const e=routeAt(route,b);camWant(e[0],e[1],false);
 }
 function camTick(p){
   if(!$('camShow').checked)return;
-  if(!camAt||dist(camAt.lat,camAt.lon,p.lat,p.lon)>2200)loadCams(p.lat,p.lon);
-  if(route||window.preview||(p.speed||0)<5||p.heading==null)return;   // z trasą ostrzega istniejący mechanizm
+  camAround(p.lat,p.lon,.045,.07,true);
+  if(route&&Date.now()-camRouteAt>20000){camRouteAt=Date.now();try{camRoute(route.along||0)}catch(e){}}
+  if(window.preview||(p.speed||0)<5||p.heading==null)return;
+  const sg=typeof signs!=='undefined'&&signs&&signs.haz?signs.haz:null;
   for(const c of cams){
-    if(camAl[c.id])continue;const d=dist(p.lat,p.lon,c.lat,c.lon);if(d>500||d<40)continue;
+    if(camAl[c.id]||c.role==='to')continue;const d=dist(p.lat,p.lon,c.lat,c.lon);if(d>500||d<40)continue;
     if(angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading)>35)continue;
     if(c.dir!=null&&angDiff(c.dir,p.heading)>70)continue;
+    if(route){   // z trasą: tylko to, co leży na trasie, a zwykłe fotoradary zgłasza już znak przy drodze
+      if(routeHaz(c)!==true)continue;
+      if(!c.avg&&sg&&sg.some(h=>h.id===c.id))continue;
+    }
     camAl[c.id]=1;const dm=Math.round(d/50)*50;
-    say('cam'+c.id,'Za '+dm+' metrów fotoradar. Proszę zachować dozwoloną prędkość.',[150,80,150],'Fotoradar');
+    if(c.avg)say('cam'+c.id,'Za '+dm+' metrów odcinkowy pomiar prędkości. Proszę zachować dozwoloną prędkość na całym odcinku.',[150,80,150],'Odcinkowy pomiar');
+    else say('cam'+c.id,'Za '+dm+' metrów fotoradar. Proszę zachować dozwoloną prędkość.',[150,80,150],'Fotoradar');
     break;
   }
 }
+setInterval(()=>{   // także dla mapy przesuniętej palcem, podglądu trasy i oglądanego miejsca
+  if(!$('camShow').checked||!vf||!vf.cam||scaleCur<.02)return;
+  camAround(vf.cam.lat,vf.cam.lon,.045,.07,false);
+},1500);
 function drawCams(){
-  if(!cams.length||!$('camShow').checked||!last)return;
-  const W=window.innerWidth,H=window.innerHeight,car=vf&&vf.car?vf.car:last;
+  if(!cams.length||!$('camShow').checked||!vf)return;
+  const W=window.innerWidth,H=window.innerHeight,far=scaleCur<.03;
   for(const c of cams){
-    if(dist(car.lat,car.lon,c.lat,c.lon)>2500)continue;
+    if(far&&!(route&&routeHaz(c)===true))continue;   // z daleka tylko te na trasie
     const q=proj(c.lat,c.lon);if(!q||q.x<-30||q.x>W+30||q.y<-30||q.y>H+30)continue;
     const u=Math.max(10,Math.min(16,12*q.k));
-    mx.save();mx.translate(q.x,q.y);mx.beginPath();mx.arc(0,0,u,0,6.2832);mx.fillStyle='#c62828';mx.fill();mx.lineWidth=Math.max(2,u*.2);mx.strokeStyle='#fff';mx.stroke();
-    icoDraw(mx,'cam',0,0,u*1.25,'#fff',Math.max(1.8,2*u/12));mx.restore();
+    mx.save();mx.translate(q.x,q.y);mx.beginPath();mx.arc(0,0,u,0,6.2832);mx.fillStyle=c.avg?'#e65100':'#c62828';mx.fill();mx.lineWidth=Math.max(2,u*.2);mx.strokeStyle='#fff';mx.stroke();
+    icoDraw(mx,'cam',0,0,u*1.25,'#fff',Math.max(1.8,2*u/12));
+    if(c.avg&&q.k>.55){   // podpis: odcinkowy pomiar prędkości (początek / koniec odcinka)
+      const t=c.role==='to'?'koniec odcinka':c.role==='from'?'początek odcinka':'odcinkowy pomiar';
+      mx.font='700 11px '+FONT_UI;mx.textAlign='center';mx.textBaseline='top';mx.lineWidth=3.5;mx.lineJoin='round';mx.strokeStyle='rgba(255,255,255,.95)';mx.strokeText(t,0,u+3);mx.fillStyle='#bf360c';mx.fillText(t,0,u+3);
+    }
+    mx.restore();
   }
 }
 // ================= Pasek „co dalej na trasie” =================
@@ -4354,7 +4417,7 @@ async function loadSigns(lat,lon){
   if(signsBusy||Date.now()<signsNext)return;signsBusy=true;
   try{
     const R=1500,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
-    const j=await cachedOverpass('s|'+Math.round(lat*40)+'|'+Math.round(lon*26),'[out:json][timeout:25];node["highway"~"^(stop|give_way)$"]'+bb+'->.w;(node["highway"~"^(traffic_signals|speed_camera|crossing)$"]'+bb+';node["traffic_calming"~"^(bump|hump|table|cushion)$"]'+bb+';node["enforcement"="maxspeed"]'+bb+';)->.o;(.w;.o;)->.s;.s out body;way(bn.w)["highway"];out geom qt;');
+    const j=await cachedOverpass('s|'+Math.round(lat*40)+'|'+Math.round(lon*26),'[out:json][timeout:25];node["highway"~"^(stop|give_way)$"]'+bb+'->.w;(node["highway"~"^(traffic_signals|speed_camera|crossing)$"]'+bb+';node["traffic_calming"~"^(bump|hump|table|cushion)$"]'+bb+';node["enforcement"~"^(maxspeed|average_speed|speed_camera)$"]'+bb+';)->.o;(.w;.o;)->.s;.s out body;way(bn.w)["highway"];out geom qt;');
     const byNode=new Map(),list=[],lights=[],haz=[];
     for(const w of j.elements)if(w.type==='way'&&w.nodes&&w.geometry)w.nodes.forEach((id,i)=>{let a=byNode.get(id);if(!a)byNode.set(id,a=[]);a.push([w,i])});
     const brg=(a,b)=>bear(a.lat,a.lon,b.lat,b.lon);
@@ -4362,7 +4425,7 @@ async function loadSigns(lat,lon){
       if(n.type!=='node'||n.lat==null)continue;
       const t=n.tags||{},ws=byNode.get(n.id)||[],hs=[],dir=t.direction||'';
       if(t.highway==='traffic_signals'){lights.push({id:n.id,lat:n.lat,lon:n.lon,kind:'lights'});continue}
-      if(t.highway==='speed_camera'||t.enforcement==='maxspeed'){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'camera',ms:t.maxspeed?parseMax(t.maxspeed):null});continue}
+      if(t.highway==='speed_camera'||/^(maxspeed|average_speed|speed_camera)$/.test(t.enforcement||'')){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'camera',avg:t.enforcement==='average_speed',ms:t.maxspeed?parseMax(t.maxspeed):null});continue}
       if(t.traffic_calming){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'bump'});continue}
       if(t.highway==='crossing'){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'crossing'});continue}
       for(const [w,i] of ws){
@@ -4508,12 +4571,12 @@ function signCheck(p){
   if(!best){el.classList.remove('on');return}
   const K=best.sg.kind,dd=Math.max(10,Math.round(best.d/10)*10);
   $('sigi').innerHTML=SIG_ICON[K];
-  $('sigt').textContent='Za '+dd+' m '+({stop:'znak STOP',give_way:'ustąp pierwszeństwa',camera:'fotoradar'+(best.sg.ms?' · limit '+best.sg.ms:''),bump:'próg zwalniający',crossing:'przejście dla pieszych'})[K];
+  $('sigt').textContent='Za '+dd+' m '+({stop:'znak STOP',give_way:'ustąp pierwszeństwa',camera:(best.sg.avg?'odcinkowy pomiar prędkości':'fotoradar')+(best.sg.ms?' · limit '+best.sg.ms:''),bump:'próg zwalniający',crossing:'przejście dla pieszych'})[K];
   el.classList.add('on');
   const now=Date.now();
   if($('sigsnd').checked&&(!sigSeen[best.sg.id]||now-sigSeen[best.sg.id]>90000)){
     sigSeen[best.sg.id]=now;chime(K==='stop'?'stop':'give_way');if(navigator.vibrate)try{navigator.vibrate(30)}catch(e){}
-    if(K==='camera'){if(!playClip('camera',.9))speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.')}
+    if(K==='camera'){if(best.sg.avg)speak(vbose==='short'?'Odcinkowy pomiar':'Za '+dd+' metrów odcinkowy pomiar prędkości. Proszę zachować dozwoloną prędkość na całym odcinku.');else if(!playClip('camera',.9))speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.')}
     else if(K==='bump'){if(!playClip('bump',.9))speak(vbose==='short'?'Próg zwalniający':'Za '+dd+' metrów próg zwalniający. Proszę zwolnić.')}
   }
 }
@@ -4657,8 +4720,11 @@ function camFix(p,h){
   fix=nf;
   if(provCam){provCam=null;document.body.classList.remove('nofix')}   // pierwszy prawdziwy odczyt: kamera płynnie dojeżdża z ostatniej znanej pozycji
 }
-function vecCam(now){   // kamera = pozycja samochodu + ręczne przesunięcie
-  const c=vecCam0(now);if(!c||!(panE||panN))return c;
+var camOff={lat:0,lon:0};   // przesunięcie auta na pas ruchu i na oś trasy – kamera jedzie dokładnie za narysowanym autem
+function vecCam(now){   // kamera = narysowane auto (na trasie: na swoim pasie) + ręczne przesunięcie
+  let c=vecCam0(now);if(!c)return c;
+  if((camOff.lat||camOff.lon)&&!freeCam)c={lat:c.lat+camOff.lat,lon:c.lon+camOff.lon};
+  if(!(panE||panN))return c;
   return {lat:c.lat+panN/111195,lon:c.lon+panE/(111195*Math.cos(rad(c.lat)))};
 }
 function vecCam0(now){   // sam samochód (przewidywanie ruchu)
@@ -4895,6 +4961,24 @@ function getTile(tpl,z,x,y){
   if(tileMem.size>40)tileMem.delete(tileMem.keys().next().value);
   return pr;
 }
+// kafelki na trasie przed autem wczytują się do pamięci urządzenia z wyprzedzeniem (tylko w czasie jazdy po trasie, ok. 15 km do przodu) – mapa nie czeka na sieć
+var pfBusy=false,pfSeen=new Set();
+async function prefetchAhead(){
+  if(pfBusy||!vec||!route||!route.pts||route.pts.length<2||window.preview||window.browse||!last||route.off>150||navigator.onLine===false)return;
+  try{if(navigator.connection&&navigator.connection.saveData)return}catch(e){}
+  pfBusy=true;
+  try{
+    const tpl=await ofmUrl(),z=14,n=Math.pow(2,z),list=[],seen=new Set(),a=route.along||0,b=Math.min(route.len,a+15000);
+    for(let d=a;d<=b+1&&list.length<70;d+=900){
+      const p=routeAt(route,Math.min(d,route.len)),fx=(p[1]+180)/360*n,fy=(1-Math.log(Math.tan(rad(p[0]))+1/Math.cos(rad(p[0])))/Math.PI)/2*n,tx=Math.floor(fx),ty=Math.floor(fy);
+      for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]]){const k=(tx+dx)+'/'+(ty+dy);if(!seen.has(k)&&!pfSeen.has(k)){seen.add(k);list.push([tx+dx,ty+dy,k])}}
+    }
+    let i=0;const work=async()=>{while(i<list.length&&route&&!window.preview){const [x,y,k]=list[i++];try{await tileBuf(tpl,z,x,y);pfSeen.add(k)}catch(e){}}};
+    await Promise.all([work(),work()]);
+  }catch(e){}
+  pfBusy=false;
+}
+setInterval(()=>{try{prefetchAhead()}catch(e){}},30000);
 function buildSP(j,lat,lon){
   const kx=111195*Math.cos(rad(lat)),SP=[];
   for(const w of j.elements||[]){
@@ -5320,8 +5404,10 @@ function checkSingleLane(){
 }
 function updCarSnap(){
   const el=$('carIcon');carSnap=null;
+  const setOff=(la,lo)=>{camOff.lat+=(la-camOff.lat)*.35;camOff.lon+=(lo-camOff.lon)*.35;if(Math.abs(camOff.lat)<1e-9&&Math.abs(camOff.lon)<1e-9&&!la&&!lo){camOff.lat=0;camOff.lon=0}};
   const zf=Math.max(.36,Math.min(1,scaleCur/.85)),Rr=rw('tr',scaleCur),Wc=Math.round(Math.max(30,Math.min(96*zf,vec&&route?Rr*.8:96*zf)));   // rozmiar auta dopasowany do szerokości drogi (tylko na trasie)
   const base='translate(-50%,-80%)';
+  if(freeCam||window.preview||!(vec&&route&&vf&&vf.car&&!demo&&route.pts.length>1&&route.len>0))setOff(0,0);
   if(freeCam&&!window.preview&&vec&&vf&&vf.car){   // mapa przesunięta ręcznie: to samo auto (ten sam model) jedzie po swoim miejscu na mapie
     const q=proj(vf.car.lat,vf.car.lon),pr=el.offsetParent||document.body,rc=pr.getBoundingClientRect();
     if(q){const Wf=Math.round(Math.max(30,Math.min(96*zf,route?Rr*.8:70*zf)));el.style.width=Wf+'px';el.style.height=Math.round(Wf*.8)+'px';
@@ -5331,16 +5417,17 @@ function updCarSnap(){
   if(!(vec&&route&&vf&&vf.car&&!freeCam&&!demo&&route.pts.length>1&&route.len>0)){if(zf<1&&vec){el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px'}else{el.style.width='';el.style.height=''}el.style.transform='';return}
   el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px';
   const n=route.pts.length-2,m=projRoute(route,vf.car.lat,vf.car.lon,Math.max(0,route.idx-2),Math.min(n,route.idx+12));
-  if(m.off>30){el.style.transform=base;return}
+  if(m.off>30){setOff(0,0);el.style.transform=base;return}
   const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=dAt(route,m.along),a=dAt(route,Math.max(0,m.along-6)),b=dAt(route,Math.min(route.len,m.along+6));
   const brg=dist(a[0],a[1],b[0],b[1])>2?bear(a[0],a[1],b[0],b[1]):lastH;
   const tg=laneTarget(Rr);if(laneCur==null)laneCur=tg;
   const prev=laneCur;laneCur+=(tg-laneCur)*.07;laneYaw+=(Math.max(-9,Math.min(9,(laneCur-prev)*14))-laneYaw)*.2;   // płynna zmiana pasa + lekkie wychylenie auta
   const lanePx=laneCur,laneM=lanePx/scaleCur;
   const r=rad(brg+90),lat=c[0]+Math.cos(r)*laneM/111195,lon=c[1]+Math.sin(r)*laneM/(111195*Math.cos(rad(c[0])));
-  const q=proj(lat,lon),q0=proj(vf.car.lat,vf.car.lon);
+  const q=proj(lat,lon),q0=proj(vf.cam.lat,vf.cam.lon);   // q0 = środek kamery (z przesunięciem camOff)
   carSnap={lat:c[0],lon:c[1]};
   if(!q||!q0){el.style.transform=base;return}
+  setOff(camOff.lat+(lat-vf.cam.lat)*w,camOff.lon+(lon-vf.cam.lon)*w);   // kamera dąży do narysowanego auta – auto zostaje na środku ekranu
   el.style.transform='translate(calc(-50% + '+((q.x-q0.x)*w).toFixed(1)+'px),calc(-80% + '+((q.y-q0.y)*w).toFixed(1)+'px)) rotate('+laneYaw.toFixed(1)+'deg)';
 }
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
