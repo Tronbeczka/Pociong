@@ -677,7 +677,8 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 #settings select,#srchIn{text-overflow:ellipsis}
 #srchIn{min-width:0}
 #wait{left:70px;right:70px;padding:14px 12px;max-width:560px;margin:0 auto}
-#evToast{top:calc(env(safe-area-inset-top,0px) + 150px)}
+#evToast{top:calc(env(safe-area-inset-top,0px) + 150px);max-height:calc(100dvh - env(safe-area-inset-top,0px) - 170px);overflow:auto}
+@media (orientation:landscape) and (max-height:540px){#evToast{top:calc(env(safe-area-inset-top,0px) + 70px);left:max(14px,env(safe-area-inset-left,0px));right:80px;max-width:520px;max-height:calc(100dvh - 90px)}}
 @media (orientation:landscape) and (max-height:540px){
   #banner,#strip{width:min(58%,560px)}
   #banner{border-radius:0 0 20px 20px}
@@ -785,6 +786,21 @@ body.night #goRow{background:linear-gradient(to top,var(--u-surf) 72%,rgba(32,34
 
 /* --- toast: plakietka z ikoną, tytuł, opis, przyciski i pasek pozostałego czasu --- */
 #evToast{background:rgba(22,26,34,.97);color:#f4f6fa;border-radius:16px;padding:6px 12px 8px 10px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.09),0 2px 6px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.42)}
+/* okno pytania/potwierdzenia (zamiast systemowych confirm/prompt): mieści się w ekranie, przewija się, gdy tekst jest długi, uwzględnia wcięcia i klawiaturę */
+#dlg{position:fixed;inset:0;z-index:4600;display:none;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(10,14,22,.55);animation:fadeIn .18s ease}
+#dlg.open{display:flex}
+#dlg .dlgc{width:min(100%,380px);max-height:100%;overflow:auto;overscroll-behavior:contain;background:var(--u-surf,#fff);color:var(--u-ink,#1a2330);border-radius:26px;padding:22px 20px 16px;text-align:center;box-shadow:0 0 0 1px var(--u-hair,rgba(16,24,40,.1)),0 24px 60px rgba(0,0,0,.5);animation:cardIn .22s ease}
+#dlg #dlgI{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 12px;border-radius:50%;background:var(--u-accSoft,#e6effd);color:var(--u-acc,#1a73e8)}
+#dlg #dlgI .ic{width:26px;height:26px}
+#dlg.warn #dlgI{background:#fdeede;color:#c75b06}body.night #dlg.warn #dlgI{background:#4a2c10;color:#ffb066}
+#dlg b{display:block;font-size:1.18rem;font-weight:700;line-height:1.25;margin-bottom:6px}
+#dlg p{margin:0 0 14px;font-size:.95rem;line-height:1.45;color:var(--u-ink2,#586372);overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
+#dlg input{display:none;width:100%;box-sizing:border-box;margin:0 0 14px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--u-hair,#ccd);background:var(--u-surf2,#eef1f5);color:inherit;font:inherit;font-size:1rem;text-align:center}
+#dlg input:focus{outline:2px solid var(--u-acc,#1a73e8);outline-offset:1px}
+#dlg .dlgb{display:flex;gap:10px}
+#dlg .dlgb button{flex:1;min-height:46px;padding:10px;border-radius:14px;border:0;font:inherit;font-weight:700;font-size:1rem;background:var(--u-surf2,#eef1f5);color:var(--u-ink,#1a2330)}
+#dlg .dlgb button#dlgOk{background:var(--u-acc,#1a73e8);color:#fff}body.night #dlg .dlgb button#dlgOk{color:#0b1220}
+@media (max-height:420px){#dlg .dlgc{padding:14px 16px 12px}#dlg #dlgI{display:none}#dlg b{font-size:1.05rem}#dlg p{margin-bottom:10px}}
 #evToast .evh{display:flex;align-items:center;gap:9px}
 #evToast .evx{min-width:0;flex:1}
 #evToast #evIc{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--evc,#2f7be5);color:var(--evi,#fff);box-shadow:0 0 0 2px rgba(255,255,255,.07)}
@@ -1309,6 +1325,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
 <button id="mic" aria-label="Polecenia głosowe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/></svg></button><div id="micTo"></div>
 <div id="zoomb"><button id="zin" aria-label="Przybliż"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button id="zout" aria-label="Oddal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg></button></div>
 <div id="repSheet"><h3>Zgłoś zdarzenie dla innych kierowców</h3><p id="repSub">Zgłoszenie dotyczy Twojej obecnej pozycji.</p><div id="repGrid"></div><button id="repCancel" type="button">Anuluj</button></div>
+<div id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT"><div class="dlgc"><i id="dlgI" aria-hidden="true"></i><b id="dlgT"></b><p id="dlgP"></p><input id="dlgIn" type="text" autocomplete="off" maxlength="60"><div class="dlgb"><button type="button" id="dlgNo"></button><button type="button" id="dlgOk"></button></div></div></div>
 <div id="evToast"><div class="evh"><i id="evIc" aria-hidden="true"></i><div class="evx"><b id="evT1"></b><span id="evT2"></span></div></div><div class="evb" id="evB"></div><em id="evTm" aria-hidden="true"></em></div>
 <button id="srchfab" aria-label="Szukaj miejsca" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></button>
 <div id="srchBox"><div id="srchRow"><input id="srchIn" placeholder="Miejscowość lub ulica…" autocomplete="off"><button id="srchX" type="button" aria-label="Zamknij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="srchSug"></div><div id="srchFavs"></div></div>
@@ -1356,7 +1373,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 133</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 134</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2909,7 +2926,7 @@ $('share').onclick=async()=>{
   const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   const txt='Jadę do: '+(F.to.el.value||'celu')+'. Przyjazd ok. '+eta+' (za '+mins+' min). Cel: https://www.google.com/maps/dir/?api=1&destination='+endPt.lat+','+endPt.lon;
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
-  try{await navigator.clipboard.writeText(txt);note('Skopiowano do schowka',txt)}catch(e){prompt('Skopiuj wiadomość:',txt)}
+  try{await navigator.clipboard.writeText(txt);note('Skopiowano do schowka',txt)}catch(e){dlg({ic:'copy',title:'Skopiuj wiadomość',input:txt,ro:true,ok:'Gotowe',no:false})}
 };
 // --- zgłaszanie błędów mapy ---
 $('report').onclick=()=>{
@@ -3092,12 +3109,12 @@ $('impFile').onchange=async e=>{
   if(!OWNER)return;
   const f=e.target.files[0];if(!f)return;
   try{const j=JSON.parse(await f.text());if(j.app!=='przejazd'||!j.data)throw new Error('to nie jest kopia ustawień');
-    if(!confirm('Wczytać kopię ustawień ('+Object.keys(j.data).length+' wpisów: miejsca, historia, statystyki'+(j.idb&&((j.idb.tracks||[]).length||(j.idb.vis||[]).length)?', przejechane trasy':'')+')? Zastąpi bieżące dane o tych samych nazwach.'))return;
+    if(!await dlg({ic:'hist',title:'Wczytać kopię ustawień?',ok:'Wczytaj',text:'('+Object.keys(j.data).length+' wpisów: miejsca, historia, statystyki'+(j.idb&&((j.idb.tracks||[]).length||(j.idb.vis||[]).length)?', przejechane trasy':'')+') Zastąpi bieżące dane o tych samych nazwach.'}))return;
     for(const k in j.data)localStorage.setItem(k,j.data[k]);
     if(j.idb){   // trasy i ulice z kopii dołączamy do tych, które już są
       if(Array.isArray(j.idb.tracks)&&j.idb.tracks.length){const cur=(await idbGet('tracks').catch(()=>null))||[],ids=new Set(cur.map(t=>t&&t.t0));await idbSet('tracks',cur.concat(j.idb.tracks.filter(t=>t&&t.pts&&!ids.has(t.t0))))}
       if(Array.isArray(j.idb.vis)&&j.idb.vis.length){const cv=(await idbGet('vis').catch(()=>null))||[];await idbSet('vis',[...new Set(cv.concat(j.idb.vis))])}
-    }alert('Przywrócono ustawienia. Aplikacja się odświeży.');location.reload()}
+    }await dlg({ic:'check',title:'Przywrócono ustawienia',text:'Aplikacja się odświeży.',no:false});location.reload()}
   catch(err){note('Nie udało się wczytać',err.message)}
 };
 // aktualizacja pogody w trakcie jazdy (gołoledź, mgła)
@@ -3700,6 +3717,21 @@ function evKind(t1){
 }
 // krótka, nieblokująca informacja (zamiast okna alert)
 function note(t1,t2){try{evToast(t1,t2||'',[],5200)}catch(e){alert(t1+(t2?'\n'+t2:''))}}
+// własne okno pytania (zamiast confirm/prompt/alert): zwraca Promise – true/false albo wpisany tekst (null po anulowaniu)
+function dlg(o){
+  return new Promise(res=>{
+    const d=$('dlg'),inp=$('dlgIn');if(!d){res(o.input!=null?null:false);return}
+    $('dlgI').innerHTML=icoSvg(o.ic||'info');$('dlgT').textContent=o.title||'';$('dlgP').textContent=o.text||'';$('dlgP').style.display=o.text?'':'none';
+    d.classList.toggle('warn',!!o.warn);inp.style.display=o.input!=null?'block':'none';inp.value=o.input||'';inp.placeholder=o.ph||'';inp.readOnly=!!o.ro;
+    const no=$('dlgNo'),ok=$('dlgOk');no.textContent=o.no||'Anuluj';ok.textContent=o.ok||'OK';no.style.display=o.no===false?'none':'';
+    const done=v=>{d.classList.remove('open');document.removeEventListener('keydown',kd,true);no.onclick=ok.onclick=null;res(v)};
+    const kd=e=>{if(e.key==='Escape'){e.preventDefault();done(o.input!=null?null:false)}else if(e.key==='Enter'&&e.target!==no){e.preventDefault();done(o.input!=null?inp.value:true)}};
+    document.addEventListener('keydown',kd,true);
+    no.onclick=()=>done(o.input!=null?null:false);ok.onclick=()=>done(o.input!=null?inp.value:true);
+    d.onclick=e=>{if(e.target===d)no.onclick()};
+    d.classList.add('open');setTimeout(()=>{try{if(o.input!=null){inp.focus();if(o.ro)inp.select()}else ok.focus()}catch(e){}},60);
+  });
+}
 function evToast(t1,t2,btns,ms){
   const k=evKind(t1),c=EVC[k.kd]||EVC.info,el=$('evToast'),tm=$('evTm');
   el.style.setProperty('--evc',k.col||c[0]);el.style.setProperty('--evi',k.col?'#fff':c[1]);el.dataset.k=k.kd;
@@ -3923,7 +3955,7 @@ function showFail(c){
   $('xShr').onclick=async()=>{
     const txt='Awaria przejazdu kolejowego. Współrzędne: '+ll+'. Mapa: https://www.google.com/maps?q='+ll.replace(', ',',');
     try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
-    try{await navigator.clipboard.writeText(txt);$('xShr').textContent='Skopiowano do schowka ✓'}catch(e){prompt('Skopiuj:',txt)}
+    try{await navigator.clipboard.writeText(txt);$('xShr').textContent='Skopiowano do schowka ✓'}catch(e){dlg({ic:'copy',title:'Skopiuj',input:txt,ro:true,ok:'Gotowe',no:false})}
   };
   $('xRep').onclick=()=>{B.style.display='none';reportEvent('xfail',{lat:c.lat,lon:c.lon})};
 }
@@ -4127,7 +4159,7 @@ $('sharePos').onclick=async()=>{
   if(route&&endPt){const rem=Math.max(0,route.len-route.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
     txt+='\nJadę do: '+(F.to.el.value||'celu')+', przyjazd ok. '+new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' (za '+mins+' min).'}
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
-  try{await navigator.clipboard.writeText(txt);note('Skopiowano do schowka',txt)}catch(e){prompt('Skopiuj wiadomość:',txt)}
+  try{await navigator.clipboard.writeText(txt);note('Skopiowano do schowka',txt)}catch(e){dlg({ic:'copy',title:'Skopiuj wiadomość',input:txt,ro:true,ok:'Gotowe',no:false})}
 };
 
 // ================= Pogoda rysowana na mapie =================
@@ -7006,15 +7038,15 @@ function xBoardExtras(c){
   const w=$('xWatch'),h=$('xHide');if(!w||!h)return;
   const wl=on=>{w.innerHTML=icoSvg(on?'eye':'eyeoff')+'<span>'+(on?'Obserwowany':'Obserwuj')+'</span>';w.classList.toggle('on',!!on)};
   wl(xWatched(c));
-  w.onclick=()=>{
+  w.onclick=async()=>{
     if(xWatched(c)){xWatchL=xWatchL.filter(q=>!xSame(q,c));LSput('xwatch',xWatchL);wl(false);return}
-    let nm='';try{nm=prompt('Nazwa przejazdu (np. „przy domu”) – możesz zostawić puste:','')||''}catch(e){}
+    let nm='';try{nm=await dlg({ic:'star',title:'Obserwuj przejazd',text:'Nazwa przejazdu (np. „przy domu”) – możesz zostawić puste.',input:'',ph:'Nazwa (opcjonalnie)',ok:'Obserwuj'})}catch(e){}if(nm===null)return;nm=nm||'';
     xWatchL.unshift({lat:+c.lat.toFixed(6),lon:+c.lon.toFixed(6),nm:nm.trim().slice(0,30)});xWatchL=xWatchL.slice(0,20);LSput('xwatch',xWatchL);
     wl(true);evToast('★ Przejazd obserwowany','Zobaczysz go w Ustawienia → Historia i dane → Obserwowane przejazdy.',null,5000);
   };
   h.innerHTML=icoSvg(c.user&&!c.rem?'x':'shield')+'<span>'+(c.user&&!c.rem?'Usuń ten przejazd':'To nie przejazd – ukryj')+'</span>';
-  h.onclick=()=>{
-    if(!confirm(c.user&&!c.rem?'Usunąć przejazd dodany przez Ciebie?':'Ukryć ten przejazd? Zniknie z mapy i ostrzeżeń (przywrócisz go w Ustawienia → Historia i dane → Obserwowane przejazdy).'))return;
+  h.onclick=async()=>{
+    const del=c.user&&!c.rem;if(!await dlg({ic:del?'x':'shield',warn:true,title:del?'Usunąć ten przejazd?':'Ukryć ten przejazd?',text:del?'Przejazd dodany przez Ciebie zniknie z mapy.':'Zniknie z mapy i ostrzeżeń. Przywrócisz go w Ustawienia → Historia i dane → Obserwowane przejazdy.',ok:del?'Usuń':'Ukryj'}))return;
     xHide(c);$('xBoard').style.display='none';
   };
 }
@@ -7101,7 +7133,7 @@ async function shareDest(p){
   const lab=p.label||'Wskazany punkt',url=location.href.split('#')[0]+'#cel='+p.lat.toFixed(5)+','+p.lon.toFixed(5)+','+encodeURIComponent(lab);
   try{if(navigator.share){await navigator.share({title:'Cel w aplikacji Przejazd',text:'Jedź do: '+lab,url});return}}catch(e){if(e&&e.name==='AbortError')return}
   try{await navigator.clipboard.writeText(url);evToast('📋 Skopiowano link','Wklej go znajomemu – po otwarciu aplikacja zaproponuje trasę.',null,5000)}
-  catch(e){try{prompt('Skopiuj link:',url)}catch(_){}}
+  catch(e){try{dlg({ic:'copy',title:'Skopiuj link',input:url,ro:true,ok:'Gotowe',no:false})}catch(_){}}
 }
 function showPinSheet(){
   const B=$('xBoard'),p=pinPt;if(!p)return;B.dataset.c='';
@@ -7113,10 +7145,10 @@ function showPinSheet(){
   B.style.display='block';
   const lab=()=>(pinPt&&pinPt.label)||('Punkt '+p.lat.toFixed(4)+', '+p.lon.toFixed(4));
   $('pinOff').onclick=hidePin;
-  $('pinGo').onclick=()=>{
+  $('pinGo').onclick=async()=>{
     const q=pinPt;if(!q)return;const l=lab();hidePin();
     if(window.preview||window.browse||!route){window.browseIt={title:l,sub:'',label:l,lat:q.lat,lon:q.lon};$('brwGo').onclick();return}
-    if(!confirm('Zmienić cel trasy na to miejsce?'))return;   // trasa już trwa – zmiana celu wymaga potwierdzenia
+    if(!await dlg({ic:'pin',title:'Zmienić cel trasy?',text:'Trasa już trwa. Nowy cel: '+(l||'wybrane miejsce')+'.',ok:'Zmień cel'}))return;   // trasa już trwa – zmiana celu wymaga potwierdzenia
     pickDest({label:l,lat:q.lat,lon:q.lon});F.from.el.value='';F.from.pt=null;planRoute();
   };
   $('pinX').onclick=()=>{
