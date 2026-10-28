@@ -1396,7 +1396,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 140</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 141</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -5474,8 +5474,8 @@ var FONT_UI='Barlow,system-ui,sans-serif',FONT_NUM='"Barlow Semi Condensed",Barl
 (function(){if(!document.fonts||!document.fonts.load)return;   // gdy czcionki się wczytają, mapa i etykiety rysują się od nowa
   Promise.all(['400 14px Barlow','600 14px Barlow','700 14px Barlow','700 14px "Barlow Semi Condensed"'].map(f=>document.fonts.load(f))).then(()=>{vd=null}).catch(()=>{})})();
 const TERR=['resi','ind','farm','grass','wood','wet','sand','inst','sport','cem','rland'];   // kolejność rysowania terenów (od spodu)
-function paintVec(cam){
-  const S=$('rot').clientWidth,s=scaleCur,kx=111195*Math.cos(rad(cam.lat)),pal=themePal(PAL[night?'night':'day']),c=vctx;
+function paintVec(cam,sh){   // cam – środek płótna; sh – o ile px ekranu (wschód, północ) leży przed kamerą (widok 3D)
+  const S=$('rot').clientWidth,s=scaleCur,kx=111195*Math.cos(rad(cam.lat)),pal=themePal(PAL[night?'night':'day']),c=vctx,she=sh?sh[0]:0,shn=sh?sh[1]:0;
   $('view').style.background=pal.bg;document.documentElement.style.setProperty('--sky',pal.bg);
   c.setTransform(vq,0,0,vq,0,0);
   c.fillStyle=pal.bg;c.fillRect(0,0,S,S);
@@ -5556,9 +5556,9 @@ function paintVec(cam){
     c.restore();
     if(D.LB&&s>=.3){   // nazwy ulic: ważniejsze drogi pierwsze, bez nakładania się i bez powtórzeń tej samej nazwy tuż obok siebie
       c.font='600 13px '+FONT_UI;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4;c.lineJoin='round';
-      const rr=rad(curRot),rk={mw:0,pr:1,sc:2,tr:3,rs:4},cand=[],cr=Math.cos(rr),sr=Math.sin(rr),Wd=window.innerWidth,Hd=window.innerHeight,tl=tiltDeg>8?2.2:1;
+      const rr=rad(curRot),rk={mw:0,pr:1,sc:2,tr:3,rs:4},cand=[],cr=Math.cos(rr),sr=Math.sin(rr),Wd=window.innerWidth,Hd=window.innerHeight,tl=tiltDeg>8?1.5:1;
       for(const l of D.LB){if(dm&&l.c==='rs'&&s<1.4)continue;
-        const sx=S/2+s*(l.x-ox),sy=S/2-s*(l.y-oy),dx=sx-S/2,dy=sy-S/2;
+        const sx=S/2+s*(l.x-ox),sy=S/2-s*(l.y-oy),dx=sx-S/2+she,dy=sy-S/2-shn;
         const u=dx*cr-dy*sr,v=dx*sr+dy*cr;   // położenie na ekranie względem środka obrotu mapy (z zapasem, bo mapa przerysowuje się rzadko)
         if(Math.abs(u)>Wd/2+240||v<-.68*Hd*tl-240||v>.32*Hd+240)continue;
         cand.push({l,sx,sy,d:Math.hypot(u,v+.18*Hd)});
@@ -5631,18 +5631,47 @@ const skyA=y=>skyY<0?0:y<=skyQ?1:y>=skyQ+skyL?0:Math.pow(1-(y-skyQ)/skyL,SKYP); 
 function skyUpd(tx,ty,k,S){
   const el=$('sky');
   if(!el||!tiltDeg){skyY=-1;return}
-  const H=window.innerHeight,now=performance.now(),e=skyEdge(tx,ty,k,S),yMin=H*.1;
+  const H=window.innerHeight,now=performance.now(),e=skyEdge(tx,ty,k,S),yMin=H*.07;
   skyE=e;
   const yt=isNaN(e)?yMin:Math.max(yMin,Math.min(H*.6,e+6));
   if(skyY<0||yt>=skyY)skyY=yt;else skyY+=(yt-skyY)*(1-Math.exp(-Math.min(2000,now-skyT)/1200));   // krawędź zbliża się – mgła od razu; oddala się (po przerysowaniu mapy) – mgła ustępuje łagodnie
   skyT=now;
-  const q=Math.round(skyY),L=Math.max(70,Math.round((cyCur*H-q)*.32)),pal=themePal(PAL[night?'night':'day']);
+  const q=Math.round(skyY),L=Math.max(60,Math.round((cyCur*H-q)*.2)),pal=themePal(PAL[night?'night':'day']);
   if(!/^#[0-9a-f]{6}$/i.test(pal.bg))return;
   const da=Math.round(dmA*8),key=q+'|'+L+'|'+(night?1:0)+'|'+pal.bg+'|'+da;
   if(key===skyKey)return;
   skyKey=key;skyQ=q;skyL=L;
   el.style.height=(q+L)+'px';
   el.style.background=skyGrad(q,L,hx3(pal.bg),night?SKYTOP.night:SKYTOP.day,(.26+.3*da/8)*(night?.6:1));
+}
+// ---- płótno mapy przed kamerą (widok 3D) ----
+// To daleki brzeg płótna decyduje, gdzie mapa przechodzi w mgłę. Dlatego w 3D płótno malujemy nie wokół kamery, tylko o FWD·S przed nią (w stronę „góry ekranu”):
+// z tyłu zostaje zapas na dolną krawędź ekranu (ok. ⅓ jego wysokości), a do przodu mapa sięga ok. 1,5× dalej – horyzont leży tuż pod górną krawędzią, a nie na ⅕–⅓ ekranu.
+const FWD=.3;
+function vDataAhead(D,cam,b){   // jak daleko (m) od kamery w kierunku b (rad od północy) sięgają wczytane kafelki mapy
+  if(!D||D.tx==null||D.z==null)return 1500;   // dane zapasowe (Overpass) – obszar ok. 1,5–2,5 km
+  const W=40075016.686,cl=Math.cos(rad(D.lat)),cx=D.lon/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(D.lat)/2)),T=W/Math.pow(2,D.z);
+  const x0=(-W/2+(D.tx-1)*T-cx)*cl,x1=(-W/2+(D.tx+2)*T-cx)*cl,y1=(W/2-(D.ty-1)*T-cy)*cl,y0=(W/2-(D.ty+2)*T-cy)*cl;   // 3×3 kafelki wokół punktu wczytania, w metrach od niego
+  const ox=(cam.lon-D.lon)*111195*cl,oy=(cam.lat-D.lat)*111195,ux=Math.sin(b),uy=Math.cos(b);
+  let t=1e9;
+  if(ux>1e-6)t=Math.min(t,(x1-ox)/ux);else if(ux<-1e-6)t=Math.min(t,(x0-ox)/ux);
+  if(uy>1e-6)t=Math.min(t,(y1-oy)/uy);else if(uy<-1e-6)t=Math.min(t,(y0-oy)/uy);
+  return Math.max(0,t);
+}
+function vRear(){   // dolne rogi ekranu rzutowane na płaszczyznę mapy: [odległość za środkiem obrotu, połowa szerokości] w px płaszczyzny – tyle płótna musi zostać za kamerą
+  const W=window.innerWidth,H=window.innerHeight,P=900,th=rad(tiltE()),sn=Math.sin(th),cs=Math.cos(th),v=.55*H,y=P*(v-(cyCur-.45)*H)/(P*cs+v*sn);
+  return [y,(W/2)*(P-y*sn)/P];
+}
+function vShift(S,s,cam){   // o ile px (wschód, północ) środek malowanego płótna ma leżeć przed kamerą: w 3D w stronę „góry ekranu”, w 2D wcale
+  if(!(tiltDeg>8))return [0,0];
+  const b=rad(-tgtRot),r=vRear();let d=Math.min(FWD*S,Math.max(0,S/2-85-Math.hypot(r[0],r[1])));   // za kamerą zostaje płótno do dolnych rogów ekranu + 85 px zapasu (przy każdym kierunku jazdy)
+  if(vecData&&cam)d=Math.max(0,Math.min(d,vDataAhead(vecData,cam,b)*1.05*s-S/2));   // dalej, niż sięgają wczytane kafelki, nie ma czego rysować – wtedy płótno zostaje wyśrodkowane
+  return [d*Math.sin(b),d*Math.cos(b)];
+}
+function vHole(tx,ty,k,S){   // zapas płótna (px) przy dolnych rogach ekranu; poniżej zera widać dziurę bez mapy (płótno wyświetlone w (tx,ty), skala k)
+  const ph=rad(curRot),cp=Math.cos(ph),sp=Math.sin(ph),h=k*S/2,r=vRear(),y=r[0];let m=1e9;
+  for(const sg of [-1,1]){const x=sg*r[1],a=x*cp+y*sp,b=-x*sp+y*cp;m=Math.min(m,h-Math.max(Math.abs(a-tx),Math.abs(b-ty)))}   // odwrotny obrót do układu płótna (te same wzory co w skyEdge)
+  return m;
 }
 function drawVec(){
   const now=performance.now(),cam=vecCam(now);
@@ -5652,13 +5681,15 @@ function drawVec(){
   if(scaleCur<.3)loadWide(cam);
   if(!vctx||$('vmap').width!==Math.round(S*vq))sizeV();
   if(!vctx)return;
+  const sh=vShift(S,scaleCur,cam);   // idealne położenie środka płótna względem kamery [px ekranu: wschód, północ]
   let need=!vd||vd.data!==vecData||vd.wide!==wideD||vd.night!==night||vd.dm!==(dmA>.02)||vd.dmk!==dmK||vd.lv!==laneVer;
   if(!need){
-    const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s,dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);
-    const t3=tiltDeg>8,hh=rad(-curRot),fw=t3?(e*Math.sin(hh)+n*Math.cos(hh))*vd.s*k:0;   // w widoku 3D daleka krawędź płótna zbliża się najszybciej przy jeździe do przodu – przerysowujemy wcześniej
-    if(Math.hypot(e,n)*vd.s*k>S*.12||fw>S*.09||k<.8||k>1.25||dr>25)need=true;
+    const k=scaleCur/vd.s,ex=(cam.lon-vd.cam.lon)*vd.kx*vd.s*k,ey=(cam.lat-vd.cam.lat)*111195*vd.s*k,   // kamera względem środka płótna [px ekranu]
+      dx=ex+sh[0],dy=ey+sh[1],dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);   // (dx,dy): odchyłka od położenia idealnego (przy świeżo namalowanej mapie 0)
+    const t3=tiltDeg>8,hh=rad(-tgtRot),fw=t3?dx*Math.sin(hh)+dy*Math.cos(hh):0;   // w widoku 3D daleka krawędź płótna zbliża się najszybciej przy jeździe do przodu – przerysowujemy wcześniej
+    if(Math.hypot(dx,dy)>S*.12||fw>S*.09||k<.8||k>1.25||dr>25||(t3&&vHole(-ex,ey,k,S)<40))need=true;   // ostatni warunek: zapas płótna przy dolnych rogach ekranu
   }
-  if(need&&now-lastVt>100){const t0=performance.now();paintVec(cam);lastVt=now;const ms=performance.now()-t0;fpsPaint(ms);if(ms>110&&vq>1.15){if(++slowN>=3){slowN=0;vqCap=Math.max(1.1,vq-.35);sizeV()}}else if(ms<=110)slowN=0}
+  if(need&&now-lastVt>100){const t0=performance.now();paintVec(sh[0]||sh[1]?{lat:cam.lat+sh[1]/scaleCur/111195,lon:cam.lon+sh[0]/scaleCur/vf.kx}:cam,sh);lastVt=now;const ms=performance.now()-t0;fpsPaint(ms);if(ms>110&&vq>1.15){if(++slowN>=3){slowN=0;vqCap=Math.max(1.1,vq-.35);sizeV()}}else if(ms<=110)slowN=0}
   if(!vd)return;
   const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s;
   $('vmap').style.transform='translate('+(-k*vd.s*e).toFixed(1)+'px,'+(k*vd.s*n).toFixed(1)+'px) scale('+k.toFixed(4)+')';
