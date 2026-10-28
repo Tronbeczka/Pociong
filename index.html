@@ -801,6 +801,13 @@ body.night #goRow{background:linear-gradient(to top,var(--u-surf) 72%,rgba(32,34
 #dlg .dlgb button{flex:1;min-height:46px;padding:10px;border-radius:14px;border:0;font:inherit;font-weight:700;font-size:1rem;background:var(--u-surf2,#eef1f5);color:var(--u-ink,#1a2330)}
 #dlg .dlgb button#dlgOk{background:var(--u-acc,#1a73e8);color:#fff}body.night #dlg .dlgb button#dlgOk{color:#0b1220}
 @media (max-height:420px){#dlg .dlgc{padding:14px 16px 12px}#dlg #dlgI{display:none}#dlg b{font-size:1.05rem}#dlg p{margin-bottom:10px}}
+/* pigułka wiarygodności czasu pociągu */
+#tcard .tq{display:inline-block;font-style:normal;font-size:.66rem;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:7px;vertical-align:1px;background:rgba(255,255,255,.2);color:inherit}
+#tcard .tq.live{background:#1f9d55;color:#fff}#tcard .tq.old{background:#d9822b;color:#fff}
+/* podsumowanie przejazdu */
+#histbox .rep3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 12px}
+#histbox .rep3 div{background:var(--u-accSoft,#e6effd);color:var(--u-acc,#1a73e8);border-radius:16px;padding:10px 4px;text-align:center}
+#histbox .rep3 b{display:block;font-size:1.25rem;line-height:1.1}#histbox .rep3 small{display:block;margin-top:3px;font-size:.7rem;opacity:.85}
 /* szybkie ustawienia (dotknięcie licznika prędkości) */
 #speed{pointer-events:auto;cursor:pointer}
 #qs{position:fixed;left:0;right:0;margin:0 auto;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);z-index:3150;width:min(calc(100vw - 24px),420px);display:none;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px;border-radius:22px;background:var(--u-surf,#fff);box-shadow:0 0 0 1px var(--u-hair,rgba(16,24,40,.1)),0 16px 40px rgba(0,0,0,.4);animation:cardIn .2s ease}
@@ -1298,6 +1305,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <button id="about" class="sec">O dokładności danych</button>
   <div id="liveDiag" class="sInfo" style="white-space:pre-line"></div>
   <button id="liveChk" class="sec">Sprawdź źródła opóźnień pociągów</button>
+  <label data-own style="font-size:.85rem">Przekaźnik danych (https://…, opcjonalnie)<input id="liveRelayIn" type="url" placeholder="https://twoj-przekaznik.workers.dev/" style="width:100%;margin-top:4px"></label>
   <button id="expSet" class="sec">Eksport ustawień</button>
   <button id="impSet" class="sec">Import ustawień</button><input id="impFile" type="file" accept="application/json" style="display:none">
   <div id="cfg">
@@ -1382,7 +1390,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 135</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 136</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -3090,9 +3098,11 @@ function tripTick(p){
 }
 function showReport(tr,dur){
   const b=$('histbox'),mov=Math.max(1,dur-tr.stop);
-  b.innerHTML='<h3>Podsumowanie przejazdu</h3>';
-  [['Cel',tr.to],['Czas',Math.round(dur/60)+' min'],['Dystans',(tr.dist/1000).toFixed(1).replace('.',',')+' km'],
-   ['Średnia prędkość',Math.round(tr.dist/mov*3.6)+' km/h (w ruchu)'],['Maksymalna prędkość',Math.round(tr.max*3.6)+' km/h'],
+  b.innerHTML='<h3>Dotarłeś do celu</h3>';
+  {const g=document.createElement('div');g.className='rep3';
+   [[Math.round(dur/60)+' min','czas'],[(tr.dist/1000).toFixed(1).replace('.',',')+' km','dystans'],[Math.round(tr.dist/mov*3.6)+' km/h','średnio w ruchu']].forEach(([v,l])=>{const d=document.createElement('div');d.innerHTML='<b></b><small></small>';d.firstChild.textContent=v;d.lastChild.textContent=l;g.appendChild(d)});b.appendChild(g)}
+  [['Cel',tr.to],
+   ['Maksymalna prędkość',Math.round(tr.max*3.6)+' km/h'],
    ['Postoje i korki',Math.round(tr.stop/60)+' min'],['Przejazdy kolejowe',String(tr.xs.size)]].concat(tr.xw>=5?[['Czekanie na przejazdach',Math.round(tr.xw/60*10)/10+' min ('+tr.xn+' '+(tr.xn===1?'raz':'razy')+')']]:[]).concat(tr.ds>=120?[['Spokojna jazda',Math.round(100*(tr.cs||0)/tr.ds)+'%'+(tr.hb?' · gwałtownych hamowań: '+tr.hb:'')]]:[]).forEach(([k,v])=>{
     const d=document.createElement('div');d.className='it';d.innerHTML='<small></small><br><b></b>';d.querySelector('small').textContent=k;d.querySelector('b').textContent=v;b.appendChild(d)});
   const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>b.style.display='none';b.appendChild(c);b.style.display='block';
@@ -3217,10 +3227,37 @@ function zoneCheck(p){
   }
 }
 // strzałki na wszystkich pasach przed skrzyżowaniem (nasz pas wyróżniony)
+// duża strzałka skrętu rysowana NA JEZDNI w miejscu manewru (biała z ciemnym obrysem), pojawia się ok. 260 m przed skrętem
+const TURN_T=['turn','fork','off ramp','on ramp','end of road','merge','roundabout','rotary','exit roundabout','exit rotary'];
+function drawTurnArrow(){
+  if(!(vec&&vf&&route&&nav&&nav.i>0&&!freeCam))return;
+  const st=route.steps&&route.steps[nav.i];if(!st||!TURN_T.includes(st.type)||st.mod==='straight')return;
+  const d=nav.d;if(!(d>8&&d<260))return;
+  const at=route.along+d,len=route.len,Rr=rw('tr',scaleCur),off=(singleLane?0:Rr/4)/scaleCur,al=Math.max(0,Math.min(1,(260-d)/100));
+  const A0=routeAt(route,Math.max(0,at-30)),M=routeAt(route,Math.min(len,at)),B0=routeAt(route,Math.min(len,at+22));
+  const turn=Math.abs(((bear(M[0],M[1],B0[0],B0[1])-bear(A0[0],A0[1],M[0],M[1])+540)%360)-180);   // 180° = prosto
+  if(180-turn<20)return;   // łagodny łuk – bez strzałki
+  const pts=[];
+  for(let q=-30;q<=22;q+=3){
+    const dd=Math.max(0,Math.min(len,at+q)),c=routeAt(route,dd),a=routeAt(route,Math.max(0,dd-4)),b=routeAt(route,Math.min(len,dd+4)),r=rad(bear(a[0],a[1],b[0],b[1])+90);
+    const p=proj(c[0]+Math.cos(r)*off/111195,c[1]+Math.sin(r)*off/(111195*Math.cos(rad(c[0]))));if(!p)return;pts.push(p);
+  }
+  const n=pts.length,kk=Math.max(.4,Math.min(1.25,pts[Math.floor(n/2)].k)),w=Math.max(5,Math.min(13,Rr*.3))*kk;
+  const E=pts[n-1],P=pts[n-3],ang=Math.atan2(E.y-P.y,E.x-P.x),hl=w*2.2,hw=w*1.5,ux=Math.cos(ang),uy=Math.sin(ang);
+  mx.save();mx.lineCap='butt';mx.lineJoin='round';
+  for(const pass of [0,1]){
+    const col=pass?'rgba(255,255,255,'+al.toFixed(2)+')':'rgba(12,14,18,'+(al*.85).toFixed(2)+')';
+    mx.strokeStyle=col;mx.fillStyle=col;mx.lineWidth=pass?w:w+3.4;
+    mx.beginPath();mx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<n-1;i++)mx.lineTo(pts[i].x,pts[i].y);mx.lineTo(E.x-ux*hl*.6,E.y-uy*hl*.6);mx.stroke();
+    mx.beginPath();mx.moveTo(E.x+ux*hl*.55,E.y+uy*hl*.55);mx.lineTo(E.x-ux*hl*.45-uy*hw,E.y-uy*hl*.45+ux*hw);mx.lineTo(E.x-ux*hl*.45+uy*hw,E.y-uy*hl*.45-ux*hw);mx.closePath();
+    if(pass)mx.fill();else{mx.lineWidth=3.4;mx.stroke();mx.fill()}
+  }
+  mx.restore();
+}
 function drawLaneArrow(){
   if(!(vec&&vf&&route&&nav&&nav.i>0&&!freeCam))return;
   const st=route.steps&&route.steps[nav.i];if(!st||!st.lanes||!st.lanes.lanes||st.lanes.lanes.length<2)return;
-  if(nav.d<22||nav.d>150)return;
+  if(nav.d<22||nav.d>220)return;
   const at=Math.max(route.along+14,route.along+nav.d-34),c=routeAt(route,at),a=routeAt(route,at-6),b2=routeAt(route,at+6);
   const brg=rad(bear(a[0],a[1],b2[0],b2[1])),Rr=rw('tr',scaleCur),L=st.lanes,n=L.lanes.length;
   let best=n-1;for(let i=n-1;i>=0;i--)if(L.valid[i]){best=i;break}
@@ -3228,6 +3265,10 @@ function drawLaneArrow(){
   for(let i=0;i<n;i++){
     const lm=(Rr/4+(i-(n-1))*pl)/scaleCur;
     const Wp=(x,y)=>{const e=rE*(x+lm)+fE*y,nn=rN*(x+lm)+fN*y;return proj(c[0]+nn/111195,c[1]+e/(111195*Math.cos(rad(c[0]))))};
+    if(L.valid[i]&&L.valid.some(v=>!v)){   // pasy prowadzące do celu: niebieska poświata od najechania na skrzyżowanie
+      const hwm=pl*.42/scaleCur,bq=[Wp(-hwm,-45),Wp(hwm,-45),Wp(hwm,30),Wp(-hwm,30)];
+      if(bq.every(q=>q)){mx.save();mx.fillStyle='rgba(26,115,232,.26)';mx.beginPath();mx.moveTo(bq[0].x,bq[0].y);for(let j=1;j<4;j++)mx.lineTo(bq[j].x,bq[j].y);mx.closePath();mx.fill();mx.restore()}
+    }
     const dirs=[...L.lanes[i]].filter(ch=>'LSR'.includes(ch));if(!dirs.length)dirs.push('S');
     const ok=!!L.valid[i],sc=ok?1:.8,segs=[[[0,-4.5*sc],[0,0]]];
     for(const dch of dirs)segs.push(dch==='L'?[[0,0],[-2.8*sc,2.8*sc]]:dch==='R'?[[0,0],[2.8*sc,2.8*sc]]:[[0,0],[0,3.2*sc]]);
@@ -3496,7 +3537,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['hudBtn','eco']);
-  mv('diag',['liveDiag','liveChk','logon','fpsOn','logdl','logan','logFile','expSet','impSet','impFile']);
+  mv('diag',['liveDiag','liveChk','liveRelayIn','logon','fpsOn','logdl','logan','logFile','expSet','impSet','impFile']);
   mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow']);
   mv('about',['about','report']);
   G('adv').appendChild($('cfg'));
@@ -4850,6 +4891,8 @@ function updTrainCard(p){
     $('tmeta').textContent='po torze do przejazdu (za '+fmtKm(best.a.d)+')';
     {const m2=$('tmeta2'),lt=t.late!=null?Math.round(+t.late):null;
       m2.textContent='';
+      {const q=best.r&&best.r.q,live=lt!=null&&!isNaN(lt),old=q==='old'||q==='stale',pill=document.createElement('i');   // skąd pochodzi czas: na żywo / tylko rozkład / dane stare
+       pill.className='tq '+(old?'old':live?'live':'sch');pill.textContent=old?'dane stare':live?'na żywo':'rozkład';m2.append(pill)}
       if(sp!=null)m2.append((sp>3?sp+' km/h':'stoi')+' · ');
       const eb=document.createElement('b');eb.textContent=fmtEta(best.eta);m2.append(eb);
       m2.append((lt!=null&&!isNaN(lt)?(lt>=1?' · opóźnienie '+lt+' min':lt<=-1?' · przed czasem':' · punktualnie'):' · wg rozkładu')+(best.r&&(best.r.q==='old'||best.r.q==='stale')?' · dane sprzed '+fmtAge(best.r.age/60):''))}
@@ -5856,7 +5899,7 @@ function drawMarkers(){
   updCarSnap();carShadow();
   drawBuildings3D();if(dmA>.02)fogBuild();
   drawHeat();
-  drawAlts();drawRouteTop();drawLaneArrow();drawJunction();
+  drawAlts();drawRouteTop();drawTurnArrow();drawLaneArrow();drawJunction();
   drawRouteSigns();
   drawTrail();
   drawPoi();drawEvents();drawCams();drawFriends();drawWx();drawSeasonFx();
@@ -6742,12 +6785,17 @@ function buildIdx(){
 // z pierwszych kilobajtów pliku (resztę pobierania przerywamy). Cały plik pobieramy dopiero przy nowszej wersji. Starsze dane nigdy nie nadpisują nowszych.
 const LV={busy:false,at:0,chk:0,ok:0,fails:0,src:'',news:0,last:'',gap:0,stamps:[],bytes:0,ms:0,parseAt:0,cool:0,probe:''};
 const LIVE_SRC=[{id:'mk',name:'mkuran.pl (na żywo)',heavy:true},{id:'gh',name:'kopia na GitHubie',heavy:false}];
+// opcjonalny własny przekaźnik (np. Cloudflare Worker z pliku przekaznik-cloudflare.js) – gdy mkuran.pl nie wpuszcza przeglądarki (CORS); adres wpisuje właściciel w Diagnostyce
+const LIVE_RELAY_DEF='';
+setTimeout(()=>{const e=$('liveRelayIn');if(e){e.value=LSget('liveRelay','')||'';e.onchange=()=>{const v=e.value.trim();if(v&&!/^https:\/\/[^\s]+$/.test(v)){note('Nieprawidłowy adres','Adres przekaźnika musi zaczynać się od https://');return}LSput('liveRelay',v);note('Zapisano','Przekaźnik zacznie działać po odświeżeniu aplikacji.')}}},0);
+{const u=String(LSget('liveRelay','')||LIVE_RELAY_DEF||'').trim();if(/^https:\/\/[^\s]+$/.test(u))LIVE_SRC.unshift({id:'rl',name:'przekaźnik (własny serwer)',heavy:true,url:u})}
 LIVE_SRC.forEach(S=>Object.assign(S,{lm:'',len:'',noHead:false,fails:0,nextAt:0,peekAt:0,reg:null,ok:0,err:''}));
 const STAMP_RE=/"timestamp"\s*:\s*"([^"]+)"/;
 const LIVE_EVERY={hot:10000,drive:20000,idle:60000},LIVE_MINGAP={hot:25000,drive:45000,idle:60000};   // co ile sprawdzamy / jak rzadko wolno pobierać duży plik w całości
 const liveK=()=>window.__lvK||1;   // skala czasu (tylko testy)
 function liveUrl(S){
   const o=window.__lvUrl;if(o&&o[S.id])return o[S.id];   // adres podmieniany w testach
+  if(S.id==='rl')return S.url;
   if(S.id==='mk')return 'https://mkuran.pl/gtfs/polish_trains/updates.json';
   const m=location.hostname.match(/^([^.]+)\.github\.io$/),user=m?m[1]:'Tronbeczka',repo=m?(location.pathname.split('/')[1]||'Pociong'):'Pociong';
   // parametr omija 5-minutową pamięć podręczną serwerów GitHuba (raz na 2,5 min nowy adres); sprawdzenia w jego obrębie wracają z pamięci podręcznej
