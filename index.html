@@ -1356,7 +1356,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 131</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 132</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -4438,20 +4438,31 @@ async function radUpdate(){
       const i=(Math.min(255,Math.floor(t.py))*256+Math.min(255,Math.floor(t.px)))*4,al=img.data[i+3];
       if(al>40)pts.push({lat,lon,r:img.data[i],g:img.data[i+1],b:img.data[i+2],a:al/255});
     }
-    radSamp=pts;radCam={lat:c.lat,lon:c.lon};radErr='';
+    pts.sort((a,b)=>a.a-b.a);radSamp=pts;radCam={lat:c.lat,lon:c.lon};radErr='';
     $('radStat').textContent='Radar z '+new Date(radData.time*1000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' · opady w okolicy: '+(pts.length?'tak':'brak');
   }catch(e){radErr=e.message||'błąd';radSamp=[];radAt=Date.now()-240000;$('radStat').textContent=OWNER?'Radar niedostępny: '+radErr+(/kafelek|tainted|Security/i.test(radErr)?' (przeglądarka blokuje obraz – brak zgody CORS)':''):'Radar chwilowo niedostępny'}
   radBusy=false;
 }
 setInterval(()=>{if(radOn){const c=(vf&&vf.cam)||last;if(!c)return;if(!radCam||dist(radCam.lat,radCam.lon,c.lat,c.lon)>9000||Date.now()-radAt>300000)radUpdate()}},15000);
+// radar rysujemy do małej warstwy (1/4 rozdzielczości) w pełnej barwie, od najsłabszych opadów do najsilniejszych, a potem skalujemy z wygładzaniem:
+// plamy mają miękkie brzegi i nie ciemnieją tam, gdzie okręgi się nakładają (wcześniej: setki półprzezroczystych kółek = „cętki”)
+let radL=null,radX=null;
 function drawRadar(){
   if(!radOn||!radSamp.length||!vf)return;
+  const W=innerWidth,H=innerHeight,k=4,w=Math.ceil(W/k),h=Math.ceil(H/k);
+  if(!radL||radL.width!==w||radL.height!==h){radL=document.createElement('canvas');radL.width=w;radL.height=h;radX=radL.getContext('2d')}
+  radX.clearRect(0,0,w,h);let n=0;
   for(const p of radSamp){
     const q=proj(p.lat,p.lon);if(!q)continue;const q2=proj(p.lat,p.lon+.012);
-    const rr=q2?Math.max(5,Math.min(140,Math.hypot(q2.x-q.x,q2.y-q.y)*.75)):12;
-    if(q.x<-rr||q.x>innerWidth+rr||q.y<-rr||q.y>innerHeight+rr)continue;
-    mx.fillStyle='rgba('+p.r+','+p.g+','+p.b+','+(.34*p.a).toFixed(2)+')';mx.beginPath();mx.arc(q.x,q.y,rr,0,6.2832);mx.fill();
+    const rr=q2?Math.max(5,Math.min(140,Math.hypot(q2.x-q.x,q2.y-q.y)*.8)):12;
+    if(q.x<-rr||q.x>W+rr||q.y<-rr||q.y>H+rr)continue;
+    const c0='rgba('+p.r+','+p.g+','+p.b+',',al=.45+.55*p.a,x=q.x/k,y=q.y/k,r=rr/k;
+    if(r>6){const g=radX.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,c0+al.toFixed(2)+')');g.addColorStop(.55,c0+(al*.9).toFixed(2)+')');g.addColorStop(1,c0+'0)');radX.fillStyle=g}   // przy zbliżeniu: miękki brzeg zamiast twardej tarczy
+    else radX.fillStyle=c0+al.toFixed(2)+')';
+    radX.beginPath();radX.arc(x,y,r,0,6.2832);radX.fill();n++;
   }
+  if(!n)return;
+  mx.save();mx.globalAlpha=night?.5:.55;mx.imageSmoothingEnabled=true;mx.imageSmoothingQuality='high';mx.drawImage(radL,0,0,w,h,0,0,W,H);mx.restore();
 }
 
 
