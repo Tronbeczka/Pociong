@@ -1280,6 +1280,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="vcRoad" checked> Głos: znaki, korki, limity</label>
   <label style="font-size:.9rem"><input type="checkbox" id="eco"> Tryb oszczędny baterii</label>
   <label style="font-size:.9rem"><input type="checkbox" id="dmCb" checked> Widok kierowcy podczas trasy (szersze drogi, mgła, strzałki na trasie)</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="laneCb" checked> Pasy ruchu na drogach i na trasie (dane z OpenStreetMap)</label>
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
@@ -1391,7 +1392,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 137</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 138</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2236,6 +2237,7 @@ async function fetchLanes(R,st){
   const at=routeAt(R,st.off),a=routeAt(R,Math.max(0,st.off-30)),b=routeAt(R,Math.max(0,st.off-70));
   if(dist(a[0],a[1],b[0],b[1])<15)return null;
   const hd=bear(b[0],b[1],a[0],a[1]);
+  try{const L0=lnLanesFromStore(R,st);if(L0)return L0}catch(e){}   // pasy znane już z pobranych danych – bez zapytania do sieci
   const j=await fetchOverpass('[out:json][timeout:8];way(around:22,'+a[0].toFixed(6)+','+a[1].toFixed(6)+')[highway][~"^turn:lanes"~"."];out tags geom;');
   let best=null,bd=1e9;
   for(const w of j.elements||[]){
@@ -3234,13 +3236,13 @@ function drawTurnArrow(){
   if(!(vec&&vf&&route&&nav&&nav.i>0&&!freeCam))return;
   const st=route.steps&&route.steps[nav.i];if(!st||!TURN_T.includes(st.type)||st.mod==='straight')return;
   const d=nav.d;if(!(d>8&&d<260))return;
-  const at=route.along+d,len=route.len,Rr=rw('tr',scaleCur),off=(singleLane?0:Rr/4)/scaleCur,al=Math.max(0,Math.min(1,(260-d)/100));
+  const at=route.along+d,len=route.len,Rr=rw('tr',scaleCur),offF=dd=>{const p=singleLane?null:lnOffPx(route,dd);return (p==null?(singleLane?0:Rr/4):p)/scaleCur},al=Math.max(0,Math.min(1,(260-d)/100));
   const A0=routeAt(route,Math.max(0,at-30)),M=routeAt(route,Math.min(len,at)),B0=routeAt(route,Math.min(len,at+22));
   const turn=Math.abs(((bear(M[0],M[1],B0[0],B0[1])-bear(A0[0],A0[1],M[0],M[1])+540)%360)-180);   // 180° = prosto
   if(180-turn<20)return;   // łagodny łuk – bez strzałki
   const pts=[];
   for(let q=-30;q<=22;q+=3){
-    const dd=Math.max(0,Math.min(len,at+q)),c=routeAt(route,dd),a=routeAt(route,Math.max(0,dd-4)),b=routeAt(route,Math.min(len,dd+4)),r=rad(bear(a[0],a[1],b[0],b[1])+90);
+    const dd=Math.max(0,Math.min(len,at+q)),c=routeAt(route,dd),a=routeAt(route,Math.max(0,dd-4)),b=routeAt(route,Math.min(len,dd+4)),r=rad(bear(a[0],a[1],b[0],b[1])+90),off=offF(dd);
     const p=proj(c[0]+Math.cos(r)*off/111195,c[1]+Math.sin(r)*off/(111195*Math.cos(rad(c[0]))));if(!p)return;pts.push(p);
   }
   const n=pts.length,kk=Math.max(.4,Math.min(1.25,pts[Math.floor(n/2)].k)),w=Math.max(5,Math.min(13,Rr*.3))*kk;
@@ -3262,28 +3264,32 @@ function drawLaneArrow(){
   const at=Math.max(route.along+14,route.along+nav.d-34),c=routeAt(route,at),a=routeAt(route,at-6),b2=routeAt(route,at+6);
   const brg=rad(bear(a[0],a[1],b2[0],b2[1])),Rr=rw('tr',scaleCur),L=st.lanes,n=L.lanes.length;
   let best=n-1;for(let i=n-1;i>=0;i--)if(L.valid[i]){best=i;break}
-  const pl=Math.min(22,Rr*.6/(n-1)),fE=Math.sin(brg),fN=Math.cos(brg),rE=Math.cos(brg),rN=-Math.sin(brg);
+  // znamy pasy tej drogi (OSM): strzałki leżą na prawdziwych pasach o prawdziwej szerokości; bez danych – dawny, ściśnięty układ
+  let lp=0,laneC=null;
+  try{const q=lnAt(route,at);if(q){const P=q[0],j=q[1];if(P.kn[j]&&P.nt[j]>=n){lp=rw(LN_K[P.kc[j]],scaleCur)/2;const N=P.nt[j]+P.no[j]+P.cc[j],k0=P.nt[j]-n;laneC=i=>(-N/2+P.no[j]+P.cc[j]+k0+i+.5)*lp}}}catch(e){laneC=null}
+  const pl=laneC?lp:Math.min(22,Rr*.6/(n-1)),gk=laneC?Math.max(.6,Math.min(1.6,lp/scaleCur/10)):1,fE=Math.sin(brg),fN=Math.cos(brg),rE=Math.cos(brg),rN=-Math.sin(brg);
   for(let i=0;i<n;i++){
-    const lm=(Rr/4+(i-(n-1))*pl)/scaleCur;
+    const lm=(laneC?laneC(i):Rr/4+(i-(n-1))*pl)/scaleCur;
     const Wp=(x,y)=>{const e=rE*(x+lm)+fE*y,nn=rN*(x+lm)+fN*y;return proj(c[0]+nn/111195,c[1]+e/(111195*Math.cos(rad(c[0]))))};
     if(L.valid[i]&&L.valid.some(v=>!v)){   // pasy prowadzące do celu: niebieska poświata od najechania na skrzyżowanie
       const hwm=pl*.42/scaleCur,bq=[Wp(-hwm,-45),Wp(hwm,-45),Wp(hwm,30),Wp(-hwm,30)];
       if(bq.every(q=>q)){mx.save();mx.fillStyle='rgba(26,115,232,.26)';mx.beginPath();mx.moveTo(bq[0].x,bq[0].y);for(let j=1;j<4;j++)mx.lineTo(bq[j].x,bq[j].y);mx.closePath();mx.fill();mx.restore()}
     }
     const dirs=[...L.lanes[i]].filter(ch=>'LSR'.includes(ch));if(!dirs.length)dirs.push('S');
-    const ok=!!L.valid[i],sc=ok?1:.8,segs=[[[0,-4.5*sc],[0,0]]];
+    const ok=!!L.valid[i],sc=(ok?1:.8)*gk,segs=[[[0,-4.5*sc],[0,0]]];
     for(const dch of dirs)segs.push(dch==='L'?[[0,0],[-2.8*sc,2.8*sc]]:dch==='R'?[[0,0],[2.8*sc,2.8*sc]]:[[0,0],[0,3.2*sc]]);
     const k=(Wp(0,0)||{k:1}).k,lw=Math.max(2.5,.45*scaleCur*k);
-    const col=ok?'#fff':'rgba(200,205,215,.55)',edge=ok?'#111':'rgba(30,30,30,.35)';
+    const col=ok?'#fff':night?'#8591b0':'#8d949f',edge=ok?'#111':null;   // pasy niewłaściwe: jedna matowa warstwa (bez „ducha” obrysu)
     mx.save();mx.lineCap='butt';mx.lineJoin='round';
     for(const pass of [0,1]){
+      if(!pass&&!edge)continue;
       mx.strokeStyle=pass?col:edge;mx.fillStyle=pass?col:edge;mx.lineWidth=pass?lw:lw+3;
       for(const sg of segs){
         const P0=Wp(sg[0][0],sg[0][1]),P1=Wp(sg[1][0],sg[1][1]);if(!P0||!P1)continue;
         mx.beginPath();mx.moveTo(P0.x,P0.y);mx.lineTo(P1.x,P1.y);mx.stroke();
         if(sg!==segs[0]){
           const dx=sg[1][0]-sg[0][0],dy=sg[1][1]-sg[0][1],an=Math.atan2(dx,dy),tip=sg[1];
-          const hd=[[0,2.1],[-1.4,-.9],[1.4,-.9]].map(([x,y])=>Wp(tip[0]+x*Math.cos(an)+y*Math.sin(an),tip[1]-x*Math.sin(an)+y*Math.cos(an)));
+          const hd=[[0,2.1],[-1.4,-.9],[1.4,-.9]].map(([x,y])=>Wp(tip[0]+(x*Math.cos(an)+y*Math.sin(an))*gk,tip[1]+(-x*Math.sin(an)+y*Math.cos(an))*gk));
           if(hd.every(q=>q)){mx.beginPath();mx.moveTo(hd[0].x,hd[0].y);mx.lineTo(hd[1].x,hd[1].y);mx.lineTo(hd[2].x,hd[2].y);mx.closePath();pass?mx.fill():mx.stroke()}
         }
       }
@@ -3531,7 +3537,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb']);
+  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
   mv('snd',['vsel','vbose','sndsel','volTrain','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
@@ -4810,7 +4816,8 @@ function drawRouteSigns(){
     const q=proj(sg.lat,sg.lon);if(!q)continue;
     const k=q.k,u=Math.max(8,Math.min(12.5,10.5*k));
     // przesunięcie w metrach na prawo od osi drogi (tuż za prawym brzegiem jezdni), więc przy oddaleniu i pochyleniu znak trzyma się trasy
-    const bg=rad(sg.brg),off=(rw('tr',scaleCur)/2+u*1.1)/scaleCur;
+    let hw=null;try{hw=lnHalfPx(route,route.along+sg.d)}catch(e){}   // droga z pasami jest szersza: znak stoi za jej brzegiem
+    const bg=rad(sg.brg),off=((hw==null?rw('tr',scaleCur)/2:hw)+u*1.1)/scaleCur;
     const q2=proj(sg.lat-Math.sin(bg)*off/111195,sg.lon+Math.cos(bg)*off/(111195*Math.cos(rad(sg.lat))));if(!q2)continue;
     const x=q2.x,y=q2.y;
     if(x<-30||x>W+30||y<-30||y>H+30)continue;
@@ -5458,6 +5465,7 @@ function paintVec(cam){
     c.save();c.translate(S/2,S/2);c.scale(s,-s);c.translate(-ox,-oy);
     c.lineCap='round';c.lineJoin='round';
     const order=['sv','rs','tr','sc','pr','mw'].filter(k=>!(k==='sv'&&s<.3)&&!(k==='rs'&&s<.14));
+    let LV=[],LG=null;try{LV=lnVis(D,s,ox,oy,S);LG=LV.length?lnGroups(LV,s):null}catch(e){LV=[];LG=null;window.__lnErr=String(e&&e.stack||e)}   // drogi z kilkoma pasami (dane OSM)
     if(Wd&&D.bb){c.fillStyle=pal.bg;c.fillRect(D.bb[0],D.bb[1],D.bb[2]-D.bb[0],D.bb[3]-D.bb[1])}   // szczegółowy obszar rysujemy od czystego tła (bez „duchów” z uproszczonych kafelków)
     terr(P);
     if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.park)}
@@ -5470,12 +5478,16 @@ function paintVec(cam){
     if(dm&&s>=.7){
       const shw=night?'rgba(0,0,0,.30)':'rgba(70,58,35,.16)',wk=night?'rgba(130,145,190,.16)':'rgba(255,255,255,.7)',gl='rgba(255,208,150,.09)';
       if(night)for(const k of ['tr','sc','pr','mw'])if(P[k]){c.strokeStyle=gl;c.lineWidth=(rwz(k)+cwz+18)/s;c.stroke(P[k])}   // poświata latarni przy głównych drogach
+      if(LG&&night)try{lnStroke(c,LG,gl,cwz+18,s,g=>g.kc<=3)}catch(e){c.lineCap='round';window.__lnErr=String(e&&e.stack||e)}
       if(s>=1.2)for(const k of ['rs','tr','sc'])if(P[k]){c.strokeStyle=wk;c.lineWidth=(rwz(k)+cwz+9)/s;c.stroke(P[k])}   // chodnik wzdłuż ulicy
+      if(LG&&s>=1.2)try{lnStroke(c,LG,wk,cwz+9,s,g=>g.kc===0||g.kc>=3)}catch(e){c.lineCap='round';window.__lnErr=String(e&&e.stack||e)}
       c.save();c.translate(2.4/s,-2.4/s);c.strokeStyle=shw;   // miękki cień jezdni (głębia)
       for(const k of order)if(P[k]&&k!=='sv'){c.lineWidth=(rwz(k)+cwz+2)/s;c.stroke(P[k])}
+      if(LG)try{lnStroke(c,LG,shw,cwz+2,s)}catch(e){c.lineCap='round';window.__lnErr=String(e&&e.stack||e)}
       c.restore();
     }
     for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rwz(k)+cwz+(dm?1.2:0))/s;c.stroke(P[k])}
+    if(LG)try{lnStroke(c,LG,g=>g.kc===1?pal.csMw:g.kc===2?pal.csPr:g.kc===3?pal.csSc:pal.casing,cwz+(dm?1.2:0),s)}catch(e){c.lineCap='round';window.__lnErr=String(e&&e.stack||e)}   // obrysy dróg z pasami: pod wypełnieniem ulic bocznych (ich wloty zostają otwarte)
     const lm=night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)',le=night?'rgba(215,225,255,.32)':'rgba(105,95,75,.30)';
     for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=rwz(k)/s;c.stroke(P[k])
       const w=rwz(k);
@@ -5489,6 +5501,7 @@ function paintVec(cam){
       if(P.cl){c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
+    if(LG)try{lnBody(c,LG,LV,pal,s,dm,night,lite||ecoOn)}catch(e){c.setLineDash([]);c.lineCap='round';window.__lnErr=String(e&&e.stack||e)}   // wypełnienie, linie pasów, strzałki
     if(P.rail){
       if(s<.3){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(P.rail)}   // oddalenie: cienka ciągła linia
       else if(s<.6){c.strokeStyle=night?'#8f9bb8':'#6b7380';c.lineWidth=Math.max(1.6,rlw*.6)/s;c.stroke(P.rail)}   // średnio: ciągła linia bez „podkładów” (stacje nie robią zebry)
@@ -5524,7 +5537,7 @@ function paintVec(cam){
       }
     }
   }
-  vd={cam,s,kx,night,dm,dmk:dmK,rot:curRot,data:vecData,wide:wideD};
+  vd={cam,s,kx,night,dm,dmk:dmK,rot:curRot,data:vecData,wide:wideD,lv:laneVer};
   $('vmap').style.opacity=1;
 }
 
@@ -5553,7 +5566,7 @@ function drawVec(){
   if(scaleCur<.3)loadWide(cam);
   if(!vctx||$('vmap').width!==Math.round(S*vq))sizeV();
   if(!vctx)return;
-  let need=!vd||vd.data!==vecData||vd.wide!==wideD||vd.night!==night||vd.dm!==(dmA>.02)||vd.dmk!==dmK;
+  let need=!vd||vd.data!==vecData||vd.wide!==wideD||vd.night!==night||vd.dm!==(dmA>.02)||vd.dmk!==dmK||vd.lv!==laneVer;
   if(!need){
     const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s,dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);
     if(Math.hypot(e,n)*vd.s*k>S*.12||k<.8||k>1.25||dr>25)need=true;
@@ -5601,12 +5614,18 @@ function drawRouteTop(){
   }
   // niebieska linia tylko na naszym pasie: przesuwamy ją w bok tak jak samochód (blisko auta – jego bieżący pas, dalej – prawy pas albo środek)
   const Rr=rw('tr',scaleCur),def=singleLane?0:Rr/4,lc=laneCur==null?def:laneCur;
+  let ca=R.along||0;   // położenie auta wzdłuż trasy
+  try{const q=projRoute(R,car[0],car[1],Math.max(0,(R.idx|0)-1),Math.min(R.pts.length-2,(R.idx|0)+2));if(q&&q.off<40)ca=q.along}catch(e){}
+  try{lnPlan(R)}catch(e){R.lp=null}   // plan pasów: gdzie jest który pas i który pas wybrać przed manewrem
   const brg=[],dcum=[0];
   for(let i=0;i<pts.length;i++){const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];brg.push(bear(a[0],a[1],b[0],b[1]));if(i)dcum.push(dcum[i-1]+dist(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]))}
-  const offAt=d=>d<60?lc:d>140?def:lc+(def-lc)*(d-60)/80;
+  const offAt=d=>{const p=singleLane?null:lnOffPx(R,ca+d);if(p==null)return d<60?lc:d>140?def:lc+(def-lc)*(d-60)/80;const w=Math.min(1,d/45);return lc*(1-w)+p*w};   // dalej niż 45 m: pas z planu
   const pAt=(la,lo,b,d)=>{const m=offAt(d)/scaleCur,r=rad(b+90);return proj(la+Math.cos(r)*m/111195,lo+Math.sin(r)*m/(111195*Math.cos(rad(la))))};
   const pr=pts.map((q,i)=>pAt(q[0],q[1],brg[i],dcum[i]));
   const lw=singleLane?Math.max(6,Math.min(14,Rr*.5)):Math.max(5,Math.min(12,Rr*.34));
+  // na drodze z liniami pasów pasek (z czarnymi brzegami) jest węższy niż pas – linie między pasami zostają widoczne po bokach
+  const lfAt=d=>{const q=singleLane?null:lnAt(R,ca+d);if(!q)return 1;const P=q[0],i=q[1],j=Math.min(P.n-1,i+1),m=P.mf[i]+(P.mf[j]-P.mf[i])*q[2];if(m<.02)return 1;
+    const fit=Math.max(.6,Math.min(1,rw(LN_K[P.kc[i]],scaleCur)/2*.78/(lw*1.55)));return Math.round((1-m*(1-fit))*25)/25};
   // dłuższe odcinki dzielimy na krótsze kawałki, żeby szerokość linii zmieniała się płynnie wraz z perspektywą (bez „schodków” na brzegach)
   const pieces=[];
   for(let i=0;i<pr.length-1;i++){
@@ -5616,19 +5635,19 @@ function drawRouteTop(){
     for(let j=1;j<=n;j++){
       let p1=b;
       if(j<n){const t=j/n,A=pts[i],B=pts[i+1],db=((brg[i+1]-brg[i]+540)%360)-180;p1=pAt(A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,brg[i]+db*t,dcum[i]+(dcum[i+1]-dcum[i])*t);if(!p1)break}
-      pieces.push({a:p0,b:p1,lv:jl[i]||0});p0=p1;
+      pieces.push({a:p0,b:p1,lv:jl[i]||0,lf:lfAt((dcum[i]+dcum[i+1])/2)});p0=p1;
     }
   }
   // sąsiednie kawałki o tym samym natężeniu ruchu i prawie tej samej grubości łączymy w jedną linię (jedno stroke() zamiast setek)
   const runs=[];let cur=null;
   for(const pc of pieces){
     const kk=(pc.a.k+pc.b.k)/2;
-    if(cur&&cur.lv===pc.lv&&cur.e===pc.a&&Math.abs(kk-cur.k0)<=.035*cur.k0){cur.xy.push(pc.b.x,pc.b.y);cur.e=pc.b;cur.ks+=kk;cur.n++}
-    else{cur={lv:pc.lv,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
+    if(cur&&cur.lv===pc.lv&&cur.lf===pc.lf&&cur.e===pc.a&&Math.abs(kk-cur.k0)<=.035*cur.k0){cur.xy.push(pc.b.x,pc.b.y);cur.e=pc.b;cur.ks+=kk;cur.n++}
+    else{cur={lv:pc.lv,lf:pc.lf,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
   if(runs.length&&runs[0].xy.length>=4){
-    const r0=runs[0],xy=r0.xy,dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy),sh=lw*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));
+    const r0=runs[0],xy=r0.xy,dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy),sh=lw*r0.lf*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));
     if(L>sh*1.3){xy[0]+=dx/L*sh;xy[1]+=dy/L*sh}
   }
   mx.lineCap='round';mx.lineJoin='round';
@@ -5638,7 +5657,7 @@ function drawRouteTop(){
     for(const [wm,al] of [[3.3,.10],[2.2,.16]])for(const r of runs){
       mx.globalAlpha=al*fadeA(r)*dmA;mx.strokeStyle=r.lv?JC[r.lv]:pal.route;
       mx.beginPath();mx.moveTo(r.xy[0],r.xy[1]);for(let i=2;i<r.xy.length;i+=2)mx.lineTo(r.xy[i],r.xy[i+1]);
-      mx.lineWidth=lw*wm*Math.max(.3,Math.min(1.25,r.ks/r.n));mx.stroke();
+      mx.lineWidth=lw*wm*(r.lf<1?r.lf*.72:1)*Math.max(.3,Math.min(1.25,r.ks/r.n));mx.stroke();   // na drodze z pasami poświata nie przykrywa sąsiednich pasów
     }
     mx.globalAlpha=1;mx.lineCap='round';
   }
@@ -5647,13 +5666,11 @@ function drawRouteTop(){
       const jc=r.lv&&w<lw*1.2;   // natężenie ruchu: kolor drogi zależy od korka
       mx.strokeStyle=fcol(jc?JC[r.lv]:col,fadeA(r),pal.bg);
       mx.beginPath();mx.moveTo(r.xy[0],r.xy[1]);for(let i=2;i<r.xy.length;i+=2)mx.lineTo(r.xy[i],r.xy[i+1]);
-      mx.lineWidth=(w+(jc?2:0))*Math.max(.3,Math.min(1.25,r.ks/r.n));mx.stroke();
+      mx.lineWidth=(w*r.lf+(jc?2:0))*Math.max(.3,Math.min(1.25,r.ks/r.n));mx.stroke();
     }
   }
   mx.globalAlpha=1;
   if(dm&&!ecoOn&&!lite){   // białe strzałki kierunku jazdy przyklejone do drogi (co 26 m): płyną ku autu, bledną z odległością
-    let ca=R.along||0;
-    try{const q=projRoute(R,car[0],car[1],Math.max(0,(R.idx|0)-1),Math.min(R.pts.length-2,(R.idx|0)+2));if(q&&q.off<40)ca=q.along}catch(e){}
     const SP=26;let d=Math.ceil((ca+9)/SP)*SP-ca,j=0;
     mx.strokeStyle='#fff';
     for(;d<230&&j<pr.length-1;d+=SP){
@@ -5661,7 +5678,7 @@ function drawRouteTop(){
       const A=pr[j],B=pr[j+1];if(!A||!B)break;
       const L=dcum[j+1]-dcum[j];if(L<=.01)continue;
       const t=Math.max(0,Math.min(1,(d-dcum[j])/L)),x=A.x+(B.x-A.x)*t,y=A.y+(B.y-A.y)*t,kc=Math.max(.3,Math.min(1.25,A.k+(B.k-A.k)*t));
-      const u=Math.max(1.8,Math.min(8,lw*.4*kc));
+      const u=Math.max(1.8,Math.min(8,lw*lfAt(d)*.4*kc));
       mx.globalAlpha=Math.max(0,1-d/230)*.92*dmA;
       mx.save();mx.translate(x,y);mx.rotate(Math.atan2(B.y-A.y,B.x-A.x));
       mx.lineWidth=Math.max(1.3,u*.55);mx.beginPath();mx.moveTo(-u*.7,-u);mx.lineTo(u*.6,0);mx.lineTo(-u*.7,u);mx.stroke();
@@ -5700,12 +5717,428 @@ function proj(lat,lon,hm){
   const k=D/(D-z),Px=W*.5,Py=H*.45,Cx=W*.5,Cy=H*cyCur;
   return {x:Px+(Cx+x1-Px)*k,y:Py+(Cy+y1*Math.cos(T)-h*Math.sin(T)-Py)*k,k};
 }
+// ================= Wersja 138: pasy ruchu (dane z OpenStreetMap) =================
+// Kafelki mapy nie mają liczby pasów, więc bierzemy ją z OpenStreetMap (tagi lanes, lanes:forward/backward, oneway, turn:lanes):
+// 1) dane pobieramy komórkami ok. 2,2 km (Overpass, pamięć urządzenia 14 dni), 2) droga z kilkoma pasami jest rysowana szerzej, z liniami między pasami
+// i strzałkami, 3) niebieska trasa i auto jadą pasem wynikającym z najbliższego manewru (prawy – domyślnie, lewy przed skrętem w lewo).
+var laneOn=LSget('laneOn',true)!==false;
+var LANEW=new Map(),laneVer=0,lnDirty=0,lnGrid=new Map(),lnCells=new Map(),lnQ=[],lnBusy=false,carAl=null;
+const LN_K=['tr','mw','pr','sc','rs','sv'],LN_CELL={y:.02,x:.03};
+// opis drogi z tagów OSM: liczba pasów w kierunku zgodnym z rysowaniem (nf), przeciwnym (nb), pasy środkowe (c), jednokierunkowość (ow), strzałki (tf/tb)
+function lnWay(w){
+  const t=w.tags||{},g=w.geometry;if(!g||g.length<2)return null;
+  const k=HW[t.highway];if(!k||k==='sv')return null;
+  if(t.tunnel&&t.tunnel!=='no'&&t.tunnel!=='building_passage')return null;
+  const nn=v=>{const m=/^\s*(\d+)/.exec(v||'');return m?+m[1]:0},cnt=v=>v?String(v).split('|').length:0;
+  const o=t.oneway;let ow=0;
+  if(o==='yes'||o==='true'||o==='1')ow=1;else if(o==='-1'||o==='reverse')ow=-1;
+  else if(o!=='no'&&(t.highway==='motorway'||t.highway==='motorway_link'||t.junction==='roundabout'||t.junction==='circular'))ow=1;
+  const n=nn(t.lanes);let nf=nn(t['lanes:forward']),nb=nn(t['lanes:backward']),c=nn(t['lanes:both_ways']);
+  const tf=t['turn:lanes:forward']||(ow===1?t['turn:lanes']:'')||'',tb=t['turn:lanes:backward']||(ow===-1?t['turn:lanes']:'')||'';
+  if(ow===1){nf=nf||n||cnt(tf);nb=0;c=0}
+  else if(ow===-1){nb=nb||n||cnt(tb);nf=0;c=0}
+  else if(n){
+    if(nf&&!nb)nb=Math.max(0,n-nf-c);else if(nb&&!nf)nf=Math.max(0,n-nb-c);
+    else if(!nf&&!nb){c=c||(n%2);nf=nb=(n-c)>>1}
+  }else{nf=nf||cnt(tf);nb=nb||cnt(tb);if(nf&&!nb)nb=1;else if(nb&&!nf)nf=1}
+  const N=nf+nb+c;if(N<2||N>14)return null;
+  const multi=N>=3||ow!==0;
+  if(!multi&&!tf&&!tb)return null;   // zwykła droga 1+1 pasy bez strzałek: rysujemy jak dotąd
+  // pasy zamknięte dla zwykłych aut (buspas, pas dla taksówek / HOV, access:lanes=no): bit i = i-ty pas od lewej w kierunku jazdy
+  const ex=(dir,cn)=>{
+    let m=0;
+    for(const k of ['bus','psv','taxi','hov','vehicle','motor_vehicle','motorcar','access']){
+      const v=t[k+':lanes:'+dir]||(((dir==='forward'&&ow===1)||(dir==='backward'&&ow===-1))?t[k+':lanes']:'');
+      if(!v)continue;
+      const a=String(v).split('|'),pub=k==='bus'||k==='psv'||k==='taxi'||k==='hov';
+      for(let i=0;i<a.length&&i<cn;i++){const x=a[i].trim();if(pub?x==='designated':(x==='no'||x==='psv'||x==='bus'||x==='taxi'))m|=1<<i}
+    }
+    return m===(1<<cn)-1?0:m;   // wszystkie pasy zamknięte = błędne dane
+  };
+  const xf=nf?ex('forward',nf):0,xb=nb?ex('backward',nb):0;
+  const ga=new Array(g.length*2);for(let i=0;i<g.length;i++){ga[2*i]=Math.round(g[i].lat*1e6)/1e6;ga[2*i+1]=Math.round(g[i].lon*1e6)/1e6}
+  return {id:w.id,k,kc:Math.max(0,LN_K.indexOf(k)),nf,nb,c,ow,N,multi,tf,tb,xf,xb,z:(t.bridge&&t.bridge!=='no')||+t.layer>0?1:0,g:ga};
+}
+// siatka ok. 75 m do szybkiego szukania drogi przy punkcie (dopasowanie trasy do danych o pasach)
+function lnIdx(w){
+  const g=w.g,n=g.length/2;
+  for(let i=0;i<n-1;i++){
+    const la0=Math.min(g[2*i],g[2*i+2]),la1=Math.max(g[2*i],g[2*i+2]),lo0=Math.min(g[2*i+1],g[2*i+3]),lo1=Math.max(g[2*i+1],g[2*i+3]);
+    for(let u=Math.floor(lo0*900);u<=Math.floor(lo1*900);u++)for(let v=Math.floor(la0*1400);v<=Math.floor(la1*1400);v++){
+      const k=u+','+v;let l=lnGrid.get(k);if(!l)lnGrid.set(k,l=[]);l.push(w,i);
+    }
+  }
+}
+function lnIngest(arr){
+  let add=0;
+  for(const w of arr||[]){if(!w||LANEW.has(w.id))continue;LANEW.set(w.id,w);lnIdx(w);add++}
+  if(add){laneVer++;vd=null}
+}
+// najbliższa droga z danymi o pasach: {w,fwd,i}; fwd = jedziemy zgodnie z kierunkiem rysowania drogi; needTurn = tylko drogi ze strzałkami (turn:lanes)
+function lnMatch(lat,lon,brg,maxd,needTurn){
+  const cy=Math.floor(lat*1400),cx=Math.floor(lon*900),kx=111195*Math.cos(rad(lat));
+  let best=null,bd=maxd||11;
+  for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){
+    const l=lnGrid.get(u+','+v);if(!l)continue;
+    for(let j=0;j<l.length;j+=2){
+      const w=l[j],i=l[j+1],g=w.g;
+      if(needTurn&&!(w.tf||w.tb))continue;
+      const ax=(g[2*i+1]-lon)*kx,ay=(g[2*i]-lat)*111195,bx=(g[2*i+3]-lon)*kx,by=(g[2*i+2]-lat)*111195,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;
+      if(L2<.01)continue;
+      let t=-(ax*dx+ay*dy)/L2;t=t<0?0:t>1?1:t;
+      const d=Math.hypot(ax+dx*t,ay+dy*t);if(d>=bd)continue;
+      const da=angDiff((Math.atan2(dx,dy)*180/Math.PI+360)%360,brg);
+      if(da>35&&da<145)continue;
+      const fwd=da<=35;
+      if((w.ow===1&&!fwd)||(w.ow===-1&&fwd))continue;   // nie pod prąd
+      bd=d;best={w,fwd,i};
+    }
+  }
+  return best;
+}
+// ---- pobieranie danych komórkami ----
+function lnWant(lat,lon,pri){
+  const cx=Math.floor(lon/LN_CELL.x),cy=Math.floor(lat/LN_CELL.y),k=cx+'|'+cy;let c=lnCells.get(k);
+  if(!c)lnCells.set(k,c={s:0,q:0,cx,cy});
+  if(c.s!==0||c.q||Date.now()<(c.next||0))return;
+  c.q=1;lnQ.push([cx,cy,pri]);
+}
+async function lnLoadCell(cx,cy){
+  const key='ln|'+cx+'|'+cy;let c=null;
+  try{c=await idbGet(key)}catch(e){}
+  if(c&&c.a&&Date.now()-c.t<14*864e5){lnIngest(c.a);return}
+  const b=[cy*LN_CELL.y-.0004,cx*LN_CELL.x-.0006,(cy+1)*LN_CELL.y+.0004,(cx+1)*LN_CELL.x+.0006].map(v=>v.toFixed(5)),bb='('+b.join(',')+')';
+  const hw='motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link';
+  const f=x=>'way["highway"~"^('+hw+')$"]'+x+bb+';';
+  const q='[out:json][timeout:25];('+f('["lanes"~"^([3-9]|1[0-9])"]')+f('["lanes"="2"]["oneway"~"^(yes|true|1|-1)$"]')+f('["lanes"="2"]["junction"~"^(roundabout|circular)$"]')
+    +'way["highway"~"^(motorway|motorway_link)$"]["lanes"="2"]'+bb+';'+f('["lanes:forward"~"^[2-9]"]')+f('["lanes:backward"~"^[2-9]"]')
+    +f('["turn:lanes"]')+f('["turn:lanes:forward"]')+f('["turn:lanes:backward"]')+');out tags geom qt;';
+  let j;
+  try{
+    j=await fetchOverpass(q,24000);
+    if(!j||!Array.isArray(j.elements)||(j.remark&&/runtime error|timed out|out of memory/i.test(j.remark)))throw new Error('overpass: '+(j&&j.remark||'bad'));   // serwer odpowiedział błędem w treści (200 + remark) – nie zapamiętujemy pustego wyniku
+  }catch(e){if(c&&c.a){lnIngest(c.a);return}throw e}   // brak sieci: starsze dane z pamięci urządzenia są lepsze niż żadne
+  const arr=(j.elements||[]).map(lnWay).filter(Boolean);
+  try{await idbSet(key,{t:Date.now(),a:arr})}catch(e){}
+  lnIngest(arr);
+}
+async function lnPump(){
+  if(lnBusy)return;lnBusy=true;
+  try{
+    while(lnQ.length){
+      lnQ.sort((a,b)=>a[2]-b[2]);
+      const [cx,cy]=lnQ.shift(),c=lnCells.get(cx+'|'+cy);if(!c)continue;
+      c.q=0;if(c.s!==0)continue;c.s=1;
+      try{await lnLoadCell(cx,cy);c.s=2;c.fails=0}
+      catch(e){c.s=0;c.fails=(c.fails||0)+1;c.next=Date.now()+Math.min(600000,30000*Math.pow(2,c.fails-1))}
+      await new Promise(r=>setTimeout(r,500));
+    }
+  }finally{lnBusy=false}
+}
+// przy bardzo długiej jeździe odrzucamy drogi leżące daleko za nami (pamięć telefonu)
+function lnPrune(p){
+  if(LANEW.size<6000)return;
+  const R=10000,kx=111195*Math.cos(rad(p.lat));let drop=0;
+  for(const [id,w] of LANEW){
+    const g=w.g;let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+    for(let i=0;i<g.length;i+=2){const y=(g[i]-p.lat)*111195,x=(g[i+1]-p.lon)*kx;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+    if(x1<-R||x0>R||y1<-R||y0>R){LANEW.delete(id);drop++}
+  }
+  if(!drop)return;
+  lnGrid.clear();for(const w of LANEW.values())lnIdx(w);
+  for(const [k,c] of lnCells)if(c.s===2){const x=((c.cx+.5)*LN_CELL.x-p.lon)*kx,y=((c.cy+.5)*LN_CELL.y-p.lat)*111195;if(Math.abs(x)>R||Math.abs(y)>R)lnCells.delete(k)}
+  laneVer++;vd=null;
+}
+function lnTick(){
+  if(!laneOn||!vec||!vecData||window.preview||demo||navigator.onLine===false)return;   // dopiero gdy mapa jest już wczytana (nie spowalniamy jej startu)
+  try{if(navigator.connection&&navigator.connection.saveData)return}catch(e){}
+  const p=(vf&&vf.car)||last;if(!p)return;
+  lnPrune(p);
+  const dy=1300/111195,dx=1300/(111195*Math.cos(rad(p.lat)));
+  for(const [a,b] of [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]])lnWant(p.lat+a*dy,p.lon+b*dx,Math.hypot(a,b));
+  if(route&&route.len>0&&!window.browse){const a0=route.along||0;for(let d=700;d<=7000;d+=700){const q=routeAt(route,Math.min(route.len,a0+d));lnWant(q[0],q[1],1+d/700)}}
+  if(lnQ.length)lnPump();
+}
+setInterval(()=>{try{lnTick()}catch(e){}},2500);
+{const e=$('laneCb');if(e){e.checked=laneOn;e.onchange=()=>{laneOn=e.checked;LSput('laneOn',laneOn);vd=null;laneVer++;if(route)route.lp=null;if(laneOn)lnTick()}}}
+// ---- plan pasa dla trasy ----
+// strona, po której trzeba jechać przed manewrem: 'L' / 'R' albo null (bez zmiany pasa)
+function lnSide(st){
+  const m=st.mod||'',t=st.type;
+  if(t==='turn'){if(m==='uturn')return 'L';if(m.includes('slight'))return null;return m.includes('left')?'L':m.includes('right')?'R':null}
+  if(t==='fork'||t==='on ramp'||t==='off ramp'||t==='end of road'||t==='merge')return m.includes('left')?'L':m.includes('right')?'R':null;
+  return null;
+}
+// synchronicznie, z pamięci: strzałki pasów (turn:lanes) przed manewrem – jak fetchLanes, ale bez zapytania do sieci
+function lnLanesFromStore(R,st){
+  if(!LANEW.size)return null;
+  const a=routeAt(R,Math.max(0,st.off-30)),b=routeAt(R,Math.max(0,st.off-70));
+  if(dist(a[0],a[1],b[0],b[1])<15)return null;
+  const m=lnMatch(a[0],a[1],bear(b[0],b[1],a[0],a[1]),22,true);if(!m)return null;
+  const tag=m.fwd?m.w.tf:m.w.tb;if(!tag)return null;
+  const lanes=lnParse(tag),need=lnDir(st),valid=lanes.map(s=>s.has(need)||(need==='U'&&s.has('L')));
+  if(!valid.some(Boolean)||lanes.every(s=>s.size===1&&s.has('S')))return null;
+  return {lanes,valid,need};
+}
+function lnPref(R,st){
+  if(!['turn','fork','off ramp','on ramp','end of road','merge','roundabout','rotary'].includes(st.type))return null;
+  if(st.lanes===undefined&&!st.laneBusy){const L=lnLanesFromStore(R,st);if(L){st.lanes=L;lnDirty++}}
+  const L=st.lanes;
+  if(L&&L.lanes&&L.lanes.length>=2&&L.valid&&L.valid.some(Boolean)&&!L.valid.every(Boolean)){
+    let b=-1;for(let i=L.lanes.length-1;i>=0;i--)if(L.valid[i]){b=i;break}
+    return {s:'K',b,n:L.lanes.length};
+  }
+  const sd=lnSide(st);return sd?{s:sd}:null;
+}
+// plan: dla odcinka trasy tuż przed autem i ok. 2,6 km do przodu – gdzie jest pas (liczba pasów, przesunięcie) i który pas wybrać
+function lnPlan(R){
+  if(!R||!(R.len>0)||!LANEW.size||!laneOn){if(R)R.lp=null;return null}
+  const al=R.along||0,sn=R.snapFor?R.snapFor.lat+','+R.snapFor.lon:'0',key=laneVer+'|'+lnDirty+'|'+R.pts.length+'|'+sn;
+  let P=R.lp;
+  if(P&&P.key===key&&al>=P.a0&&al<=P.a0+(P.n-1)*P.st-700)return P;
+  const st=6,a0=Math.max(0,al-90),a1=Math.min(R.len,al+2600),n=Math.max(2,Math.ceil((a1-a0)/st)+1);
+  const u=new Float32Array(n),kc=new Uint8Array(n),kn=new Uint8Array(n),NT=new Uint8Array(n),NO=new Uint8Array(n),CC=new Uint8Array(n),raw=new Float32Array(n),mfR=new Float32Array(n),mf=new Float32Array(n);
+  const man=[];
+  if(R.steps)for(let j=1;j<R.steps.length;j++){const s=R.steps[j];if(s.off<a0-10)continue;if(s.off>a1+260)break;const pf=lnPref(R,s);if(pf){pf.off=s.off;man.push(pf)}}
+  let mi=0;
+  for(let i=0;i<n;i++){
+    const a=a0+i*st,p=dAt(R,a),q1=dAt(R,Math.max(0,a-7)),q2=dAt(R,Math.min(R.len,a+7));
+    const m=lnMatch(p[0],p[1],bear(q1[0],q1[1],q2[0],q2[1]),11,false);
+    let nt=0,no=0,c=0,N=2,mk=0;
+    if(m){const w=m.w;nt=m.fwd?w.nf:w.nb;no=m.fwd?w.nb:w.nf;c=w.c;N=nt+no+c;kc[i]=w.kc;kn[i]=1;mfR[i]=w.multi?1:0;mk=(m.fwd?w.xf:w.xb)|0}
+    let ud=N/2-.5;   // domyślnie pas skrajnie prawy
+    if(!m||nt<1){nt=m?nt:0;ud=.5;kn[i]=m?1:0}
+    else if(mk){let kd=nt-1;while(kd>0&&(mk>>kd&1))kd--;ud=-N/2+no+c+kd+.5}   // domyślnie: skrajnie prawy pas dostępny dla zwykłych aut (nie buspas)
+    let uo=ud;
+    while(mi<man.length&&man[mi].off<a-6)mi++;
+    if(m&&nt>=2&&mi<man.length){
+      const pf=man[mi],dm=pf.off-a;
+      if(dm<200){
+        const w=dm<=70?1:(()=>{const t=(200-dm)/130;return t*t*(3-2*t)})();
+        let kk=nt-1;
+        if(pf.s==='L'){kk=0;while(kk<nt-1&&(mk>>kk&1))kk++}
+        else{
+          if(pf.s==='K')kk=pf.b===0?0:Math.max(0,Math.min(nt-1,pf.n===nt?pf.b:nt-1-(pf.n-1-pf.b)));
+          while(kk>0&&(mk>>kk&1))kk--;
+        }
+        const ut=-N/2+no+c+kk+.5;
+        uo=ud+(ut-ud)*w;
+      }
+    }
+    raw[i]=uo;NT[i]=nt;NO[i]=no;CC[i]=c;
+  }
+  const K=4;
+  for(let i=0;i<n;i++){let s=0,ws=0,s2=0;for(let d=-K;d<=K;d++){const j=i+d;if(j<0||j>=n)continue;const w=K+1-Math.abs(d);s+=raw[j]*w;s2+=mfR[j]*w;ws+=w}u[i]=s/ws;mf[i]=s2/ws}
+  return R.lp={key,a0,st,n,u,kc,kn,mf,nt:NT,no:NO,cc:CC};
+}
+// próbka planu dla odległości al wzdłuż trasy: [plan, indeks, ułamek] albo null
+function lnAt(R,al){
+  const P=R&&R.lp;if(!P)return null;
+  const f=(al-P.a0)/P.st;if(f<0||f>P.n-1)return null;
+  const i=Math.floor(f);return [P,i,f-i];
+}
+// przesunięcie trasy/auta w poprzek jezdni w px (+ = w prawo od osi drogi); null = brak danych o pasach w tym miejscu
+function lnOffPx(R,al){
+  const q=lnAt(R,al);if(!q)return null;
+  const P=q[0],i=q[1],t=q[2],j=Math.min(P.n-1,i+1);
+  if(!P.kn[i]&&!P.kn[j])return null;
+  const pi=P.u[i]*rw(LN_K[P.kc[i]],scaleCur)/2,pj=P.u[j]*rw(LN_K[P.kc[j]],scaleCur)/2;
+  return pi+(pj-pi)*t;
+}
+// połowa szerokości jezdni rysowanej z pasami (px) w miejscu al trasy – znaki i światła stoją za jej brzegiem; null = zwykła droga
+function lnHalfPx(R,al){
+  const q=lnAt(R,al);if(!q)return null;
+  const P=q[0],i=q[1];if(!P.kn[i]||P.mf[i]<.5)return null;
+  const N=P.nt[i]+P.no[i]+P.cc[i];if(N<2)return null;
+  return N*rw(LN_K[P.kc[i]],scaleCur)/4;
+}
+// ---- rysunek pasów na mapie (płótno mapy, w metrach względem środka mapy D) ----
+function lnMetres(D,w){
+  const mp=D.LNG||(D.LNG=new Map());let r=mp.get(w.id);if(r)return r;
+  const kx=111195*Math.cos(rad(D.lat)),g=w.g,n=g.length/2,a=new Float64Array(n*2);
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(let i=0;i<n;i++){const x=(g[2*i+1]-D.lon)*kx,y=(g[2*i]-D.lat)*111195;a[2*i]=x;a[2*i+1]=y;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  r={a,b:[x0,y0,x1,y1]};mp.set(w.id,r);return r;
+}
+// linia równoległa do drogi w odległości d (m, + = w prawo względem kierunku rysowania), z ostrymi narożnikami
+function lnOff(a,d){
+  const n=a.length/2,o=new Float64Array(n*2);
+  for(let i=0;i<n;i++){
+    let n1x=0,n1y=0,n2x=0,n2y=0;
+    if(i>0){const dx=a[2*i]-a[2*i-2],dy=a[2*i+1]-a[2*i-1],L=Math.hypot(dx,dy)||1;n1x=dy/L;n1y=-dx/L}
+    if(i<n-1){const dx=a[2*i+2]-a[2*i],dy=a[2*i+3]-a[2*i+1],L=Math.hypot(dx,dy)||1;n2x=dy/L;n2y=-dx/L}
+    if(i===0){n1x=n2x;n1y=n2y}if(i===n-1){n2x=n1x;n2y=n1y}
+    const k=1/Math.max(.35,1+n1x*n2x+n1y*n2y);
+    o[2*i]=a[2*i]+d*(n1x+n2x)*k;o[2*i+1]=a[2*i+1]+d*(n1y+n2y)*k;
+  }
+  return o;
+}
+function lnLine(P,o){P.moveTo(o[0],o[1]);for(let i=2;i<o.length;i+=2)P.lineTo(o[i],o[i+1])}
+const lnLanePx=(kc,s)=>rw(LN_K[kc],s)/2;
+function lnVis(D,s,ox,oy,S){
+  const out=[];if(!laneOn||!LANEW.size||s<.6)return out;
+  const r=S/2/s*1.25+90;
+  for(const w of LANEW.values()){
+    if(!w.multi)continue;
+    const m=lnMetres(D,w),b=m.b;
+    if(b[2]<ox-r||b[0]>ox+r||b[3]<oy-r||b[1]>oy+r)continue;
+    out.push({w,m});
+  }
+  return out;
+}
+// budynki, których środek leży w pasie szerokiej jezdni (rysowanej z przesadą), nie rosną nad drogą – droga ma być widoczna w całości
+function lnCull(D){
+  if(!laneOn||!LANEW.size||scaleCur<.6||!D.B||!D.B.length){if(D.LNB){D.LNB=null;D.LNK='';bldCache=null}return null}
+  const s=scaleCur,key=laneVer+'|'+Math.round(lnLanePx(0,s)/s*2)+'|'+D.B.length;
+  if(D.LNK===key)return D.LNB;
+  D.LNK=key;
+  const set=new Set(),G=new Map(),CS=40;
+  for(const w of LANEW.values()){
+    if(!w.multi)continue;
+    const m=lnMetres(D,w),a=m.a,hw=w.N*lnLanePx(w.kc,s)/s/2+1.5;
+    if(m.b[2]<-760||m.b[0]>760||m.b[3]<-760||m.b[1]>760)continue;
+    for(let i=0;i<a.length/2-1;i++){
+      const x1=a[2*i],y1=a[2*i+1],x2=a[2*i+2],y2=a[2*i+3],sg=[x1,y1,x2,y2,hw];
+      for(let u=Math.floor((Math.min(x1,x2)-hw)/CS);u<=Math.floor((Math.max(x1,x2)+hw)/CS);u++)for(let v=Math.floor((Math.min(y1,y2)-hw)/CS);v<=Math.floor((Math.max(y1,y2)+hw)/CS);v++){
+        const k=u+','+v;let l=G.get(k);if(!l)G.set(k,l=[]);l.push(sg);
+      }
+    }
+  }
+  for(const b of D.B){
+    const l=G.get(Math.floor(b.cx/CS)+','+Math.floor(b.cy/CS));if(!l)continue;
+    for(const g of l){
+      const dx=g[2]-g[0],dy=g[3]-g[1],L2=dx*dx+dy*dy;let t=L2>0?((b.cx-g[0])*dx+(b.cy-g[1])*dy)/L2:0;t=t<0?0:t>1?1:t;
+      if(Math.hypot(g[0]+dx*t-b.cx,g[1]+dy*t-b.cy)<g[4]){set.add(b);break}
+    }
+  }
+  D.LNB=set;bldCache=null;return set;
+}
+// grupy dróg o tej samej szerokości: jedno obrysowanie na grupę
+function lnGroups(V,s){
+  const M=new Map(),ends=new Map();
+  for(const v of V){
+    const w=v.w,key=w.z+':'+w.kc+':'+w.N;let g=M.get(key);
+    if(!g)M.set(key,g={z:w.z,kc:w.kc,N:w.N,wpx:w.N*lnLanePx(w.kc,s),path:new Path2D(),ep:[]});
+    const a=v.m.a,n=a.length/2;g.path.moveTo(a[0],a[1]);for(let i=1;i<n;i++)g.path.lineTo(a[2*i],a[2*i+1]);
+    for(const e of [0,n-1]){   // okrągłe złącze tylko tam, gdzie styka się inna droga tej samej szerokości (bez zaślepek na zwężeniach)
+      const k=Math.round(a[2*e]*1.5)+','+Math.round(a[2*e+1]*1.5)+','+key,t=ends.get(k);
+      if(t)t.n++;else ends.set(k,{x:a[2*e],y:a[2*e+1],g,n:1});
+    }
+  }
+  for(const e of ends.values())if(e.n>=2)e.g.ep.push(e.x,e.y);
+  return [...M.values()].sort((p,q)=>p.z-q.z||p.kc-q.kc||p.N-q.N);
+}
+// obrys wszystkich grup: kolor (lub funkcja koloru), dodatek do szerokości w px, opcjonalny filtr klas
+function lnStroke(c,G,col,add,s,only){
+  c.lineCap='butt';
+  for(const g of G){
+    if(only&&!only(g))continue;
+    const w=(g.wpx+add)/s;c.strokeStyle=typeof col==='function'?col(g):col;c.lineWidth=w;c.stroke(g.path);
+    if(g.ep.length){c.fillStyle=c.strokeStyle;c.beginPath();for(let i=0;i<g.ep.length;i+=2){c.moveTo(g.ep[i]+w/2,g.ep[i+1]);c.arc(g.ep[i],g.ep[i+1],w/2,0,6.2832)}c.fill()}
+  }
+  c.lineCap='round';
+}
+// strzałka na pasie: wzdłuż (ux,uy), jednostka u = szerokość pasa
+function lnGlyph(S,F,cx,cy,ux,uy,u,dirs){
+  const W=(f,l)=>[cx+ux*f-uy*l,cy+uy*f+ux*l],has=d=>dirs.includes(d);
+  const head=(p,df,dl,r)=>{const dx=ux*df-uy*dl,dy=uy*df+ux*dl,nx=-dy,ny=dx;F.moveTo(p[0]+dx*r*1.15,p[1]+dy*r*1.15);F.lineTo(p[0]-dx*r*.15+nx*r*.8,p[1]-dy*r*.15+ny*r*.8);F.lineTo(p[0]-dx*r*.15-nx*r*.8,p[1]-dy*r*.15-ny*r*.8);F.closePath()};
+  const r=u*.19,s0=W(-.5*u,0),s1=W(.12*u,0);
+  S.moveTo(s0[0],s0[1]);S.lineTo(s1[0],s1[1]);
+  const straight=has('S')||(!has('L')&&!has('R')&&!has('U'));
+  if(straight){const t=W(.4*u,0);S.moveTo(s1[0],s1[1]);S.lineTo(t[0],t[1]);head(W(.4*u,0),1,0,r)}
+  for(const [d,sg] of [['L',1],['R',-1]]){
+    if(!(has(d)||(d==='L'&&has('U'))))continue;
+    const m=W(.3*u,sg*.2*u),t=W(.46*u,sg*.4*u);
+    S.moveTo(s1[0],s1[1]);S.quadraticCurveTo(...W(.2*u,sg*.02*u),m[0],m[1]);S.lineTo(t[0],t[1]);
+    head(W(.5*u,sg*.44*u),.7,sg*.7,r);
+  }
+}
+// strzałki z turn:lanes na końcu drogi (przed skrzyżowaniem), osobno dla obu kierunków jazdy
+function lnArrows(S,F,v,LWm){
+  const w=v.w,a=v.m.a,n=a.length/2;
+  for(const fwd of [true,false]){
+    const tag=fwd?w.tf:w.tb;if(!tag)continue;
+    const nt=fwd?w.nf:w.nb,no=fwd?w.nb:w.nf;if(!nt)continue;
+    const sets=lnParse(tag),px=i=>a[2*(fwd?i:n-1-i)],py=i=>a[2*(fwd?i:n-1-i)+1],want=Math.max(5,LWm*1.7);   // punkty w kolejności jazdy
+    let acc=0,got=null;
+    for(let k=n-1;k>0;k--){   // od końca odcinka ku początkowi: miejsce ok. 1,7 szerokości pasa przed skrzyżowaniem
+      const x1=px(k),y1=py(k),x0=px(k-1),y0=py(k-1),dx=x1-x0,dy=y1-y0,L=Math.hypot(dx,dy);
+      if(L<1e-6)continue;
+      if(acc+L>=want){const t=(want-acc)/L;got=[x1-dx*t,y1-dy*t,dx/L,dy/L];break}
+      acc+=L;
+    }
+    if(!got)continue;
+    const [bx,by,ux,uy]=got,N=w.N,rx=uy,ry=-ux;   // (rx,ry) – w prawo względem kierunku jazdy
+    for(let j=0;j<sets.length;j++){
+      const kk=nt-sets.length+j;if(kk<0||kk>=nt)continue;   // pasy z tagu dopasowane do prawej krawędzi
+      const xt=-N*LWm/2+(no+w.c+kk+.5)*LWm;
+      lnGlyph(S,F,bx+rx*xt,by+ry*xt,ux,uy,LWm,[...sets[j]]);
+    }
+  }
+}
+// kolory jezdni z pasami: nawierzchnia nieco ciemniejsza niż zwykła droga (od razu widać, że to szeroka jezdnia), białe linie jak farba na asfalcie
+const LNM=new Map();
+function lnMix(a,b,t){
+  if(a[0]!=='#'||a.length!==7)return a;
+  const k=a+b+t;let v=LNM.get(k);if(v)return v;
+  const x=hx3(a),y=hx3(b);v='rgb('+x.map((q,i)=>Math.round(q+(y[i]-q)*t)).join(',')+')';
+  if(LNM.size>200)LNM.clear();LNM.set(k,v);return v;
+}
+function lnStyle(pal,night){
+  if(window.__lnStyle)return window.__lnStyle(pal,night,lnMix);
+  return night?{
+    fill:kc=>lnMix(pal[LN_K[kc]],'#0a0e18',.22),edgeOut:'rgba(10,14,24,.55)',edge:'rgba(236,241,255,.55)',
+    dash:'rgba(240,244,255,.92)',dashOut:null,solid:'rgba(245,248,255,.95)',arrow:'rgba(245,248,255,.92)',bus:'rgba(176,74,66,.5)',lw:1
+  }:{
+    fill:kc=>lnMix(pal[LN_K[kc]],'#6d7683',kc===0||kc===4?.36:.3),edgeOut:'rgba(60,56,48,.36)',edge:'rgba(255,255,255,.8)',
+    dash:'#ffffff',dashOut:'rgba(60,56,48,.34)',solid:'#ffffff',arrow:'#ffffff',bus:'rgba(200,84,72,.5)',lw:1
+  };
+}
+// pasy na drodze: wypełnienie, krawędzie, linie między pasami, oś jezdni, strzałki
+function lnBody(c,G,V,pal,s,dm,night,lite){
+  const ST=lnStyle(pal,night);
+  for(const g of G)lnStroke(c,[g],ST.fill(g.kc),0,s);
+  lnStroke(c,G,ST.edgeOut,-3,s);   // cienka krawędź tuż przy brzegu jezdni
+  lnStroke(c,G,g=>ST.fill(g.kc),-5,s);
+  const MK=new Map();
+  for(const v of V){
+    const w=v.w,a=v.m.a;if(a.length<4)continue;
+    let q=MK.get(w.kc);if(!q)MK.set(w.kc,q={DP:new Path2D(),SP:new Path2D(),EP:new Path2D(),BP:new Path2D(),AS:new Path2D(),AF:new Path2D(),lp:lnLanePx(w.kc,s)});
+    const LWm=q.lp/s,N=w.N,x0=-N*LWm/2;
+    for(let i=1;i<N;i++){
+      const x=x0+i*LWm,med=w.ow===0&&(i===w.nb||i===w.nb+w.c);
+      if(!med)lnLine(q.DP,lnOff(a,x));
+      else if(w.c===0){const d=LWm*.075;lnLine(q.SP,lnOff(a,x-d));lnLine(q.SP,lnOff(a,x+d))}
+      else lnLine(q.SP,lnOff(a,x));
+    }
+    {const e=N*LWm/2-LWm*.09;lnLine(q.EP,lnOff(a,-e));lnLine(q.EP,lnOff(a,e))}   // ciągłe linie krawędziowe
+    if(w.xf)for(let k=0;k<w.nf;k++)if(w.xf>>k&1)lnLine(q.BP,lnOff(a,x0+(w.nb+w.c+k+.5)*LWm));   // buspasy (kolor)
+    if(w.xb)for(let k=0;k<w.nb;k++)if(w.xb>>k&1)lnLine(q.BP,lnOff(a,x0+(w.nb-1-k+.5)*LWm));
+    if(!lite)lnArrows(q.AS,q.AF,v,LWm);
+  }
+  c.lineCap='butt';c.lineJoin='round';
+  for(const q of MK.values()){
+    const lw=Math.max(1.7,Math.min(4.6,q.lp*.1))*ST.lw;
+    c.strokeStyle=ST.bus;c.lineWidth=q.lp/s*.96;c.stroke(q.BP);
+    if(ST.dashOut){   // ciemniejszy obrys: białe kreski są czytelne także na jasnej jezdni
+      c.strokeStyle=ST.dashOut;c.lineWidth=(lw+1.8)/s;c.setLineDash([q.lp*.55/s,q.lp*.8/s]);c.stroke(q.DP);c.setLineDash([]);
+      c.lineWidth=(lw*.78+1.8)/s;c.stroke(q.SP);
+    }
+    c.strokeStyle=ST.edge;c.lineWidth=Math.max(1.2,lw*.55)/s;c.stroke(q.EP);
+    c.strokeStyle=ST.dash;c.lineWidth=lw/s;c.setLineDash([q.lp*.55/s,q.lp*.8/s]);c.stroke(q.DP);c.setLineDash([]);
+    c.strokeStyle=ST.solid;c.lineWidth=Math.max(1.3,lw*.78)/s;c.stroke(q.SP);
+    c.strokeStyle=ST.arrow;c.fillStyle=ST.arrow;c.lineWidth=Math.max(1.8,q.lp*.12)/s;c.stroke(q.AS);c.fill(q.AF);
+  }
+  c.lineCap='round';
+}
+
 // auto na jezdni: na wyznaczonej trasie ikona jest „przyklejona” do drogi i jedzie prawym pasem
 var carSnap=null,laneCur=null,laneYaw=0;
 // docelowe położenie auta w poprzek jezdni (px od osi drogi, + = w prawo): domyślnie prawy pas; przed skrętem w lewo / przy zmianie pasa – przesunięcie w lewo
 function laneTarget(Rr){
   let tgt=Rr/4;
   if(checkSingleLane())return 0;   // jeden pas: auto na środku drogi
+  if(route&&carAl!=null){const p=lnOffPx(route,carAl+5);if(p!=null)return p}   // znamy pasy tej drogi: pas z planu trasy
   if(nav&&nav.i>0&&route&&route.steps){
     const st=route.steps[nav.i],d=nav.d;
     if(st&&d<230&&d>6){
@@ -5734,6 +6167,7 @@ function checkSingleLane(){
     }
     c.restore();
   }catch(e){}
+  if(on&&route&&route.lp&&carAl!=null){try{const q=lnAt(route,carAl);if(q&&q[0].kn[q[1]]&&q[0].mf[q[1]]>.5)on=false}catch(e){}}   // OSM mówi, że to droga z kilkoma pasami – jedziemy pasem, nie środkiem
   slHits=on?Math.min(3,slHits+1):0;
   if(slHits>=2)singleLane=true;else if(!on)singleLane=false;
   return singleLane;
@@ -5756,6 +6190,7 @@ function updCarSnap(){
   if(m.off>30){setOff(0,0);el.style.transform=base;return}
   const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=dAt(route,m.along),a=dAt(route,Math.max(0,m.along-6)),b=dAt(route,Math.min(route.len,m.along+6));
   const brg=dist(a[0],a[1],b[0],b[1])>2?bear(a[0],a[1],b[0],b[1]):lastH;
+  carAl=m.along;try{lnPlan(route)}catch(e){route.lp=null}
   const tg=laneTarget(Rr);if(laneCur==null)laneCur=tg;
   const prev=laneCur;laneCur+=(tg-laneCur)*.07;laneYaw+=(Math.max(-9,Math.min(9,(laneCur-prev)*14))-laneYaw)*.2;   // płynna zmiana pasa + lekkie wychylenie auta
   const lanePx=laneCur,laneM=lanePx/scaleCur;
@@ -5791,8 +6226,9 @@ function drawBuildings3D(){
   let lst;
   if(bldCache&&bldCache.D===D&&(bldTick++%5)&&Math.abs(bldCache.rot-curRot)<2&&Math.abs(bldCache.s-s)<.05*s)lst=bldCache.lst;   // kolejność rysowania liczymy co kilka klatek
   else{
-    lst=[];
+    lst=[];const cull=lnCull(D);
     for(const b of D.B){
+      if(cull&&cull.has(b))continue;
       const q=proj(D.lat+b.cy/111195,D.lon+b.cx/(111195*Math.cos(rad(D.lat))));
       if(!q||q.x<-160||q.x>W+160||q.y<-220||q.y>H+160)continue;
       lst.push({b,y:q.y,k:q.k});
