@@ -67,8 +67,9 @@ button.lockd{opacity:.6}button.lockd svg{filter:grayscale(1) brightness(.4)}
 #splash .bd{font-size:1.9rem;font-weight:800;text-align:center;line-height:1.15;animation:spUp .6s .2s ease both;text-shadow:0 2px 14px #000a}
 @keyframes spFlame{from{transform:scale(1,.85) rotate(-6deg)}to{transform:scale(.9,1.12) rotate(6deg)}}
 #carAcc{position:absolute;left:50%;top:-10px;transform:translateX(-50%);font-size:19px;line-height:1;filter:drop-shadow(0 2px 2px #0007);pointer-events:none}
-#carPlate{position:absolute;left:50%;bottom:17px;transform:translateX(-50%);background:#f6f6f2;color:#111;border:1px solid #222;border-radius:2px;font:800 6px/1.1 'Courier New',monospace;padding:.5px 2px .5px 6px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 1px 2px #0008;display:none}
-#carPlate::before{content:"PL";position:absolute;left:0;top:0;bottom:0;width:4.5px;background:#0b4ea2;color:#fff;font-size:3px;line-height:8px;text-align:center}
+#carPlate{position:absolute;overflow:hidden;background:#f6f6f2;color:#111;border-radius:1px;box-shadow:inset 0 0 0 .5px #222;display:none}
+#carPlate span{position:absolute;left:57%;top:50%;font:800 10px/1 'Courier New',monospace;letter-spacing:.02em;white-space:nowrap;transform-origin:50% 50%}
+#carPlate::before{content:"";position:absolute;left:0;top:0;bottom:0;width:13%;background:#0b4ea2}
 .achTabs{display:flex;gap:6px;overflow-x:auto;max-width:620px;margin:0 auto 12px;padding-bottom:2px}
 .achTab{padding:8px 13px;border-radius:999px;background:var(--card);color:var(--tx);font-size:.82rem;font-weight:700;white-space:nowrap;flex:0 0 auto}
 .achTab.on{background:var(--acc);color:#fff}
@@ -1390,7 +1391,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 136</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 137</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -4807,9 +4808,11 @@ function drawRouteSigns(){
   const W=window.innerWidth,H=window.innerHeight;
   for(const sg of rSigns.slice().sort((a,b)=>b.d-a.d)){   // dalsze najpierw
     const q=proj(sg.lat,sg.lon);if(!q)continue;
-    const ang=rad(sg.brg+curRot),k=q.k,off=26*Math.max(.55,Math.min(1.2,k)),u=Math.max(8,Math.min(12.5,10.5*k));
-    // przesunięcie na prawo od osi drogi (na ekranie), żeby nie zasłaniać niebieskiej trasy
-    const x=q.x+Math.cos(ang)*off,y=q.y+Math.sin(ang)*off;
+    const k=q.k,u=Math.max(8,Math.min(12.5,10.5*k));
+    // przesunięcie w metrach na prawo od osi drogi (tuż za prawym brzegiem jezdni), więc przy oddaleniu i pochyleniu znak trzyma się trasy
+    const bg=rad(sg.brg),off=(rw('tr',scaleCur)/2+u*1.1)/scaleCur;
+    const q2=proj(sg.lat-Math.sin(bg)*off/111195,sg.lon+Math.cos(bg)*off/(111195*Math.cos(rad(sg.lat))));if(!q2)continue;
+    const x=q2.x,y=q2.y;
     if(x<-30||x>W+30||y<-30||y>H+30)continue;
     drawSignIcon(sg.kind,x,y,u);
   }
@@ -5917,7 +5920,7 @@ function drawMarkers(){
     const dc=carP?dist(carP.lat,carP.lon,c.lat,c.lon):1e9;
     if(!xZoomOk()&&dc>300)continue;   // z daleka (mapa oddalona) przejazdów nie rysujemy – pojawiają się po przybliżeniu; najbliższe zawsze widać
     const p=P(c.lat,c.lon);if(p)list.push({p,t:0,c,d:dc})}
-  trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt,near:t.id===nearTrainId,name:t.id,hd:t.heading})});
+  if(xZoomOk())trains.forEach(t=>{const p=P(t.lat,t.lon);if(p)list.push({p,t:1,rt:t.rt,near:t.id===nearTrainId,name:t.id,hd:t.heading})});
   if(endPt){const p=P(endPt.lat,endPt.lon);if(p)list.push({p,t:2})}
   if(window.preview&&!window.browse&&route&&route.pts&&route.pts.length){const a=route.pts[0],p=P(a[0],a[1]);if(p)list.push({p,t:4})}   // podgląd trasy: znacznik startu (A)
   if(pinPt){const p=P(pinPt.lat,pinPt.lon);if(p)list.push({p,t:3})}
@@ -6257,8 +6260,18 @@ function seasonNow(){
 }
 let seasonCur=seasonNow();
 let plate=LSget('plate','');
+function fitPlate(){   // tablica dokładnie w prostokącie tablicy z grafiki auta (każdy model ma ją gdzie indziej)
+  const e=$('carPlate'),ic=$('carIcon');if(!e||!ic||!plate)return;
+  const sv=ic.querySelector('svg'),vb=((sv&&sv.getAttribute('viewBox'))||'0 0 100 80').split(/\s+/).map(Number);
+  let x=40,y=53,w=20,h=6;const r=sv&&sv.querySelector('rect[fill="#eee"]');
+  if(r){x=+r.getAttribute('x');y=+r.getAttribute('y');w=+r.getAttribute('width');h=+r.getAttribute('height')}
+  const st=e.style;st.left=(x/vb[2]*100)+'%';st.top=(y/vb[3]*100)+'%';st.width=(w/vb[2]*100)+'%';st.height=(h/vb[3]*100)+'%';st.bottom='auto';st.transform='none';
+  const t=e.firstChild;if(!t)return;t.style.transform='translate(-50%,-50%)';
+  const bw=(ic.clientWidth||96)*w/vb[2],bh=(ic.clientHeight||77)*h/vb[3],tw=t.offsetWidth||1,th=t.offsetHeight||1;
+  const sc=Math.min((bw*.8)/tw,(bh*.9)/th);t.style.transform='translate(-50%,-50%) scale('+sc.toFixed(3)+')';
+}
 function plateEl(){let ac=$('carAcc');if(!ac){ac=document.createElement('div');ac.id='carAcc'}if(ac.parentNode!==$('carIcon'))$('carIcon').appendChild(ac);ac.textContent=seasonCur.s==='halloween'?'🎃':seasonCur.s==='xmas'?'🎄':'';
-  let e=$('carPlate');if(!e){e=document.createElement('div');e.id='carPlate'}if(e.parentNode!==$('carIcon'))$('carIcon').appendChild(e);e.textContent=plate;e.style.display=plate?'block':'none'}
+  let e=$('carPlate');if(!e){e=document.createElement('div');e.id='carPlate'}if(e.parentNode!==$('carIcon'))$('carIcon').appendChild(e);if(!e.firstChild||e.firstChild.nodeType!==1)e.textContent='',e.appendChild(document.createElement('span'));e.firstChild.textContent=plate;e.style.display=plate?'block':'none';fitPlate()}
 const CCOLS={default:null,blue:['#2b6cb0','#3d82cc'],red:['#d62828','#e04a4a'],green:['#2f6f4f','#3d8b64'],yellow:['#f2c200','#ffd740'],orange:['#e8710a','#ff9a3d'],black:['#23262b','#3a3f47'],white:['#e6e9ee','#ffffff'],purple:['#6d3fb8','#8a5fd6'],pink:['#e91e8c','#ff5fb0'],teal:['#0f9d9a','#2fc4c0'],lime:['#7cb518','#9fd83a'],chrome:['#8b95a3','#cfd6df'],gold:['#d4a017','#f5cf57'],neon:['#00b8d4','#00e5ff']};
 // lakier jest zapamiętany osobno dla każdego auta (carcols: {model: lakier}); dawny wspólny lakier dostaje tylko auto wybrane w chwili aktualizacji
 let carCols={};try{carCols=JSON.parse(localStorage.getItem('carcols')||'null')||{}}catch(e){}
