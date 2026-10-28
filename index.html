@@ -115,7 +115,9 @@ body.night #settings input[type=checkbox]{background:#4a5059}body.night #setting
 #settings select{width:100%;padding:14px 8px;margin:0;border:0;background:transparent;color:var(--tx);font:inherit;font-size:1rem;font-weight:600;border-radius:0;color-scheme:light dark}
 #settings select option{color:#202124}
 #settings button.sec{display:flex;width:100%;justify-content:space-between;align-items:center;text-align:left;padding:15px 0;margin:0;border-radius:0;background:none;color:var(--tx);font-size:1rem;font-weight:600}
-#settings button.sec::after{content:"›";font-size:1.4rem;color:var(--mut)}
+#settings button.sec::after{content:"›";font-size:1.4rem;color:var(--mut);margin-left:auto}
+#settings button.sec{justify-content:flex-start}
+#settings button.sec>.ic{width:1.3em;height:1.3em;margin-right:12px;color:var(--mut)}
 #settings #cfg{display:block;padding:6px 0 12px}
 #settings #cfg input{width:100%;margin:6px 0}
 #settings #cfg input:not([type=file]){background:var(--bg);color:var(--tx);border:1px solid var(--line)}
@@ -169,6 +171,7 @@ body.night #xBoard{background:#202228;color:#e8eaed}
 #brwFav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 152px);z-index:950;padding:10px 18px;border-radius:22px;background:#fff;color:#202124;font-weight:700;box-shadow:0 6px 18px #0005;display:none}
 body.night #brwFav{background:#2d3139;color:#e8eaed}
 #srchFavs b.h{display:block;font-size:.8rem;opacity:.65;margin:10px 0 2px}
+#srchFavs b.h .ic{width:14px;height:14px;margin-right:6px;vertical-align:-2px}
 #srchFavs div{display:flex;align-items:center;gap:8px}#srchFavs div span{flex:1}#srchFavs div button{background:transparent;color:inherit;opacity:.6;font-size:1rem;padding:6px 10px}
 #nextStrip{position:fixed;left:12px;right:70px;top:calc(env(safe-area-inset-top,0px) + 152px);z-index:880;display:none;gap:6px;flex-wrap:wrap;pointer-events:none}
 #nextStrip span{background:#202124d9;color:#fff;border-radius:14px;padding:5px 10px;font-weight:700;font-size:.85rem;box-shadow:0 3px 10px #0004}
@@ -208,12 +211,9 @@ body.night{background:#10141a}
 body.night #view{background:#10141a}
 #rot{position:absolute;left:50%;top:var(--cy,68%);width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;will-change:transform;transform-origin:50% 50%}
 #vmap{opacity:0;position:absolute;left:0;top:0;width:100%;height:100%;display:none;transform-origin:50% 50%;will-change:transform}
-#sky{position:absolute;left:0;right:0;top:0;height:40%;z-index:400;pointer-events:none;background:linear-gradient(var(--sky,#e8eaed) 12%,transparent)}
+#sky{position:absolute;left:0;right:0;top:0;height:40%;z-index:400;pointer-events:none;background:linear-gradient(var(--sky,#e8eaed) 12%,transparent)}   /* wstępnie; potem tło i wysokość ustawia skyUpd (horyzont liczony z geometrii widoku) */
 body.night #sky{background:linear-gradient(var(--sky,#10141a) 12%,transparent)}
 body.flat #sky{display:none}
-/* widok kierowcy: mgła na horyzoncie – daleka mapa płynnie wtapia się w niebo (maska zamiast gradientu do przezroczystości: bez „szarej szyby”) */
-body.dm #sky{height:50%;background:radial-gradient(90% 55% at 50% 38%,rgba(255,250,235,.55),rgba(255,250,235,0) 72%),var(--sky,#e8eaed);-webkit-mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%);mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%)}
-body.dm.night #sky{height:50%;background:radial-gradient(90% 55% at 50% 38%,rgba(80,110,190,.32),rgba(80,110,190,0) 72%),var(--sky,#10141a);-webkit-mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%);mask-image:linear-gradient(#000 0,#000 8%,rgba(0,0,0,.74) 28%,rgba(0,0,0,.34) 58%,transparent 100%)}
 #map{position:absolute;inset:0;background:transparent}
 body.night .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.8)}
 #carIcon{position:absolute;left:50%;top:var(--cy,68%);width:96px;height:77px;transform:translate(-50%,-80%);z-index:500;pointer-events:none;filter:drop-shadow(0 5px 5px #0009)}
@@ -291,7 +291,6 @@ body.night.dimon #dim{display:block}
 #wait{position:absolute;left:14px;right:14px;top:34%;z-index:1250;background:#b3261eee;color:#fff;border-radius:20px;padding:16px;text-align:center;font-size:1.05rem;box-shadow:0 10px 30px #0008}
 #wait b{font-size:1.6rem;display:block;margin-bottom:4px}
 body.big #bmain{font-size:1.35em}body.big #bsub{font-size:1.1em}body.big #menu button,body.big #menu select,body.big #menu label{font-size:1.15rem}body.big #tname,body.big #tdist{font-size:1.15em}body.big #spd{font-size:1.2em}
-body.hc #sky{opacity:.6}
 #limn{position:absolute;left:10px;width:70px;text-align:center;bottom:calc(env(safe-area-inset-bottom,0px) + 244px);z-index:900;font-size:11px;font-weight:700;color:#fff;background:#202124d9;border-radius:8px;padding:2px 4px;display:none}
 #lim.imp{border-style:dashed;opacity:.88}
 #lim.imp::after{content:"~";position:absolute;right:-2px;top:-9px;font-weight:800;font-size:14px;color:#d93025}
@@ -772,6 +771,7 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
 #goRow{position:sticky;bottom:0;z-index:3;margin:0 -2px;padding:10px 2px calc(env(safe-area-inset-bottom,0px) + 6px);background:linear-gradient(to top,var(--u-surf) 72%,rgba(255,255,255,0))}
 body.night #goRow{background:linear-gradient(to top,var(--u-surf) 72%,rgba(32,34,40,0))}
 #settings select{padding-left:0;padding-right:0}
+#settings label>span+select{width:auto;flex:0 1 auto;max-width:52%;text-align:right;text-align-last:right}
 #histbox{bottom:auto;max-height:calc(100% - 70px - 100px)}
 #intro .card{display:flex;flex-direction:column;overflow:hidden;max-height:min(90vh,100%)}
 #intro .card>h2{flex:none}
@@ -1169,7 +1169,8 @@ body.nofix #carIcon{opacity:.4;filter:grayscale(1) drop-shadow(0 5px 5px #0009)!
 .setList .setRow{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;margin:0;border:0;border-radius:0;background:none;color:var(--tx);text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .setList .setRow+.setRow{border-top:1px solid var(--line)}
 .setList .setRow:active{background:var(--bg)}
-.setList .setRow>i{flex:0 0 auto;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:1.25rem;background:var(--bg);box-shadow:0 0 0 1px var(--line)}
+.setList .setRow>i{flex:0 0 auto;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-style:normal;background:linear-gradient(155deg,var(--c1,#7b8698),var(--c2,#4a5365));color:#fff;box-shadow:0 1px 3px rgba(20,30,50,.25),inset 0 1px 0 rgba(255,255,255,.3)}
+.setList .setRow>i svg.ic{width:23px;height:23px;color:#fff;stroke-width:2.1;vertical-align:0;filter:drop-shadow(0 1px 0 rgba(0,0,0,.14))}
 .setList .setRow>span{flex:1;min-width:0;display:block}
 .setList .setRow b{display:block;font-size:1.02rem;font-weight:700}
 .setList .setRow small{display:block;margin-top:2px;color:var(--mut);font-size:.8rem;line-height:1.3;font-weight:500}
@@ -1182,6 +1183,7 @@ body.noBanner #banner{display:none!important}   /* bez trasy pasek znika, a ikon
 html body:not(.owner) [data-own],html body:not(.owner) #settings [data-own],html body:not(.owner) #settings label[data-own],html body:not(.owner) #settings button[data-own],html body:not(.owner) #settings .sInfo[data-own]{display:none!important}
 html body:not(.owner):not(.hasdb) [data-db],html body:not(.owner):not(.hasdb) #settings [data-db],html body:not(.owner):not(.hasdb) #settings button[data-db]{display:none!important}
 .setGrp{max-width:620px;margin:20px auto 8px;padding:0 6px;font-size:.8rem;font-weight:700;color:var(--mut);display:flex;align-items:center;gap:6px}
+.setGrp .ic{width:15px;height:15px;vertical-align:0}
 #setVer{touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;padding:8px 4px}
 body:has(#settings.open) #evToast{z-index:3800}   /* komunikaty widoczne także nad ekranem ustawień */
 #ownDlg{position:fixed;inset:0;z-index:3700;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(8,12,18,.55)}
@@ -1394,7 +1396,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 139</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 140</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -3582,27 +3584,29 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   // ---- v122: ustawienia w zakładkach ----
   const S=$('settings'),SB=S.querySelector('.sBody'),SH=S.querySelector('.sHead h2');
   const CATS=[
-    ['look','🎨','Wygląd i mapa','Motyw, noc, rozmiar interfejsu, radar opadów',/^(Wygląd|Radar)/,''],
-    ['snd','🔊','Głos i dźwięk','Głos, rodzaj komunikatów, sygnały',/^Głos/,''],
-    ['car','🚗','Samochód','Model, lakier, tablica, ślad, wygląd pociągów',/^Samochód/,''],
-    ['drive','🔋','Jazda i bateria','Tryb HUD, oszczędzanie baterii',/^Jazda/,''],
-    ['comm','📣','Społeczność','Zgłoszenia kierowców, znajomi na mapie',/^(Zgłoszenia|Znajomi)/,'db'],
-    ['data','📊','Historia i dane','Historia, przejazdy, parking, mapa offline',/^Historia/,''],
-    ['about','ℹ️','O aplikacji','Informacje, dokładność danych, zgłoszenie błędu mapy',/^O aplikacji/,''],
-    ['adv','🔧','Klucze i serwery','Mapa, rozkład jazdy, ruch, serwery tras',/^Źródła/,'own'],
-    ['clips','🎙️','Własne nagrania','Własne komunikaty i wskazówki nawigacji',/^Własne/,'own'],
-    ['diag','🛠️','Diagnostyka i kopia','Log jazdy, FPS, eksport i import ustawień',/^Diagnostyka/,'own'],
-    ['own','🔐','Tryb właściciela','Blokada trybu właściciela',/^Tryb właściciela/,'own']];
+    ['look','palette','Wygląd i mapa','Motyw, noc, rozmiar interfejsu, radar opadów',/^(Wygląd|Radar)/,''],
+    ['snd','volume','Głos i dźwięk','Głos, rodzaj komunikatów, sygnały',/^Głos/,''],
+    ['car','car','Samochód','Model, lakier, tablica, ślad, wygląd pociągów',/^Samochód/,''],
+    ['drive','bolt','Jazda i bateria','Tryb HUD, oszczędzanie baterii',/^Jazda/,''],
+    ['comm','people','Społeczność','Zgłoszenia kierowców, znajomi na mapie',/^(Zgłoszenia|Znajomi)/,'db'],
+    ['data','chart','Historia i dane','Historia, przejazdy, parking, mapa offline',/^Historia/,''],
+    ['about','info','O aplikacji','Informacje, dokładność danych, zgłoszenie błędu mapy',/^O aplikacji/,''],
+    ['adv','sliders','Klucze i serwery','Mapa, rozkład jazdy, ruch, serwery tras',/^Źródła/,'own'],
+    ['clips','mic','Własne nagrania','Własne komunikaty i wskazówki nawigacji',/^Własne/,'own'],
+    ['diag','gear','Diagnostyka i kopia','Log jazdy, FPS, eksport i import ustawień',/^Diagnostyka/,'own'],
+    ['own','lock','Tryb właściciela','Blokada trybu właściciela',/^Tryb właściciela/,'own']];
+  const CATC={look:['#8a6cff','#5b3fe0'],snd:['#ee5a8f','#c42d65'],car:['#3d82cc','#1f4f86'],drive:['#2fb36b','#157a41'],comm:['#f08a2e','#c25a05'],data:['#17b2c0','#0a7a85'],about:['#7b8698','#4a5365'],adv:['#7b8698','#4a5365'],clips:['#e5484d','#a81c1c'],diag:['#17b2c0','#0a7a85'],own:['#8a6cff','#5b3fe0']};   // kolory kafelków kategorii (jak w ustawieniach telefonu)
   const secs=[...SB.querySelectorAll(':scope>section')],home=document.createElement('div'),homeOwn=document.createElement('div'),grpHd=document.createElement('div');
   home.id='setHome';home.className='setList';homeOwn.id='setHomeOwn';homeOwn.className='setList';homeOwn.dataset.own='';
-  grpHd.className='setGrp';grpHd.dataset.own='';grpHd.textContent='🔒 Tylko dla właściciela';
+  grpHd.className='setGrp';grpHd.dataset.own='';grpHd.innerHTML=icoSvg('lock')+'Tylko dla właściciela';
   const chev='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
   for(const c of CATS){
     const mine=secs.filter(x=>{const h=x.querySelector('h3'),t=h&&h.lastChild?h.lastChild.textContent.trim():'';return c[4].test(t)});
     mine.forEach(x=>{x.dataset.cat=c[0];x.classList.toggle('one',mine.length===1)});
     const b=document.createElement('button');b.type='button';b.className='setRow';b.dataset.cat=c[0];
     if(c[5]==='db')b.dataset.db='';
-    b.innerHTML='<i aria-hidden="true">'+c[1]+'</i><span><b>'+c[2]+'</b><small>'+c[3]+'</small></span>'+chev;
+    const cc=CATC[c[0]]||CATC.about;
+    b.innerHTML='<i aria-hidden="true" style="--c1:'+cc[0]+';--c2:'+cc[1]+'">'+icoSvg(c[1])+'</i><span><b>'+c[2]+'</b><small>'+c[3]+'</small></span>'+chev;
     b.onclick=()=>setCat(c[0]);(c[5]==='own'?homeOwn:home).appendChild(b);c.title=c[2];
   }
   SB.insertBefore(home,secs[0]);SB.insertBefore(grpHd,secs[0]);SB.insertBefore(homeOwn,secs[0]);
@@ -4110,7 +4114,7 @@ window.mapTap=(x,y)=>{
 let favs=LSget('favs',[]);
 function renderFavs(){
   const b=$('srchFavs');b.innerHTML='';if(!favs.length)return;
-  const h=document.createElement('b');h.className='h';h.textContent='⭐ Ulubione miejsca';b.appendChild(h);
+  const h=document.createElement('b');h.className='h';h.innerHTML=icoSvg('star')+'Ulubione miejsca';b.appendChild(h);
   favs.forEach((f,i)=>{const d=document.createElement('div'),sp=document.createElement('span'),x=document.createElement('button');
     sp.textContent=f.title;sp.style.padding='11px 6px';x.textContent='✕';x.setAttribute('aria-label','Usuń');
     sp.onclick=()=>{$('srchBox').style.display='none';enterBrowse(f)};
@@ -5156,7 +5160,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
             break;
           }
           if(pr.class==='transit'&&(pr.subclass==='tram'||pr.subclass==='light_rail'))cls='tram';   // tramwaje: cienka, jasna kreska (bez „podkładów”)
-          else if(pr.class==='rail')cls=(pr.subclass==='subway'||pr.subclass==='funicular')?null:'rail';
+          else if(pr.class==='rail')cls=(pr.subclass==='subway'||pr.subclass==='funicular')?null:(pr.service?(wide?null:'rsv'):'rail');   // rsv: tory boczne (bocznice, stacje rozrządowe) – rysowane lżej
           else{cls=MV_ROAD[pr.class]||null;if(cls==='sv'&&(pr.service==='parking_aisle'||pr.service==='driveway'||pr.service==='drive-through'))cls=null}
           if(wide&&(cls==='rs'||cls==='sv'||cls==='tr'))cls=null;
           break;
@@ -5193,7 +5197,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
       const isTr=f.l==='transportation',one=cls==='rs'&&isTr&&(pr.oneway==1||pr.oneway===true);   // jednokierunkowe ulice osiedlowe = jeden pas
       const pa=gp(cls);let pb=null;   // pb: oś jezdni (przerywana na drogach dwukierunkowych, ciągła na autostradach)
       if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr'))pb=gp('cl');else if(cls==='mw')pb=gp('cm')}
-      const pc=one?gp('one1'):null;
+      const pc=one?gp('one1'):null,pe=(fill&&!wide&&(cls==='water'||cls==='park'))?gp(cls+'E'):null;   // pe: obrys bez odcinków leżących na brzegu kafelka (to cięcie geometrii, nie brzeg wody – inaczej na wodzie widać „szwy”)
       for(const rg of f.r){
         if(rg.length<4)continue;
         const x0=(ox+rg[0]*k-cx)*cl,y0=(oy-rg[1]*k-cy)*cl;
@@ -5206,6 +5210,11 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
           pa.lineTo(x,y);if(pb)pb.lineTo(x,y);if(pc)pc.lineTo(x,y);px=x;py=y;
         }
         if(fill)pa.lineTo(x0,y0);   // zamknięcie obrysu (wypełnienie zamyka się samo; to samo co closePath, ale dużo taniej)
+        if(pe){const E=f.e,n=rg.length;let pen=false;
+          for(let i=0;i<n;i+=2){const j=(i+2)%n,ax=rg[i],ay=rg[i+1],bx=rg[j],by=rg[j+1];
+            if((ax===bx&&(ax<=0||ax>=E))||(ay===by&&(ay<=0||ay>=E))){pen=false;continue}
+            if(!pen){pe.moveTo((ox+ax*k-cx)*cl,(oy-ay*k-cy)*cl);pen=true}
+            pe.lineTo((ox+bx*k-cx)*cl,(oy-by*k-cy)*cl)}}
         if(ra&&ra.length>=4)RS.push(ra);
       }
       if(cls==='bld'&&B.length<2200&&!(pr.render_min_height>0)){   // bryły 3D: obrysy budynków z wysokością
@@ -5496,8 +5505,8 @@ function paintVec(cam){
     let LV=[],LG=null;try{LV=lnVis(D,s,ox,oy,S);LG=LV.length?lnGroups(LV,s):null}catch(e){LV=[];LG=null;lnFail(e)}   // drogi z kilkoma pasami (dane OSM)
     if(Wd&&D.bb){c.fillStyle=pal.bg;c.fillRect(D.bb[0],D.bb[1],D.bb[2]-D.bb[0],D.bb[3]-D.bb[1])}   // szczegółowy obszar rysujemy od czystego tła (bez „duchów” z uproszczonych kafelków)
     terr(P);
-    if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.park)}
-    if(P.water){c.fillStyle=pal.water;c.fill(P.water);c.strokeStyle=pal.waterEdge;c.lineWidth=1.2/s;c.stroke(P.water)}
+    if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.parkE||P.park)}
+    if(P.water){c.fillStyle=pal.water;c.fill(P.water);c.strokeStyle=pal.waterEdge;c.lineWidth=1.2/s;c.stroke(P.waterE||P.water)}
     if(P.wline){c.strokeStyle=pal.water;c.lineWidth=7/s;c.stroke(P.wline)}
     if(P.tun&&s>=.18){c.save();c.setLineDash([7/s,6/s]);c.lineCap='butt';c.strokeStyle=pal.tun;c.lineWidth=Math.max(2,Math.min(9,rw('sc',s)*.5))/s;c.stroke(P.tun);c.restore()}   // tunele
     if(P.bld&&s>=.5){
@@ -5530,12 +5539,16 @@ function paintVec(cam){
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
     if(LG)try{lnBody(c,LG,LV,pal,s,dm,night,lite||ecoOn)}catch(e){c.setLineDash([]);c.lineCap='round';lnFail(e)}   // wypełnienie, linie pasów, strzałki
-    if(P.rail){
-      if(s<.3){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(P.rail)}   // oddalenie: cienka ciągła linia
-      else if(s<.6){c.strokeStyle=night?'#8f9bb8':'#6b7380';c.lineWidth=Math.max(1.6,rlw*.6)/s;c.stroke(P.rail)}   // średnio: ciągła linia bez „podkładów” (stacje nie robią zebry)
-      else{
-        c.strokeStyle=night?'#a3aecb':'#566070';c.lineWidth=rlw/s;c.stroke(P.rail);   // tory: ciemna kreska z jasnymi „podkładami”
-        c.strokeStyle=night?'#1a2030':'#eceef1';c.lineWidth=rlw*.53/s;c.setLineDash([8/s,8/s]);c.lineCap='butt';c.stroke(P.rail);c.setLineDash([]);c.lineCap='round';
+    if(P.rail||P.rsv){
+      if(s<.3){if(P.rail){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(P.rail)}}   // oddalenie: cienka ciągła linia
+      else if(s<.6){   // średnio: ciągła linia bez „podkładów” (stacje nie robią zebry), tory boczne bardzo cienkie i blade
+        if(P.rsv){c.strokeStyle=night?'#4d5873':'#c5c9d1';c.lineWidth=Math.max(1.2,rlw*.36)/s;c.stroke(P.rsv)}
+        if(P.rail){c.strokeStyle=night?'#8f9bb8':'#6b7380';c.lineWidth=Math.max(1.6,rlw*.6)/s;c.stroke(P.rail)}
+      }else{   // z bliska: smukła linia z poprzecznymi „podkładami” (jak na mapach kolejowych), tory boczne jeszcze delikatniejsze
+        if(P.rsv){c.strokeStyle=night?'#5a6683':'#b3b8c2';c.lineWidth=Math.max(.9,rlw*.22)/s;c.stroke(P.rsv);
+          c.strokeStyle=night?'#4f5a76':'#c0c4cc';c.lineWidth=rlw*.7/s;c.setLineDash([1.3/s,7/s]);c.lineCap='butt';c.stroke(P.rsv);c.setLineDash([]);c.lineCap='round'}
+        if(P.rail){c.strokeStyle=night?'#7f8bab':'#8c94a2';c.lineWidth=Math.max(1,rlw*.3)/s;c.stroke(P.rail);
+          c.strokeStyle=night?'#6e7a99':'#a0a7b3';c.lineWidth=rlw*1.05/s;c.setLineDash([1.5/s,5.5/s]);c.lineCap='butt';c.stroke(P.rail);c.setLineDash([]);c.lineCap='round'}
       }
     }
     if(P.tram&&s>=.3){c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(P.tram)}
@@ -5586,6 +5599,51 @@ async function loadWide(cam){
   }catch(e){wideFail=Date.now()+8000}
   wideBusy=false;
 }
+// ---- horyzont w widoku 3D: niebo i mgła ----
+// Płótno mapy ma skończony rozmiar, więc jego daleki brzeg leży na ekranie wyżej lub niżej – zależnie od przesunięcia kamery od środka płótna, skali i obrotu.
+// Co klatkę liczymy z geometrii (te same wzory co w CSS: perspective 900 px, rotateX, rotate), gdzie ten brzeg jest widoczny na ekranie, i dokładnie tam mgła osiąga pełne krycie – brzegu mapy nigdy nie widać.
+var skyY=-1,skyT=0,skyKey='',skyQ=0,skyL=0,skyE=NaN;
+const SKYF=[.1,.2,.35,.5,.7,.85],SKYP=1.9,SKYTOP={day:[188,211,236],night:[7,10,20]};
+function skyEdge(tx,ty,k,S){   // najniżej położony (na ekranie) widoczny punkt dalszego brzegu płótna: y w px od góry ekranu albo NaN
+  const W=window.innerWidth,H=window.innerHeight,P=900,th=rad(tiltE()),sn=Math.sin(th),cs=Math.cos(th),ph=rad(curRot),cp=Math.cos(ph),sp=Math.sin(ph),h=k*S/2;
+  const Y0=(cyCur-.45)*H,cut=Math.min(300,(P-200)/Math.max(.1,sn));
+  const q=[[tx-h,ty-h],[tx+h,ty-h],[tx+h,ty+h],[tx-h,ty+h]].map(a=>[a[0]*cp-a[1]*sp,a[0]*sp+a[1]*cp]),o=[];   // obrót mapy, potem obcięcie do y<=cut (dalej za kamerą rzut by „wybuchł”)
+  for(let i=0;i<4;i++){const a=q[i],b=q[(i+1)%4],ia=a[1]<=cut,ib=b[1]<=cut;if(ia)o.push(a);if(ia!==ib){const t=(cut-a[1])/(b[1]-a[1]);o.push([a[0]+(b[0]-a[0])*t,cut])}}
+  if(o.length<3)return NaN;
+  const p=o.map(a=>{const sc=P/(P-a[1]*sn);return [W/2+a[0]*sc,.45*H+(Y0+a[1]*cs)*sc]});
+  let best=NaN;
+  for(const xc of [0,W]){   // górny brzeg wypukłego czworokąta jest funkcją wypukłą, więc najniżej leży na lewym albo prawym brzegu ekranu
+    let top=Infinity;
+    for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];if(a[0]===b[0])continue;if(xc<Math.min(a[0],b[0])||xc>Math.max(a[0],b[0]))continue;const y=a[1]+(xc-a[0])*(b[1]-a[1])/(b[0]-a[0]);if(y<top)top=y}
+    if(top<Infinity&&!(top<=best))best=top;
+  }
+  return best;
+}
+function skyGrad(yf,L,hz,top,ga){   // niebo (u góry) -> horyzont (pełna mgła) -> mgła gasnąca ku autu; wszystkie przystanki tego samego koloru, więc bez szarych „szyb”
+  const c=(a,al)=>'rgba('+a[0]+','+a[1]+','+a[2]+','+al+')',mid=hz.map((v,i)=>Math.round(top[i]+(v-top[i])*.6)),st=[c(top,1)+' 0px',c(mid,1)+' '+Math.round(yf*.55)+'px',c(hz,1)+' '+yf+'px'];
+  for(const t of SKYF)st.push(c(hz,+Math.pow(1-t,SKYP).toFixed(3))+' '+Math.round(yf+L*t)+'px');
+  st.push(c(hz,0)+' '+(yf+L)+'px');
+  const gc=night?[78,108,184]:[255,248,232];
+  return 'radial-gradient(ellipse 85% '+Math.round(yf*.5+34)+'px at 50% '+Math.round(yf-6)+'px,'+c(gc,ga.toFixed(2))+','+c(gc,0)+'),linear-gradient(180deg,'+st.join(',')+')';
+}
+window.__sky=()=>({edge:skyE,y:skyY,q:skyQ,L:skyL});   // podgląd dla testów
+const skyA=y=>skyY<0?0:y<=skyQ?1:y>=skyQ+skyL?0:Math.pow(1-(y-skyQ)/skyL,SKYP);   // krycie mgły na wysokości ekranu y (0 = brak, 1 = pełne)
+function skyUpd(tx,ty,k,S){
+  const el=$('sky');
+  if(!el||!tiltDeg){skyY=-1;return}
+  const H=window.innerHeight,now=performance.now(),e=skyEdge(tx,ty,k,S),yMin=H*.1;
+  skyE=e;
+  const yt=isNaN(e)?yMin:Math.max(yMin,Math.min(H*.6,e+6));
+  if(skyY<0||yt>=skyY)skyY=yt;else skyY+=(yt-skyY)*(1-Math.exp(-Math.min(2000,now-skyT)/1200));   // krawędź zbliża się – mgła od razu; oddala się (po przerysowaniu mapy) – mgła ustępuje łagodnie
+  skyT=now;
+  const q=Math.round(skyY),L=Math.max(70,Math.round((cyCur*H-q)*.32)),pal=themePal(PAL[night?'night':'day']);
+  if(!/^#[0-9a-f]{6}$/i.test(pal.bg))return;
+  const da=Math.round(dmA*8),key=q+'|'+L+'|'+(night?1:0)+'|'+pal.bg+'|'+da;
+  if(key===skyKey)return;
+  skyKey=key;skyQ=q;skyL=L;
+  el.style.height=(q+L)+'px';
+  el.style.background=skyGrad(q,L,hx3(pal.bg),night?SKYTOP.night:SKYTOP.day,(.26+.3*da/8)*(night?.6:1));
+}
 function drawVec(){
   const now=performance.now(),cam=vecCam(now);
   if(!cam){vf=null;return}
@@ -5597,12 +5655,14 @@ function drawVec(){
   let need=!vd||vd.data!==vecData||vd.wide!==wideD||vd.night!==night||vd.dm!==(dmA>.02)||vd.dmk!==dmK||vd.lv!==laneVer;
   if(!need){
     const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s,dr=Math.abs(((curRot-vd.rot)%360+540)%360-180);
-    if(Math.hypot(e,n)*vd.s*k>S*.12||k<.8||k>1.25||dr>25)need=true;
+    const t3=tiltDeg>8,hh=rad(-curRot),fw=t3?(e*Math.sin(hh)+n*Math.cos(hh))*vd.s*k:0;   // w widoku 3D daleka krawędź płótna zbliża się najszybciej przy jeździe do przodu – przerysowujemy wcześniej
+    if(Math.hypot(e,n)*vd.s*k>S*.12||fw>S*.09||k<.8||k>1.25||dr>25)need=true;
   }
   if(need&&now-lastVt>100){const t0=performance.now();paintVec(cam);lastVt=now;const ms=performance.now()-t0;fpsPaint(ms);if(ms>110&&vq>1.15){if(++slowN>=3){slowN=0;vqCap=Math.max(1.1,vq-.35);sizeV()}}else if(ms<=110)slowN=0}
   if(!vd)return;
   const e=(cam.lon-vd.cam.lon)*vd.kx,n=(cam.lat-vd.cam.lat)*111195,k=scaleCur/vd.s;
   $('vmap').style.transform='translate('+(-k*vd.s*e).toFixed(1)+'px,'+(k*vd.s*n).toFixed(1)+'px) scale('+k.toFixed(4)+')';
+  try{skyUpd(-k*vd.s*e,k*vd.s*n,k,S)}catch(er){errNote('niebo',er)}
 }
 // trasa rysowana na wierzchu (pionowo), z szerokością malejącą z perspektywą.
 // Rysujemy CAŁĄ pozostałą trasę (aż poza brzeg ekranu), a nie tylko najbliższe kilometry – linia nie urywa się przy oddaleniu mapy
@@ -6244,15 +6304,14 @@ function updCarSnap(){
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
 const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
 let wallKey='',wallCol=null,bldCache=null,bldTick=0,wallH=[],shc=null,shx=null;
-// widok kierowcy: dalekie budynki wtapiają się w tło tak samo jak mapa pod mgłą (kolor tła nakładany tylko na narysowane piksele)
-var fogG=null,fogKey='';
-function fogBuild(){
-  if(ecoOn||lite||!(vec&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
-  const H=window.innerHeight,W=window.innerWidth,pal=themePal(PAL[night?'night':'day']),bg=pal.bg;
-  if(!/^#[0-9a-f]{6}$/i.test(bg))return;
-  const key=(night?'n':'d')+bg+H;
-  if(key!==fogKey||!fogG){fogKey=key;const r=parseInt(bg.slice(1,3),16),g=parseInt(bg.slice(3,5),16),b=parseInt(bg.slice(5,7),16),f=a=>'rgba('+r+','+g+','+b+','+a+')',G=mx.createLinearGradient(0,0,0,H*.5);G.addColorStop(0,f(1));G.addColorStop(.08,f(1));G.addColorStop(.28,f(.74));G.addColorStop(.58,f(.34));G.addColorStop(1,f(0));fogG=G}
-  mx.save();mx.globalAlpha=dmA;mx.globalCompositeOperation='source-atop';mx.fillStyle=fogG;mx.fillRect(0,0,W,H*.5);mx.restore();
+// dalekie budynki wtapiają się w tło tak samo jak mapa pod mgłą: kolor każdej bryły mieszamy z kolorem tła wg krycia mgły na jej wysokości
+// (bez nakładania gradientu na cały ekran co klatkę – to było najdroższe w całym rysowaniu)
+const BFC=new Map();let bfBg=[0,0,0];
+function bfog(c,f){   // c: 'rgb(r,g,b)' albo 'rgba(r,g,b,a)'; f=1 – bez zmian, f→0 – kolor tła (dla rgba: zanik)
+  const q=Math.round(f*12),key=c+'|'+q+'|'+bfBg;let v=BFC.get(key);if(v)return v;
+  const m=c.match(/[\d.]+/g);
+  v=m.length>3?'rgba('+m[0]+','+m[1]+','+m[2]+','+(m[3]*q/12).toFixed(3)+')':'rgb('+[0,1,2].map(i=>Math.round(bfBg[i]+(m[i]-bfBg[i])*q/12)).join(',')+')';
+  if(BFC.size>800)BFC.clear();BFC.set(key,v);return v;
 }
 function drawBuildings3D(){
   if(ecoOn||lite||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
@@ -6263,6 +6322,8 @@ function drawBuildings3D(){
   const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
   const R=rad(curRot),sunDir=rad(-35);   // „słońce” z lewej-góry: ściany zwrócone na południowy zachód jaśniejsze
   const hs=Math.min(1.6,.9+tiltDeg/90);
+  const fogOn=skyY>=0,fq=skyQ,fe=skyQ+skyL;
+  if(fogOn){const bg=themePal(PAL[night?'night':'day']).bg;if(/^#[0-9a-f]{6}$/i.test(bg))bfBg=hx3(bg)}
   let lst;
   if(bldCache&&bldCache.D===D&&(bldTick++%5)&&Math.abs(bldCache.rot-curRot)<2&&Math.abs(bldCache.s-s)<.05*s)lst=bldCache.lst;   // kolejność rysowania liczymy co kilka klatek
   else{
@@ -6280,6 +6341,7 @@ function drawBuildings3D(){
   const cl=Math.cos(rad(D.lat));
   const g=(x,y,h)=>proj(D.lat+y/111195,D.lon+x/(111195*cl),h);
   mx.lineJoin='round';
+  if(fogOn){mx.save();mx.beginPath();mx.rect(0,fq,W,H-fq);mx.clip()}   // nad horyzontem nie ma mapy, więc i budynków
   // cienie budynków wg położenia Słońca (rysowane do osobnej warstwy i nakładane półprzezroczyście)
   const sp=sunPos(D.lat,D.lon,Date.now());
   if(!night&&sp.el>3&&scaleCur>=.9){
@@ -6287,6 +6349,7 @@ function drawBuildings3D(){
     shx.setTransform(1,0,0,1,0,0);shx.clearRect(0,0,shc.width,shc.height);shx.setTransform(mk.width/W,0,0,mk.height/H,0,0);shx.fillStyle='#000';
     const dirE=Math.sin(rad(sp.az+180)),dirN=Math.cos(rad(sp.az+180)),tn=Math.tan(rad(Math.max(sp.el,6)));
     for(let n=Math.max(start,lst.length-260);n<lst.length;n++){
+      if(fogOn&&lst[n].y<fe)continue;   // w pasie mgły cieni nie rysujemy
       const b=lst[n].b,p=b.p,m=p.length/2,L=Math.min(b.h*hs/(tn*hs),b.h*3.2),ex=dirE*L,ny=dirN*L,G=[],Sd=[];let ok=true;
       for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],0),c2=g(p[2*i]+ex,p[2*i+1]+ny,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
       if(!ok)continue;
@@ -6300,6 +6363,17 @@ function drawBuildings3D(){
     const G=[],T=[];let ok=true;
     for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],0),t=g(p[2*i],p[2*i+1],H3);if(!a||!t){ok=false;break}G.push(a);T.push(t)}
     if(!ok)continue;
+    let wa=wc.a,wb=wc.b,wr=wc.roof,wl=wc.line;
+    if(fogOn){
+      let yt=1e9,yb=-1e9;for(let i=0;i<m;i++){if(T[i].y<yt)yt=T[i].y;if(G[i].y>yb)yb=G[i].y}
+      if(skyA(yb)>=.97)continue;   // cała bryła tonie w pełnej mgle
+      if(skyA(yt)>.02){   // bryła sięga pasa mgły: ku górze jej kolory wtapiają się w tło, tak jak mapa pod mgłą
+        const ye=Math.min(yb,fe),ym=yt+(ye-yt)*.5,f0=1-skyA(yt),f1=1-skyA(ym),f2=1-skyA(ye);
+        if(ye-yt>14&&f2-f0>.12){const gr=c=>{const q=mx.createLinearGradient(0,yt,0,ye);q.addColorStop(0,bfog(c,f0));q.addColorStop(.5,bfog(c,f1));q.addColorStop(1,bfog(c,f2));return q};wa=gr(wa);wb=gr(wb);wr=gr(wr)}   // wysoka bryła: płynne przejście (gradient tylko tam, gdzie widać różnicę – to oszczędza czas rysowania)
+        else{wa=bfog(wa,f1);wb=bfog(wb,f1);wr=bfog(wr,f1)}   // niska bryła: jeden odcień
+        wl=bfog(wl,f1);
+      }
+    }
     for(let i=0;i<m;i++){
       const j=(i+1)%m,dx=p[2*j]-p[2*i],dy=p[2*j+1]-p[2*i+1];
       // ściana widoczna, gdy jej dolna krawędź leży „bliżej” kamery niż górna (rzut dachu leży wyżej na ekranie)
@@ -6307,11 +6381,12 @@ function drawBuildings3D(){
       const nx=dy,ny=-dx,L=Math.hypot(nx,ny)||1,lit=(nx*Math.cos(sunDir)+ny*Math.sin(sunDir))/L;
       if(Math.abs(cross)<.01)continue;
       mx.beginPath();mx.moveTo(G[i].x,G[i].y);mx.lineTo(G[j].x,G[j].y);mx.lineTo(T[j].x,T[j].y);mx.lineTo(T[i].x,T[i].y);mx.closePath();
-      mx.fillStyle=lit>0?wc.a:wc.b;mx.fill();mx.strokeStyle=wallCol.line;mx.lineWidth=.8;mx.stroke();
+      mx.fillStyle=lit>0?wa:wb;mx.fill();mx.strokeStyle=wl;mx.lineWidth=.8;mx.stroke();
     }
     mx.beginPath();mx.moveTo(T[0].x,T[0].y);for(let i=1;i<m;i++)mx.lineTo(T[i].x,T[i].y);mx.closePath();
-    mx.fillStyle=wc.roof;mx.fill();mx.strokeStyle=wc.line;mx.lineWidth=1;mx.stroke();
+    mx.fillStyle=wr;mx.fill();mx.strokeStyle=wl;mx.lineWidth=1;mx.stroke();
   }
+  if(fogOn)mx.restore();
 }
 
 const xU=k=>Math.max(15,Math.min(30,17*k));
@@ -6342,9 +6417,9 @@ function drawXMark(o,rank){
     const lines=[['Przejazd · '+txt,'#8f1d1d']];
     if(c.nb)lines.push(['bez zapór!','#c62828']);
     const nx=xNext(c);
-    if(nx==null){if(!xTapped)lines.push(['👆 dotknij: pociągi','#37474f'])}
-    else lines.push([nx<0?'🚆 brak kursów (3 h)':nx<=0?'🚆 pociąg teraz':'🚆 pociąg za '+(nx<60?nx+' min':Math.floor(nx/60)+' h '+(nx%60)+' min'),nx>=0&&nx<=5?'#8f1d1d':'#37474f']);
-    XLAB.push({x,y:y-u*1.75+u*1.0,d:o.d,fs:Math.round(Math.max(13,Math.min(17,u*.86))),lines});
+    if(nx==null){if(!xTapped)lines.push(['dotknij: pociągi','#37474f','train'])}
+    else lines.push([nx<0?'brak kursów (3 h)':nx<=0?'pociąg teraz':'pociąg za '+(nx<60?nx+' min':Math.floor(nx/60)+' h '+(nx%60)+' min'),nx>=0&&nx<=5?'#8f1d1d':'#37474f','train']);
+    XLAB.push({x,y:y+Math.max(3.7,u*.22)+5,d:o.d,fs:Math.round(Math.max(13,Math.min(17,u*.86))),lines});
   }
   mx.restore();
 }
@@ -6361,12 +6436,17 @@ function drawXLabels(){
   for(const L of XLAB){
     if(L.x<-20||L.x>W+20||L.y<uiTopLim)continue;   // poza ekranem albo pod banerem/chipami   // znak poza ekranem
     const lh=Math.round(L.fs*1.25);mx.font='700 '+L.fs+'px '+FONT_UI;
-    let w=0;for(const [t] of L.lines)w=Math.max(w,mx.measureText(t).width);
+    const IW=Math.round(L.fs*1.1+4);   // miejsce na ikonę przed tekstem
+    let w=0;for(const [t,,ic] of L.lines)w=Math.max(w,mx.measureText(t).width+(ic?IW:0));
     const cx=Math.max(w/2+6,Math.min(W-w/2-6,L.x));   // przy brzegu ekranu napis się przesuwa, zamiast być ucięty
     const bx={x0:cx-w/2-5,x1:cx+w/2+5,y0:L.y-2,y1:L.y+lh*L.lines.length+2};
     if(placed.some(q=>bx.x0<q.x1&&bx.x1>q.x0&&bx.y0<q.y1&&bx.y1>q.y0))continue;
     placed.push(bx);
-    L.lines.forEach(([t,col],i)=>{const yy=L.y+i*lh;mx.strokeStyle=night?'rgba(10,13,18,.92)':'rgba(255,255,255,.96)';mx.strokeText(t,cx,yy);mx.fillStyle=night?(XNC[col]||col):col;mx.fillText(t,cx,yy)});
+    L.lines.forEach(([t,col,ic],i)=>{const yy=L.y+i*lh,halo=night?'rgba(10,13,18,.92)':'rgba(255,255,255,.96)',fc=night?(XNC[col]||col):col;
+      mx.strokeStyle=halo;mx.fillStyle=fc;
+      if(ic){const x0=cx-(mx.measureText(t).width+IW)/2;mx.textAlign='left';mx.strokeText(t,x0+IW,yy);mx.fillText(t,x0+IW,yy);mx.textAlign='center';
+        const ix=x0+IW/2-1,iy=yy+L.fs*.5,isz=L.fs*1.12;icoDraw(mx,ic,ix,iy,isz,halo,4.6);icoDraw(mx,ic,ix,iy,isz,fc,2.2)}   // ikona z obwódką jak napis
+      else{mx.strokeText(t,cx,yy);mx.fillText(t,cx,yy)}});
   }
   mx.restore();XLAB.length=0;
 }
@@ -6376,7 +6456,7 @@ function drawMarkers(){
   if(vec)drawVec();const P=proj;
   drawRadar();
   updCarSnap();carShadow();
-  drawBuildings3D();if(dmA>.02)fogBuild();
+  drawBuildings3D();
   drawHeat();
   drawAlts();drawRouteTop();drawTurnArrow();drawLaneArrow();drawJunction();
   drawRouteSigns();
@@ -6438,6 +6518,7 @@ function drawPlaces(){
     const O=o.O,q=proj(O.lat+o.p.y/111195,O.lon+o.p.x/(111195*(O.cl||(O.cl=Math.cos(rad(O.lat))))));
     if(!q||q.x<70||q.x>W-70||q.y<150||q.y>H-140)continue;
     if(cq&&Math.hypot(q.x-cq.x,q.y-cq.y)<80)continue;
+    q.fa=skyA(q.y);if(q.fa>.8)continue;   // za horyzontem (pod mgłą) nazw nie rysujemy
     cand.push({o,q});
   }
   if(!cand.length)return;
@@ -6452,7 +6533,7 @@ function drawPlaces(){
     if(o.wn&&p.e*s<tw*.7)continue;   // jezioro za małe na tej mapie, żeby podpisać
     if(placed.some(b=>Math.abs(b[0]-q.x)<b[2]+hw&&Math.abs(b[1]-q.y)<b[3]+hh))continue;
     placed.push([q.x,q.y,hw,hh]);seen.add(p.n);
-    mx.lineWidth=cls<=2?5:4;mx.strokeStyle=pal.halo;mx.strokeText(p.n,q.x,q.y);
+    mx.globalAlpha=1-q.fa;mx.lineWidth=cls<=2?5:4;mx.strokeStyle=pal.halo;mx.strokeText(p.n,q.x,q.y);
     mx.fillStyle=o.wn?pal.wnl:pal.plbl;mx.fillText(p.n,q.x,q.y);
     if(++n>=16)break;
   }
