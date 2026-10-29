@@ -1404,7 +1404,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 147</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 148</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -4892,16 +4892,21 @@ function routeSignsUpdate(){
     }
     if(!r||r.n!==undefined)continue;
     const d=r.along-route.along;
-    if(d>-8&&d<4000){rSigns.push({kind:sg.kind,lat:sg.lat,lon:sg.lon,brg:r.brg,d});rSignIds.add(sg.id)}
+    if(d>-8&&d<(sg.kind==='crossing'||sg.kind==='bump'?900:4000)){rSigns.push({kind:sg.kind,lat:sg.lat,lon:sg.lon,brg:r.brg,d});rSignIds.add(sg.id)}   // przejścia i progi tylko blisko (inaczej mapa się zagęszcza)
   }
 }
 // znaki i światła na całej widocznej mapie (nie tylko na trasie): rysowane w miejscu, mniejsze; ze względu na czytelność od pewnego oddalenia znikają
+function stopMark(c,u){   // napis STOP w ośmiokącie (sama biała kreska wyglądała jak znak „zakaz wjazdu”); przy bardzo małej ikonie – kreska
+  c.fillStyle='#fff';
+  if(u>=7.5){c.font='800 '+(u*.74).toFixed(1)+'px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('STOP',0,u*.04)}
+  else c.fillRect(-u*.58,-u*.16,u*1.16,u*.32);
+}
 function drawSignIcon(kind,x,y,u){   // małe oznaczenia: u = promień w px
   mx.save();mx.translate(x,y);mx.lineJoin='round';
   if(kind==='stop'){
     mx.beginPath();for(let i=0;i<8;i++){const a=Math.PI/8+i*Math.PI/4;mx.lineTo(Math.cos(a)*u*1.05,Math.sin(a)*u*1.05)}mx.closePath();
     mx.fillStyle='#d32f2f';mx.fill();mx.lineWidth=Math.max(1.5,u*.18);mx.strokeStyle='#fff';mx.stroke();
-    mx.fillStyle='#fff';mx.fillRect(-u*.58,-u*.16,u*1.16,u*.32);
+    stopMark(mx,u);
   }else if(kind==='give_way'){
     mx.beginPath();mx.moveTo(-u*1.05,-u*.8);mx.lineTo(u*1.05,-u*.8);mx.lineTo(0,u*.95);mx.closePath();
     mx.fillStyle='#fff';mx.fill();mx.lineWidth=Math.max(2,u*.34);mx.strokeStyle='#d32f2f';mx.stroke();
@@ -7754,15 +7759,17 @@ async function liveProbeAll(){   // jednorazowy test źródeł: czy odpowiadają
 const lateOf=(tr,seg)=>tr.dly?Math.round(tr.dly.a[Math.max(0,Math.min(tr.st.length-1,(seg||0)+1))]/60):null;   // opóźnienie wg prognozy na następnej stacji
 let idbP=null;   // jedno połączenie z bazą na całą sesję (wcześniej każdy odczyt otwierał nowe)
 function idb(){if(idbP)return idbP;idbP=new Promise((ok,no)=>{const r=indexedDB.open('przejazdy',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{const d=r.result;d.onclose=d.onversionchange=()=>{idbP=null;try{d.close()}catch(e){}};ok(d)};r.onerror=()=>{idbP=null;no(r.error)}});return idbP}
-// raz na tydzień: usuń stare kafelki (>30 dni) i zostaw najwyżej 1500 najnowszych – pamięć urządzenia nie rośnie bez końca
+// raz na tydzień: usuń stare dane z pamięci urządzenia i zostaw najwyżej tyle najnowszych, ile wolno w danej grupie – pamięć nie rośnie bez końca
+// (kafelki mapy 30 dni / 1500, zapytania Overpass: znaki, przejazdy 14 dni / 600, pasy ruchu 14 dni / 600, dane mapy zapasowej 14 dni / 40)
+const IDB_LIMITS=[['tile|',30,1500],['op|',14,600],['ln|',14,600],['v2|',14,40]];
 async function idbPrune(){
   try{
     if(Date.now()-LSget('tilePrune',0)<7*864e5)return;
-    const d=await idb(),rows=[];
+    const d=await idb(),rows=IDB_LIMITS.map(()=>[]);
     await new Promise((ok,no)=>{const q=d.transaction('kv').objectStore('kv').openCursor();q.onerror=()=>no(q.error);
-      q.onsuccess=()=>{const c=q.result;if(!c)return ok();if(typeof c.key==='string'&&c.key.startsWith('tile|'))rows.push([c.key,(c.value&&c.value.t)||0]);c.continue()}});
-    rows.sort((a,b)=>b[1]-a[1]);
-    const old=rows.filter((x,i)=>i>=1500||Date.now()-x[1]>30*864e5);
+      q.onsuccess=()=>{const c=q.result;if(!c)return ok();if(typeof c.key==='string'){const g=IDB_LIMITS.findIndex(x=>c.key.startsWith(x[0]));if(g>=0)rows[g].push([c.key,(c.value&&c.value.t)||0])}c.continue()}});
+    const old=[];
+    rows.forEach((r,g)=>{r.sort((a,b)=>b[1]-a[1]);for(let i=0;i<r.length;i++)if(i>=IDB_LIMITS[g][2]||Date.now()-r[i][1]>IDB_LIMITS[g][1]*864e5)old.push(r[i])});
     if(old.length)await new Promise(ok=>{const t=d.transaction('kv','readwrite'),o=t.objectStore('kv');for(const x of old)o.delete(x[0]);t.oncomplete=t.onerror=()=>ok()});
     LSput('tilePrune',Date.now());
   }catch(e){}
