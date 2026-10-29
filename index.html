@@ -919,6 +919,7 @@ body.night #brwGo{background:#3b82f6;color:#fff}
 #xBoard .xs.xi,#xBoard .xs.xw,#xBoard .xs.xnow{display:flex;align-items:flex-start;gap:8px}
 #xBoard .xs .ic{width:18px;height:18px;margin-top:1px;vertical-align:0}
 #xBoard .xs.xi{color:var(--u-ink2)}
+#xBoard .xs.xfn{font-size:.76rem;opacity:.72;margin:6px 0 4px}
 #xBoard .xs.xw{padding:9px 11px;border-radius:12px;background:#fff3d4;color:#6b4300;font-weight:600}
 #xBoard .xs.xw .ic{color:#c77d00}
 body.night #xBoard .xs.xw{background:#3b2d10;color:#ffd98a}
@@ -1396,7 +1397,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 141</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 142</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1841,13 +1842,14 @@ function evaluate(p){
       const td=dist(t.lat,t.lon,a.c.lat,a.c.lon);
       if(a===near&&td<nearestTd)nearestTd=td;
       if(t.tr&&t.tr.sh){ // pociąg z rozkładu i torem: liczy się tylko, jeśli jego tor przechodzi przez ten przejazd
-        const r=td<12000?gtfsApproach(t,nowS,a.c):null;
-        if(!r)continue;
-        // auto dojedzie dopiero po przejechaniu pociągu (z zapasem na to, że pociąg się spóźni) – bez alarmu
-        const carEta=p.speed>2?a.d/p.speed:0;
-        if(p.speed>2&&carEta>r.eta+30+r.unc)continue;
-        if(!r.passed){if(r.eta<240&&(!threat||r.eta<threat.eta))threat={eta:Math.max(0,r.eta),a,t,td:r.along,r}}
-        else if(r.eta>=-(30+r.unc)&&a.d<100+20*(p.speed||0)&&(!recent||r.eta>recent.r.eta))recent={a,t,r};   // wg danych już minął, ale mógł się spóźnić
+        const rs=td<12000?gtfsApproachAll(t,nowS,a.c):null;   // zwykle jedno przejście; pociąg zawracający na stacji może minąć przejazd dwa razy
+        if(rs)for(const r of rs){
+          // auto dojedzie dopiero po przejechaniu pociągu (z zapasem na to, że pociąg się spóźni) – bez alarmu
+          const carEta=p.speed>2?a.d/p.speed:0;
+          if(p.speed>2&&carEta>r.eta+30+r.unc)continue;
+          if(!r.passed){if(r.eta<240&&(!threat||r.eta<threat.eta))threat={eta:Math.max(0,r.eta),a,t,td:r.along,r}}
+          else if(r.eta>=-(30+r.unc)&&a.d<100+20*(p.speed||0)&&(!recent||r.eta>recent.r.eta))recent={a,t,r};   // wg danych już minął, ale mógł się spóźnić
+        }
         continue;
       }
       if(td>5000)continue;
@@ -1884,7 +1886,7 @@ function evaluate(p){
     say('m'+maybe.a.c.id,`Proszę uważać, w pobliżu przejazdu kolejowego może być pociąg. Przejazd za ${m} metrów.`,[250,120,250],'W pobliżu przejazdu może być pociąg');
   }else if(near.d<warnDist){
     let tn;   // informacja o pociągach przy najbliższym przejeździe
-    if(gtfs&&!gKey&&!feedUrl){const nx=xNextInfo(near.c);tn=nx==null?' · rozkład się wczytuje':nx.m==null?' · brak pociągów w najbliższych 3 godzinach'+dataNote(nx,1):' · najbliższy pociąg '+(nx.m<1?'za chwilę':'za ok. '+(nx.m<60?nx.m+' min':Math.floor(nx.m/60)+' h '+(nx.m%60)+' min'))+dataNote(nx,1)}
+    if(gtfs&&!gKey&&!feedUrl){const nx=xNextInfo(near.c);tn=nx==null?' · rozkład się wczytuje':nx.m==null?' · brak pociągów pasażerskich w najbliższych 3 godzinach'+dataNote(nx,1):' · najbliższy pociąg '+(nx.m<1?'za chwilę':'za ok. '+(nx.m<60?nx.m+' min':Math.floor(nx.m/60)+' h '+(nx.m%60)+' min'))+dataNote(nx,1)}
     else tn=nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu';
     setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',((crossRisk(near.c)>=3&&!near.c.nb?'Wymaga szczególnej uwagi':'')+tn+feedNote).replace(/^\s*·\s*/,'').replace(/^./,ch=>ch.toUpperCase()));
     say('x'+near.c.id,(near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`)+(crossRisk(near.c)>=3&&!near.c.nb?' Ten przejazd wymaga szczególnej uwagi.':''),near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy');
@@ -3043,11 +3045,13 @@ function earlyTrainWarn(p){
     const carEta=d/Math.max(p.speed,8);
     for(const t of trains){
       if(!(t.tr&&t.tr.sh)||dist(t.lat,t.lon,c.lat,c.lon)>15000)continue;
-      const r=gtfsApproach(t,nowS,c);
-      if(r&&!r.passed&&r.eta>0&&r.eta-carEta<50&&carEta-r.eta<50+r.unc*.5){   // pociąg bywa spóźniony bardziej, niż wynika z danych – okno szersze w stronę „pociąg po nas”
-        earlyAt[c.id]=Date.now();
-        say('e'+c.id,'Za '+(d>=1000?(d/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(d/100)*100+' metrów')+' przejazd kolejowy. Według '+(r.q==='sched'?'rozkładu':'danych o pociągach')+' pociąg minie go mniej więcej wtedy, gdy Pan tam dojedzie. Proszę rozważyć zwolnienie.',[150,80,150],'Pociąg może być przy przejeździe');
-        return;
+      const rs=gtfsApproachAll(t,nowS,c);
+      if(rs)for(const r of rs){
+        if(!r.passed&&r.eta>0&&r.eta-carEta<50&&carEta-r.eta<50+r.unc*.5){   // pociąg bywa spóźniony bardziej, niż wynika z danych – okno szersze w stronę „pociąg po nas”
+          earlyAt[c.id]=Date.now();
+          say('e'+c.id,'Za '+(d>=1000?(d/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(d/100)*100+' metrów')+' przejazd kolejowy. Według '+(r.q==='sched'?'rozkładu':'danych o pociągach')+' pociąg minie go mniej więcej wtedy, gdy Pan tam dojedzie. Proszę rozważyć zwolnienie.',[150,80,150],'Pociąg może być przy przejeździe');
+          return;
+        }
       }
     }
   }
@@ -3189,7 +3193,7 @@ function trainsToward(c){
   const nowS=Date.now()/1000;let n=0;
   for(const t of trains){
     const td=dist(t.lat,t.lon,c.lat,c.lon);if(td>8000)continue;
-    if(t.tr&&t.tr.sh){const r=gtfsApproach(t,nowS,c);if(r&&!r.passed&&r.eta<300)n++;continue}
+    if(t.tr&&t.tr.sh){const rs=gtfsApproachAll(t,nowS,c);if(rs)for(const r of rs)if(!r.passed&&r.eta<300)n++;continue}
     if(t.heading!=null&&t.speed!=null&&t.speed>5&&angDiff(bear(t.lat,t.lon,c.lat,c.lon),t.heading)<35&&td/(t.speed/3.6)<300)n++;
   }
   return n;
@@ -4003,20 +4007,20 @@ function xDepartures(c){
   for(const tr of gtfs){
     if(tr.cx||!tr.sh||tr.st.length<2||tr.st[0].length<5)continue;   // odwołane i objazdowe kursy nie przejadą tędy
     const o=shapeObj(tr.sh);if(!o)continue;
-    const key=tr.sh+'|'+c.id;let pr=APC.get(key);if(!pr){pr=projectOn(o,c.lat,c.lon);APC.set(key,pr)}
-    if(pr.off>(c.maxOff||40))continue;
     const st=tr.st,lo=tr.lo||0,hi=tr.hi==null?st.length-1:tr.hi;
-    if(pr.d<st[lo][4]-60||pr.d>st[hi][4]+15)continue;   // przed pierwszą lub za ostatnią obsługiwaną stacją
-    for(let i=lo;i<hi;i++){
-      if(pr.d<=st[i+1][4]){
-        const t=etaAt(tr,i,pr.d,true),sch=etaAt(tr,i,pr.d,false);
-        if(tr.cl>=i+1&&TA(tr,tr.cl)<=now+60)break;   // potwierdzone: już minął
-        if(t>now-90&&t<now+10800){
-          let along=null,sp=null;
-          if(t<now+1800){const pp=gtfsPos(tr,now);if(pp&&pp.sd!=null){along=Math.max(0,pr.d-pp.sd);sp=pp.speed}}
-          out.push({t,late:Math.round((t-sch)/60),name:tr.name,live:!!tr.dly,along,sp});
+    for(const pr of shapePasses(tr,o,c)){   // pociąg zawracający na stacji może minąć przejazd dwa razy – oba przejścia są na tablicy
+      if(pr.d<st[lo][4]-60||pr.d>st[hi][4]+15)continue;   // przed pierwszą lub za ostatnią obsługiwaną stacją
+      for(let i=lo;i<hi;i++){
+        if(pr.d<=st[i+1][4]){
+          const t=etaAt(tr,i,pr.d,true),sch=etaAt(tr,i,pr.d,false);
+          if(tr.cl>=i+1&&TA(tr,tr.cl)<=now+60)break;   // potwierdzone: już minął
+          if(t>now-90&&t<now+10800){
+            let along=null,sp=null;
+            if(t<now+1800){const pp=gtfsPos(tr,now);if(pp&&pp.sd!=null){along=Math.max(0,pr.d-pp.sd);sp=pp.speed}}
+            out.push({t,late:Math.round((t-sch)/60),name:tr.name,live:!!tr.dly,along,sp});
+          }
+          break;
         }
-        break;
       }
     }
   }
@@ -4038,15 +4042,16 @@ function showBoard(c){
    if(ap.length){h+='<div class="xs xnow">'+icoSvg('siren')+'<b>Nadjeżdża teraz</b></div>';
      ap.slice(0,3).forEach(x=>{shown.add(x);const m=Math.max(0,Math.round((x.t-nowS)/60)),nm=String(x.name).split(' → ');
        h+='<div class="xr hot"><span class="xt" style="min-width:76px;font-size:.95rem">'+(m<1?'za chwilę':'za '+m+' min')+'</span><span class="xn">'+nm[0]+(nm[1]?' → '+nm[1]:'')+'<small>'+hh(x.t)+(x.along!=null?' · '+fmtKm(x.along)+' od przejazdu':'')+(x.sp!=null&&x.sp>3?' · '+Math.round(x.sp)+' km/h':'')+(x.late>=2?' · +'+x.late+' min':'')+(x.live?'':' · wg rozkładu')+'</small></span></div>'})}
-   else if(gtfs)h+='<div class="xs">Według danych żaden pociąg nie dojedzie do tego przejazdu w ciągu 20 minut.</div>'}
+   else if(gtfs)h+='<div class="xs">Według rozkładu i opóźnień żaden pociąg pasażerski nie dojedzie do tego przejazdu w ciągu 20 minut.</div>'}
   if(L===null)h+='<div class="xs">Rozkład jazdy nie jest jeszcze wczytany – poczekaj chwilę lub wczytaj go w ustawieniach.</div>';
-  else if(!L.length)h+='<div class="xs">W ciągu 3 godzin nie ma kursów przez ten przejazd.</div>';
+  else if(!L.length)h+='<div class="xs">W ciągu 3 godzin nie ma kursów pasażerskich przez ten przejazd.</div>';
   else L.forEach(x=>{
     if(shown.has(x))return;   // ten pociąg jest już wyżej, w sekcji „Nadjeżdża teraz”
     const m=Math.round((x.t-Date.now()/1000)/60),when=m<=0?'teraz':m<60?'za '+m+' min':'za '+Math.floor(m/60)+' h '+(m%60)+' min';
     const nm=x.name.split(' → ');
     h+='<div class="xr"><span class="xt">'+hh(x.t)+'</span><span class="xn">'+nm[0]+(nm[1]?'<small>→ '+nm[1]+'</small>':'')+'</span><span class="xe">'+when+(x.late>=2?'<div class="late">+'+x.late+' min</div>':'')+'</span></div>';
   });
+  if(L!==null)h+='<div class="xs xfn">Aplikacja zna tylko pociągi pasażerskie z rozkładu. Pociągów towarowych i specjalnych nie widać – przy przejeździe zawsze proszę patrzeć na sygnały i rogatki.</div>';
   B.innerHTML=h+'<button type="button" id="xFail">'+icoSvg('warn')+'<span>Zgłoś awarię przejazdu</span></button><div class="xact"><button type="button" id="xWatch"></button><button type="button" id="xHide"></button></div><button type="button" id="xBoardX">Zamknij</button>';B.style.display='block';
   B.dataset.c=String(c.id);
   $('xBoardX').onclick=()=>{B.style.display='none';B.dataset.c=''};
@@ -4073,7 +4078,7 @@ function showTrainBoard(t){
   const rows=[];
   if(t.tr&&t.tr.sh&&t.sd!=null)for(const c of xAll.values()){
     if(Math.abs(c.lat-t.lat)>.3||Math.abs(c.lon-t.lon)>.45)continue;
-    const r=gtfsApproach(t,nowS,c);if(r&&!r.passed&&r.along<40000)rows.push({c,r});
+    const rs=gtfsApproachAll(t,nowS,c);if(rs)for(const r of rs)if(!r.passed&&r.along<40000)rows.push({c,r});
   }
   rows.sort((a,b)=>a.r.eta-b.r.eta);
   const dMe=last?fmtKm(dist(last.lat,last.lon,t.lat,t.lon)):'';
@@ -4952,7 +4957,9 @@ function updInfo(p){
     if(!gtfs&&!gKey&&!feedUrl)dq='brak danych o pociągach – aplikacja nie ostrzeże';
     else if(gtfs&&!gKey&&!feedUrl){
       const age=liveTs?(Date.now()-liveTs)/60000:null;
-      if(!liveN)dq='tylko rozkład jazdy, bez opóźnień – godziny pociągów mogą się różnić';
+      const sn=ttStaleNote();
+      if(sn)dq=sn;
+      else if(!liveN)dq='tylko rozkład jazdy, bez opóźnień – godziny pociągów mogą się różnić';
       else if(age!=null&&age>8)dq='opóźnienia pociągów sprzed '+fmtAge(age)+' – godziny mogą się różnić';
       else if(age!=null&&age<-2)dq='zegar urządzenia chyba się spóźnia – czasy pociągów mogą być przesunięte';
     }else if(feedUrl&&feedAt&&Date.now()-feedAt>60000)dq='dane o pociągach nieaktualne';
@@ -7160,17 +7167,6 @@ function shapeObj(id){
     o=SHC[id]={a,cum,n}}
   return o;
 }
-function projectOn(o,lat,lon){
-  const a=o.a,cl=Math.cos(rad(lat));let best=1e18,bd=0;
-  for(let i=0;i<o.n-1;i++){
-    const x1=(a[2*i+1]-lon)*KM*cl,y1=(a[2*i]-lat)*KM,x2=(a[2*i+3]-lon)*KM*cl,y2=(a[2*i+2]-lat)*KM;
-    const dx=x2-x1,dy=y2-y1,L2=dx*dx+dy*dy;
-    let t=L2>0?-(x1*dx+y1*dy)/L2:0;t=t<0?0:t>1?1:t;
-    const px=x1+dx*t,py=y1+dy*t,q=px*px+py*py;
-    if(q<best){best=q;bd=o.cum[i]+t*(o.cum[i+1]-o.cum[i])}
-  }
-  return {d:bd,off:Math.sqrt(best)};
-}
 // kandydaci rzutu stacji na tor (lokalne minima), do 6 różnych miejsc toru
 function projectCands(o,lat,lon,maxOff){
   const a=o.a,cl=Math.cos(rad(lat)),c=[];
@@ -7222,7 +7218,7 @@ function shapePt(o,d){
 async function buildGtfs(f,now,center,say){
   say=say||(()=>{});
   const dn=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-  const days=[0,-1].map(o=>warsawDay(now,o));
+  const days=[0,-1,1].map(o=>warsawDay(now,o));   // dziś, wczoraj (kursy po północy) i jutro – sesja otwarta przed północą nie traci pociągów nowej doby
   const active=days.map(()=>new Set());
   say('Czytanie kalendarza…');await pause();
   if(f['calendar.txt'])eachRow(f['calendar.txt'],(c,ix)=>days.forEach((D,k)=>{
@@ -7356,26 +7352,45 @@ function liveQ(tr,nowS){
 // Czy tor pociągu przechodzi przez przejazd i kiedy tam dojedzie (wg rozkładu i opóźnień)?
 // null = ten pociąg nie jedzie przez ten przejazd (np. sąsiedni tor), kurs jest skrócony albo pociąg dawno go minął
 // passed:true = według danych pociąg już minął przejazd (eta<0), ale dane mogą się spóźniać – zwraca niedawne przejazdy
-function gtfsApproach(t,nowS,c){
+// Tor kursu bywa przy tym samym przejeździe kilka razy: pociąg zawraca na stacji końcowej i wraca tą samą linią (Łódź Widzew, Szczecin Główny, Koziki…).
+// shapePasses = miejsca toru (m od początku) leżące przy przejeździe, rosnąco; gtfsApproachAll = wszystkie takie przejścia z czasami;
+// gtfsApproach = to jedno, które jest teraz najważniejsze (dla kodu, który potrzebuje jednego wyniku).
+function shapePasses(tr,o,c){
+  const key=tr.sh+'|'+c.id;let L=c.nc?null:APC.get(key);
+  if(!L){L=projectCands(o,c.lat,c.lon,(c.maxOff||40)+1e-6).sort((x,y)=>x.d-y.d);if(!c.nc)APC.set(key,L)}
+  return L;
+}
+function gtfsApproachAll(t,nowS,c){
   const tr=t.tr,o=tr.sh?shapeObj(tr.sh):null;
   if(!o||t.sd==null)return undefined;
-  const key=tr.sh+'|'+c.id;let pr=c.nc?null:APC.get(key);
-  if(!pr){pr=projectOn(o,c.lat,c.lon);if(!c.nc)APC.set(key,pr)}
-  if(pr.off>(c.maxOff||40))return null;
-  const s=tr.st,lo=tr.lo||0,hi=tr.hi==null?s.length-1:tr.hi;
-  if(pr.d<s[lo][4]-15||pr.d>s[hi][4]+15)return null;   // ten odcinek nie jest obsługiwany (kurs skrócony)
-  const behind=pr.d<t.sd-15;
-  for(let i=behind?lo:Math.max(lo,t.seg||0);i<hi;i++){
-    if(pr.d<=s[i+1][4]){
-      if(tr.cl>=i+1&&TA(tr,tr.cl)<=nowS+60)return null;   // potwierdzono przyjazd na stację za przejazdem – pociąg na pewno go minął
-      const eta=etaAt(tr,i,pr.d,true)-nowS,q=liveQ(tr,nowS);
-      if(behind){if(eta<-PASSED_MAX)return null;return {along:0,eta,off:pr.off,passed:true,unc:q.unc,q:q.q,age:q.age}}
-      return {along:Math.max(0,pr.d-t.sd),eta,off:pr.off,passed:false,unc:q.unc,q:q.q,age:q.age};
+  const P=shapePasses(tr,o,c),s=tr.st,lo=tr.lo||0,hi=tr.hi==null?s.length-1:tr.hi;
+  let out=null;
+  for(const pr of P){
+    if(pr.d<s[lo][4]-15||pr.d>s[hi][4]+15)continue;   // ten odcinek nie jest obsługiwany (kurs skrócony)
+    const behind=pr.d<t.sd-15;
+    for(let i=behind?lo:Math.max(lo,t.seg||0);i<hi;i++){
+      if(pr.d<=s[i+1][4]){
+        if(tr.cl>=i+1&&TA(tr,tr.cl)<=nowS+60)break;   // potwierdzono przyjazd na stację za przejazdem – pociąg na pewno go minął
+        const eta=etaAt(tr,i,pr.d,true)-nowS,q=liveQ(tr,nowS);
+        if(behind){if(eta>=-PASSED_MAX)(out||(out=[])).push({along:0,eta,off:pr.off,passed:true,unc:q.unc,q:q.q,age:q.age})}
+        else(out||(out=[])).push({along:Math.max(0,pr.d-t.sd),eta,off:pr.off,passed:false,unc:q.unc,q:q.q,age:q.age});
+        break;
+      }
     }
   }
-  return null;
+  return out;
 }
-function setTimetable(d){gtfs=d.trips;gtfsShapes=d.shapes||{};for(const k in SHC)delete SHC[k];APC.clear();buildIdx();setTimeout(loadLive,400)}
+function gtfsApproach(t,nowS,c){
+  const L=gtfsApproachAll(t,nowS,c);
+  if(L===undefined)return undefined;
+  if(!L)return null;
+  if(L.length===1)return L[0];
+  let up=null,rec=null;   // kilka przejść: najbliższe z tych, które pociąg ma jeszcze przed sobą, a gdy do niego daleko – niedawno minięte
+  for(const r of L){if(r.passed){if(!rec||r.eta>rec.eta)rec=r}else if(!up||r.eta<up.eta)up=r}
+  return up&&(up.eta<600||!rec)?up:rec||up;
+}
+let ttDay=0;   // doba (rrrrmmdd), na którą zbudowano rozkład; zmiana doby w trakcie sesji = odświeżenie okna dób
+function setTimetable(d){gtfs=d.trips;gtfsShapes=d.shapes||{};ttDay=d.ymd||0;for(const k in SHC)delete SHC[k];APC.clear();buildIdx();setTimeout(loadLive,400)}
 // ---- Opóźnienia na żywo (GTFS-RT w JSON z mkuran.pl, z kopią na GitHubie, gdyby serwer blokował CORS) ----
 var gtfsIdx=new Map(),gtfsNum=new Map(),liveOk=false,liveN=0,liveTs=0,liveStamp='',liveFor=null;
 function buildIdx(){
@@ -7619,19 +7634,28 @@ async function fetchZip(st){
   }
   throw new Error(err||'brak źródła');
 }
-async function loadTimetable(force){
+const ttK=()=>window.__ttK||1;   // skala czasu (tylko testy)
+let ttFails=0,ttRetryAt=0,ttRollAt=0,ttStale=0;   // ttStale = doba (rrrrmmdd) starszego rozkładu, z którego korzystamy, gdy nie udało się pobrać świeżego
+const ymdMs=y=>Date.UTC(Math.floor(y/10000),Math.floor(y/100)%100-1,y%100);
+function ttStaleNote(){return ttStale?'rozkład jazdy sprzed '+Math.round((ymdMs(wToday())-ymdMs(ttStale))/864e5)+' dób – nie udało się pobrać nowszego':''}
+async function loadTimetable(force,roll){   // roll = zmiana doby w trakcie sesji: rozkład w pamięci urządzenia obejmuje też nową dobę, więc nie pobieramy go od nowa
   if(ttBusy)return;ttBusy=true;
   const st=t=>{$('gstat').textContent=t;const e=$('ttstat');if(e)e.textContent='Rozkład jazdy: '+t;if(!last&&!window.gpsErr)setBanner('warn','Import rozkładu',t)};
   try{
     const today=wToday(), file=OWNER?$('gfile').files[0]:null;
     let c=null;try{c=await idbGet('gtfs')}catch(e){}
-    if(!file&&!force&&c&&c.ymd===today&&c.ver===3){setTimetable(c);gtfsCenter=c.center||null;st('gotowy, '+c.trips.length+' kursów dziś');return}
-    let buf=null;
+    if(!file&&!force&&c&&c.ymd===today&&c.ver===4){setTimetable(c);gtfsCenter=c.center||null;ttFails=0;ttStale=0;st('gotowy, '+c.trips.length+' kursów (dziś i jutro)');return}
+    let buf=null,fresh=true,stale=0,old=false;   // old = zip starszy niż dziś (wynik nie trafia do pamięci jako „dzisiejszy”); stale = zip starszy, bo nie udało się pobrać świeżego
     if(file)buf=await file.arrayBuffer();
     else{let z=null;try{z=await idbGet('zip')}catch(e){}
-      if(z&&z.ymd===today)buf=z.buf;
-      else buf=await fetchZip(st)}
-    try{await idbSet('zip',{ymd:today,buf})}catch(e){}
+      if(z&&z.buf&&(z.ymd===today||roll&&ymdMs(today)-ymdMs(z.ymd)<=864e5)){buf=z.buf;fresh=false;old=z.ymd!==today}   // zmiana doby: wczorajszy rozkład obejmuje też dzisiejszą dobę
+      else{
+        try{buf=await fetchZip(st)}
+        catch(e){   // bez sieci: starszy rozkład z pamięci urządzenia (do 6 dób) jest lepszy niż żaden albo niż rozkład bez nowej doby – zmienia się rzadko, a opóźnienia na żywo i tak są osobno
+          if((!gtfs||roll)&&z&&z.buf&&(ymdMs(today)-ymdMs(z.ymd))<=6*864e5){buf=z.buf;fresh=false;old=true;stale=z.ymd}
+          else throw e}
+      }}
+    if(fresh){try{await idbSet('zip',{ymd:today,buf})}catch(e){}}
     st('rozpakowywanie…');await pause();
     const want=['stops.txt','trips.txt','routes.txt','stop_times.txt','calendar.txt','calendar_dates.txt','shapes.txt'];
     if(typeof fflate==='undefined')await new Promise(ok=>{let n=0;const t=setInterval(()=>{if(typeof fflate!=='undefined'||++n>150){clearInterval(t);ok()}},100)});   // biblioteka ładuje się w tle (async)
@@ -7641,15 +7665,35 @@ async function loadTimetable(force){
     if(!files['trips.txt']||!files['stop_times.txt']||!files['stops.txt'])throw new Error('w pliku brak trips/stop_times/stops');
     const center=await getCenter();
     const d=await buildGtfs(files,new Date(),center,st);
-    d.ymd=today;d.ver=3;d.center=center;setTimetable(d);gtfsCenter=center;
-    const nsh=d.trips.filter(t=>t.sh).length;
-    st('gotowy, '+d.trips.length+' kursów dziś'+(center?' w promieniu '+center.r/1000+' km':''));
-    try{await idbSet('gtfs',d)}catch(e){}
-  }catch(e){const m=String(e&&e.message||e||'');st(/Failed to fetch|NetworkError|Load failed|network|fetch|HTTP|timeout|abort/i.test(m)?'niedostępny – brak połączenia z serwerem rozkładu. Bez rozkładu aplikacja nie ostrzeże o pociągach. Plik zip możesz wskazać w ustawieniach.':'niedostępny ('+m+'). Plik zip możesz wskazać w ustawieniach.')}
+    d.ymd=today;d.ver=4;d.center=center;setTimetable(d);gtfsCenter=center;
+    ttFails=0;ttStale=stale;
+    if(stale){   // starszy rozkład: nie zapisujemy gotowego wyniku jako „dzisiejszego”, a świeży rozkład próbujemy pobrać w tle
+      ttRetryAt=Date.now()+60000*ttK();
+      st('gotowy, '+d.trips.length+' kursów – rozkład sprzed '+Math.round((ymdMs(today)-ymdMs(stale))/864e5)+' dób, próbuję pobrać nowszy');
+    }else{
+      st('gotowy, '+d.trips.length+' kursów (dziś i jutro)'+(center?' w promieniu '+center.r/1000+' km':''));
+      if(!old)try{await idbSet('gtfs',d)}catch(e){}
+    }
+  }catch(e){const m=String(e&&e.message||e||''),net=/Failed to fetch|NetworkError|Load failed|network|fetch|HTTP|timeout|abort/i.test(m);
+    st(gtfs?(net?'nie udało się odświeżyć (brak połączenia z serwerem rozkładu) – zostaje poprzedni rozkład, ponowię próbę':'nie udało się odświeżyć ('+m+') – zostaje poprzedni rozkład')
+         :net?'niedostępny – brak połączenia z serwerem rozkładu. Bez rozkładu aplikacja nie ostrzeże o pociągach. Ponawiam próby, plik zip możesz też wskazać w ustawieniach.':'niedostępny ('+m+'). Plik zip możesz wskazać w ustawieniach.');
+    if(net&&!gtfs){ttFails++;ttRetryAt=Date.now()+Math.min(300000,15000*Math.pow(2,Math.min(ttFails,5)-1))*ttK()}   // 15 s, 30 s, 1 min, 2 min, 4 min, potem co 5 min
+    else if(net&&ttStale)ttRetryAt=Date.now()+300000*ttK()}
   finally{ttBusy=false}
 }
+// pilnowanie rozkładu: ponawianie nieudanego pobrania (także starszego rozkładu) oraz odświeżenie okna dób po północy
+setInterval(()=>{
+  if(ttBusy||demo||gKey)return;
+  const n=Date.now();
+  if(ttRetryAt&&n>=ttRetryAt&&(!gtfs||ttStale)&&navigator.onLine!==false){ttRetryAt=0;loadTimetable(!!ttStale);return}
+  if(gtfs&&ttDay&&n-ttRollAt>120000*ttK()&&wToday()!==ttDay){
+    if(window.liveHot!=null&&n-(window.liveHotAt||0)<20000&&window.liveHot<400)return;   // pociąg tuż przed przejazdem na trasie – przebudowa (kilka sekund pracy) poczeka
+    ttRollAt=n;loadTimetable(true,true);
+  }
+},5000*(window.__ttK||1));
+window.addEventListener('online',()=>{if(!gtfs||ttStale)ttRetryAt=Date.now()});
 $('gload').onclick=()=>{if(OWNER)loadTimetable(!!$('gfile').files[0])};
-idbGet('gtfs').then(c=>{if(c&&c.ymd===wToday()&&c.ver===3){setTimetable(c);gtfsCenter=c.center||null;$('gstat').textContent='Rozkład z pamięci: '+c.trips.length+' kursów dziś';$('ttstat').textContent='Rozkład jazdy: gotowy, '+c.trips.length+' kursów dziś'}}).catch(()=>{});
+idbGet('gtfs').then(c=>{if(c&&c.ymd===wToday()&&c.ver===4){setTimetable(c);gtfsCenter=c.center||null;$('gstat').textContent='Rozkład z pamięci: '+c.trips.length+' kursów (dziś i jutro)';$('ttstat').textContent='Rozkład jazdy: gotowy, '+c.trips.length+' kursów (dziś i jutro)'}}).catch(()=>{});
 setTimeout(()=>{if(!gtfs&&!gKey&&!ttBusy)loadTimetable(false)},1200);
 setInterval(()=>{
   if(gKey||demo||!gtfs)return;
