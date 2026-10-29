@@ -1404,7 +1404,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 148</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 149</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1618,6 +1618,11 @@ function icoDraw(g,k,x,y,sz,col,lw){   // ikona na canvasie: środek (x,y), rozm
   const rb=document.getElementById('icoReset');if(rb)rb.onclick=()=>{window.resetIcons();try{evToast('Ikony wróciły na swoje miejsca','',[],3000)}catch(e){}};
 })();
 const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
+// Zegar: rozkład i opóźnienia pociągów są w czasie rzeczywistym, więc telefon spóźniony o minutę = ostrzeżenie o minutę za późno.
+// clkOff = o ile sekund czas serwera wyprzedza zegar telefonu (mierzone nagłówkiem Date; patrz clkSync).
+var clkOff=0,clkAt=0,clkBusy=false,clkInfo='';
+try{const c=JSON.parse(localStorage.getItem('clkOff')||'null');if(c&&isFinite(c.off)&&Math.abs(c.off)<=900&&Math.abs(Date.now()-c.at)<864e5){clkOff=c.off;clkAt=c.at;clkInfo='zapamiętana'}}catch{clkOff=0}
+const nowT=()=>Date.now()/1000+clkOff;
 function dist(a,b,c,d){const R=6371000,dl=rad(c-a),dn=rad(d-b);
   const x=Math.sin(dl/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 function bear(a,b,c,d){const y=Math.sin(rad(d-b))*Math.cos(rad(c));
@@ -1856,7 +1861,7 @@ function evaluate(p){
   setDist(n>=1000?(n/1000).toFixed(1)+' km':n+' m');
   // zagrożenie pociągiem dla każdego przejazdu przed nami
   let threat=null, maybe=null, recent=null, nearestTd=Infinity;
-  const nowS=Date.now()/1000;
+  const nowS=nowT();
   for(const a of ahead){
     for(const t of trains){
       const td=dist(t.lat,t.lon,a.c.lat,a.c.lon);
@@ -1918,7 +1923,7 @@ const fmtTE=s=>s<8?'za chwilę':s<90?'za ok. '+Math.round(s/5)*5+' s':'za ok. '+
 function liveStatus(){   // krótki opis jakości danych o opóźnieniach (pusty, gdy wszystko w porządku)
   if(!gtfs)return '';
   if(!liveN)return 'Brak danych o opóźnieniach – godziny pociągów wg rozkładu jazdy';
-  const age=(Date.now()-liveTs)/60000;
+  const age=(nowT()*1000-liveTs)/60000;
   return age>8?'Opóźnienia pociągów sprzed '+fmtAge(age)+' – godziny mogą się różnić':'';
 }
 const fmtAge=min=>min<90?Math.max(1,Math.round(min))+' min':String(Math.round(min/6)/10).replace('.',',')+' godz.';
@@ -3096,7 +3101,7 @@ function carShadow(){
 const earlyAt={};
 function earlyTrainWarn(p){
   if(!route||demo||!gtfs||route.off>100||(p.speed||0)<3)return;
-  const nowS=Date.now()/1000;
+  const nowS=nowT();
   for(const c of crossings){
     const rc=routeCross(c);if(!rc||rc.off>20)continue;
     const d=rc.along-route.along;if(d<500||d>3500)continue;
@@ -3249,7 +3254,7 @@ function crossRisk(c){
 }
 // liczba pociągów zmierzających do przejazdu w ciągu 5 minut (do ostrzeżenia o drugim torze)
 function trainsToward(c){
-  const nowS=Date.now()/1000;let n=0;
+  const nowS=nowT();let n=0;
   for(const t of trains){
     const td=dist(t.lat,t.lon,c.lat,c.lon);if(td>8000)continue;
     if(t.tr&&t.tr.sh){const rs=gtfsApproachAll(t,nowS,c);if(rs)for(const r of rs)if(!r.passed&&r.eta<300)n++;continue}
@@ -4059,7 +4064,7 @@ $('brwBack').onclick=()=>{$('start').click()};
 
 // ================= Tablica odjazdów przy przejeździe (dotknij przejazdu na mapie) =================
 function xDepartures(c){
-  const out=[],now=Date.now()/1000;if(!gtfs)return null;
+  const out=[],now=nowT();if(!gtfs)return null;
   for(const tr of gtfs){
     if(tr.cx||!tr.sh||tr.st.length<2||tr.st[0].length<5)continue;   // odwołane i objazdowe kursy nie przejadą tędy
     const o=shapeObj(tr.sh);if(!o)continue;
@@ -4094,7 +4099,7 @@ function showBoard(c){
    if(cs>=1)own.push('o tej porze rogatki bywały zamknięte ('+cs+'×)');
    if(own.length)h+='<div class="xs xi">'+icoSvg('chart')+'<span>'+own.join(' · ')+'</span></div>'}
   {const ls=liveStatus();if(ls)h+='<div class="xs xw">'+icoSvg('warn')+'<span>'+ls+'</span></div>';
-   const nowS=Date.now()/1000,ap=(L||[]).filter(x=>x.t<nowS+1200&&x.t>=nowS-5);
+   const nowS=nowT(),ap=(L||[]).filter(x=>x.t<nowS+1200&&x.t>=nowS-5);
    if(ap.length){h+='<div class="xs xnow">'+icoSvg('siren')+'<b>Nadjeżdża teraz</b></div>';
      ap.slice(0,3).forEach(x=>{shown.add(x);const m=Math.max(0,Math.round((x.t-nowS)/60)),nm=String(x.name).split(' → ');
        h+='<div class="xr hot"><span class="xt" style="min-width:76px;font-size:.95rem">'+(m<1?'za chwilę':'za '+m+' min')+'</span><span class="xn">'+nm[0]+(nm[1]?' → '+nm[1]:'')+'<small>'+hh(x.t)+(x.along!=null?' · '+fmtKm(x.along)+' od przejazdu':'')+(x.sp!=null&&x.sp>3?' · '+Math.round(x.sp)+' km/h':'')+(x.late>=2?' · +'+x.late+' min':'')+(x.live?'':' · wg rozkładu')+'</small></span></div>'})}
@@ -4103,7 +4108,7 @@ function showBoard(c){
   else if(!L.length)h+='<div class="xs">W ciągu 3 godzin nie ma kursów pasażerskich przez ten przejazd.</div>';
   else L.forEach(x=>{
     if(shown.has(x))return;   // ten pociąg jest już wyżej, w sekcji „Nadjeżdża teraz”
-    const m=Math.round((x.t-Date.now()/1000)/60),when=m<=0?'teraz':m<60?'za '+m+' min':'za '+Math.floor(m/60)+' h '+(m%60)+' min';
+    const m=Math.round((x.t-nowT())/60),when=m<=0?'teraz':m<60?'za '+m+' min':'za '+Math.floor(m/60)+' h '+(m%60)+' min';
     const nm=x.name.split(' → ');
     h+='<div class="xr"><span class="xt">'+hh(x.t)+'</span><span class="xn">'+nm[0]+(nm[1]?'<small>→ '+nm[1]+'</small>':'')+'</span><span class="xe">'+when+(x.late>=2?'<div class="late">+'+x.late+' min</div>':'')+'</span></div>';
   });
@@ -4128,7 +4133,7 @@ function showFail(c){
   $('xRep').onclick=()=>{B.style.display='none';reportEvent('xfail',{lat:c.lat,lon:c.lon})};
 }
 function showTrainBoard(t){
-  const B=$('xBoard'),nowS=Date.now()/1000,nm=String(t.id).split(' → ');
+  const B=$('xBoard'),nowS=nowT(),nm=String(t.id).split(' → ');
   const sp=t.speed!=null?Math.round(t.speed):null;
   const lateTxt=t.late!=null?(t.late>=1?'opóźnienie '+t.late+' min':t.late<=-1?'przed czasem':'punktualnie'):'wg rozkładu (brak danych o opóźnieniach)';
   const rows=[];
@@ -4758,8 +4763,8 @@ try{
       if(!c){reply('Nie widzę przejazdów kolejowych w pobliżu');return}
       const L=xDepartures(c),dd=c.d>=1000?(c.d/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(c.d/10)*10+' metrów';
       if(L===null){reply('Rozkład jazdy jeszcze się wczytuje');return}
-      const f=L.find(x=>x.t>Date.now()/1000-30);
-      reply(f?'Przy najbliższym przejeździe, '+dd+' stąd, najbliższy pociąg będzie za '+Math.max(0,Math.round((f.t-Date.now()/1000)/60))+' minut':'Przy najbliższym przejeździe, '+dd+' stąd, przez trzy godziny nie ma pociągów')
+      const f=L.find(x=>x.t>nowT()-30);
+      reply(f?'Przy najbliższym przejeździe, '+dd+' stąd, najbliższy pociąg będzie za '+Math.max(0,Math.round((f.t-nowT())/60))+' minut':'Przy najbliższym przejeździe, '+dd+' stąd, przez trzy godziny nie ma pociągów')
     }
     else if(/(pociąg|pociag)/.test(t)){
       const c=$('tcard');reply(nearTrainId&&c?($('tname').textContent+', '+$('tdist').textContent):'Brak pociągów w pobliżu');
@@ -5017,7 +5022,7 @@ let nearTrainId=null,aheadList=[];
 const fmtKm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m';
 const fmtEta=sec=>sec<90?'ok. '+Math.max(1,Math.round(sec))+' s':'ok. '+Math.round(sec/60)+' min';
 function updTrainCard(p){
-  const card=$('tcard'),nowS=Date.now()/1000;
+  const card=$('tcard'),nowS=nowT();
   const hasSrc=demo||gKey||gtfs||feedUrl;
   if(!hasSrc){card.style.display='none';nearTrainId=null;return}
   let best=null;
@@ -5062,7 +5067,7 @@ function updInfo(p){
   if(!demo){
     if(!gtfs&&!gKey&&!feedUrl)dq='brak danych o pociągach – aplikacja nie ostrzeże';
     else if(gtfs&&!gKey&&!feedUrl){
-      const age=liveTs?(Date.now()-liveTs)/60000:null;
+      const age=liveTs?(nowT()*1000-liveTs)/60000:null;
       const sn=ttStaleNote();
       if(sn)dq=sn;
       else if(!liveN)dq='tylko rozkład jazdy, bez opóźnień – godziny pociągów mogą się różnić';
@@ -7148,7 +7153,7 @@ function drawSeasonFx(){
   mx.save();
   if(hal){mx.font='16px "Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.globalAlpha=.8*env}
   else mx.fillStyle='rgba(255,255,255,'+(.82*env).toFixed(2)+')';
-  const t=Date.now()/1000;
+  const t=nowT();
   for(const p of sFx){
     p.y+=p.v;p.x+=Math.sin(t+p.p)*.5;if(p.y>H+20){p.y=-20;p.x=Math.random()*W}
     if(hal){mx.font=Math.round(p.s)+'px "Apple Color Emoji","Segoe UI Emoji",sans-serif';mx.fillText(p.e,p.x,p.y)}
@@ -7440,7 +7445,7 @@ async function buildGtfs(f,now,center,say){
 // pozycja: wzdłuż toru (jeśli dopasowany), inaczej prosta między stacjami
 const TA=(tr,i)=>tr.t0+tr.st[i][0]+(tr.dly?tr.dly.a[i]:0), TD=(tr,i)=>tr.t0+tr.st[i][1]+(tr.dly?tr.dly.d[i]:0);   // godziny z rozkładu + opóźnienie na żywo
 // ruch między stacjami: pociąg rusza i hamuje (profil trapezowy), a nie jedzie ze stałą prędkością – dzięki temu czas przy przejazdach tuż za stacją jest dokładniejszy
-const ACC=.6,PASSED_MAX=260,LQ_S={q:'sched',unc:150,age:null};
+const ACC=.6,PASSED_MAX=260,LQ_S={q:'sched',unc:240,age:null};
 function segProf(L,T){
   if(!(L>0&&T>0))return null;
   const disc=T*T-4*L/ACC;if(disc<0)return null;
@@ -7490,10 +7495,12 @@ function gtfsPos(tr,nowS){
   return null;
 }
 // jakość danych o opóźnieniu danego pociągu i zapas na to, że pociąg jest spóźniony bardziej, niż wynika z danych (s)
-function liveQ(tr,nowS){
+function liveQ(tr,nowS,eta){
   if(!tr.dly)return LQ_S;
   const age=Math.max(0,nowS-(tr.liveAt||0)/1000);
-  let unc=age<=480?75:age<=1800?120:180;
+  // zapas na spóźnienie ponad prognozę: błąd prognozy rośnie z tym, jak daleko w przód sięga (od chwili jej wykonania do mijania przejazdu);
+  // na kolejnych wersjach danych z sieci (ok. 5 tys. porównań prognozy z faktem) 90% błędów mieściło się w 60 s + 1/4 tego odstępu
+  let unc=Math.min(360,60+.25*(age+Math.max(0,eta||0)));
   if(tr.cl>=0){const g=nowS-TA(tr,tr.cl);if(g>600)unc+=Math.min(90,(g-600)*.05)}   // im dawniej ostatnie potwierdzenie, tym mniej pewna prognoza
   return {q:age<=480?'live':age<=1800?'old':'stale',unc,age};
 }
@@ -7519,7 +7526,7 @@ function gtfsApproachAll(t,nowS,c){
     for(let i=behind?lo:Math.max(lo,t.seg||0);i<hi;i++){
       if(pr.d<=s[i+1][4]){
         if(tr.cl>=i+1&&TA(tr,tr.cl)<=nowS+60)break;   // potwierdzono przyjazd na stację za przejazdem – pociąg na pewno go minął
-        const eta=etaAt(tr,i,pr.d,true)-nowS,q=liveQ(tr,nowS);
+        const eta=etaAt(tr,i,pr.d,true)-nowS,q=liveQ(tr,nowS,eta);
         if(behind){if(eta>=-PASSED_MAX)(out||(out=[])).push({along:0,eta,off:pr.off,passed:true,unc:q.unc,q:q.q,age:q.age})}
         else(out||(out=[])).push({along:Math.max(0,pr.d-t.sd),eta,off:pr.off,passed:false,unc:q.unc,q:q.q,age:q.age});
         break;
@@ -7702,8 +7709,41 @@ function applyLive(j){
     }
     tr.cx=0;tr.dly={a,d};tr.cl=cl;tr.lo=lo;tr.hi=hi;tr.liveAt=ts;n++;
   }
-  liveN=n;const age=(Date.now()-ts)/60000;liveOk=n>0&&age<40;liveTs=ts;
+  liveN=n;const age=(nowT()*1000-ts)/60000;liveOk=n>0&&age<40;liveTs=ts;
 }
+// Pomiar różnicy zegarów: 3 zapytania HEAD do własnej strony (bez pamięci podręcznej) → nagłówek Date serwera (rozdzielczość 1 s) minus środek zapytania.
+// Wynik przyjmujemy tylko wtedy, gdy co najmniej 2 pomiary zgadzają się co do 3 s; różnice poniżej 4 s traktujemy jako szum (0).
+async function clkSync(force){
+  if(clkBusy||!/^https?:$/.test(window.location.protocol)||(typeof navigator!=='undefined'&&navigator.onLine===false))return;
+  if(!force&&Date.now()-clkAt<20*60000&&clkInfo.indexOf('zmierzona')===0)return;
+  clkBusy=true;
+  try{
+    const S=[];
+    for(let k=0;k<3;k++){
+      try{
+        const t0=performance.now(),w0=Date.now();
+        const r=await fetch(window.location.pathname+'?_c='+w0+'_'+k,{method:'HEAD',cache:'no-store'});
+        const rtt=performance.now()-t0,d=r.headers.get('date'),age=+(r.headers.get('age')||0);
+        const srv=d?Date.parse(d):NaN;
+        if(r.ok&&isFinite(srv)&&age<=3&&rtt<=2500)S.push((srv+500-(w0+rtt/2))/1000);   // Date jest obcięte do sekundy → środek to +0,5 s
+      }catch{}
+      if(k<2)await new Promise(res=>setTimeout(res,400));
+    }
+    if(S.length<2){clkInfo=clkInfo||'niezmierzona';return}
+    S.sort((a,b)=>a-b);
+    let best=null;for(let i=0;i+1<S.length;i++)if(S[i+1]-S[i]<=3&&(!best||S[i+1]-S[i]<best[1]-best[0]))best=[S[i],S[i+1]];
+    if(!best){clkInfo='niespójna';return}
+    const off=(best[0]+best[1])/2;
+    if(Math.abs(off)>900)return;
+    clkOff=Math.abs(off)<4?0:Math.round(off*2)/2;clkAt=Date.now();clkInfo='zmierzona';
+    try{localStorage.setItem('clkOff',JSON.stringify({off:clkOff,at:clkAt}))}catch{}
+    if(clkOff)window.bbEv&&window.bbEv('zegar','różnica '+clkOff+' s');
+  }finally{clkBusy=false}
+}
+window.clkSync=clkSync;
+setTimeout(()=>{clkSync(true).catch(()=>{})},2500);
+setInterval(()=>{if(!document.hidden)clkSync(false).catch(()=>{})},5*60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)clkSync(false).catch(()=>{})});
 // harmonogram: co sekundę sprawdzamy, czy minął czas na kolejne sprawdzenie (10 s przy pociągu blisko, 20 s w jeździe, 60 s na postoju); ukryta karta = pauza
 setInterval(()=>{
   if(document.hidden||LV.busy||!gtfs||demo)return;
@@ -7719,6 +7759,7 @@ function liveDiagText(){
   if(!gtfs)return 'Rozkład jazdy jeszcze niewczytany.';
   const n=Date.now(),L=[],sn=(LIVE_SRC.find(x=>x.id===LV.src)||{}).name;
   L.push(liveN?'Opóźnienia: '+liveN+' kursów · źródło: '+(sn||'?')+' · wersja z '+new Date(liveTs).toLocaleTimeString('pl-PL')+' (sprzed '+liveAgo(n-liveTs)+')':'Opóźnienia: brak danych');
+  L.push('Zegar telefonu: '+(clkOff?(clkOff>0?'spóźnia się':'śpieszy się')+' o '+Math.abs(clkOff)+' s względem serwera (uwzględniane przy pociągach)':'zgodny z czasem serwera'+(clkInfo?'':' (nie mierzono)')));
   L.push('Sprawdzanie: '+(LV.chk?'ostatnio '+liveAgo(n-LV.chk)+' temu':'jeszcze nie było')+' · tryb: '+({hot:'pociąg blisko',drive:'jazda',idle:'postój'})[liveMode()]+' (co '+Math.round(liveEvery()/1000)+' s)'+(LV.last?' · wynik: '+({new:'nowsza wersja',same:'bez zmian',older:'źródło ma starsze dane',wait:'nowsza czeka na pobranie'})[LV.last]:''));
   L.push('Pełnych pobrań: '+LV.news+(LV.bytes?' · ostatnie '+liveMB(LV.bytes)+' w '+(LV.ms/1000).toFixed(1).replace('.',',')+' s':'')+(LV.gap?' · rytm źródła ok. '+Math.round(LV.gap/1000)+' s':''));
   for(const S of LIVE_SRC)L.push(S.name+': '+(S.err?'błąd – '+S.err+(S.nextAt>n?' (ponowię za '+liveAgo(S.nextAt-n)+')':''):S.ok?'działa (sprawdzono '+liveAgo(n-S.ok)+' temu)':'jeszcze nie sprawdzano'));
@@ -7856,7 +7897,7 @@ idbGet('gtfs').then(c=>{if(c&&c.ymd===wToday()&&c.ver===4){setTimetable(c);gtfsC
 setTimeout(()=>{if(!gtfs&&!gKey&&!ttBusy)loadTimetable(false)},1200);
 setInterval(()=>{
   if(gKey||demo||!gtfs)return;
-  const nowS=Date.now()/1000, out=[];
+  const nowS=nowT(), out=[];
   for(const tr of gtfs){
     const p=gtfsPos(tr,nowS);
     if(p&&(!last||dist(last.lat,last.lon,p.lat,p.lon)<40000))out.push({id:tr.name,rt:false,tr,late:lateOf(tr,p.seg),...p});
@@ -7944,7 +7985,7 @@ const xPseudo=w=>({id:'w'+Math.round(w.lat*1e5)+'_'+Math.round(w.lon*1e5),lat:w.
 const xFind=w=>{for(const c of xAll.values())if(xSame(c,w))return c;return null};
 function nextTrainTxt(c){
   const L=xDepartures(c);if(L===null)return 'rozkład jazdy się wczytuje…';
-  const now=Date.now()/1000,f=L.find(x=>x.t>now-60);
+  const now=nowT(),f=L.find(x=>x.t>now-60);
   if(!f)return 'brak pociągów w ciągu 3 godzin';
   const m=Math.max(0,Math.round((f.t-now)/60));
   return 'najbliższy pociąg '+(m<1?'teraz':'za '+(m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'))+' ('+String(f.name).split(' → ')[0]+')';
@@ -8098,7 +8139,7 @@ async function resumeTrip(R){
 // --- prognoza pociągów na trasie (wg rozkładu i opóźnień) ---
 async function routeForecast(R,xs,when){
   if(!gtfs||!xs||!xs.length||route!==R)return '';
-  const now=Date.now()/1000,dep=when?when.getTime()/1000:now;
+  const now=nowT(),dep=when?when.getTime()/1000:now;
   if(dep>now+2*3600)return '';
   const rows=[];
   for(const x of xs){const rc=projRoute(R,x.lat,x.lon,0,R.pts.length-2);if(rc.off<35&&rc.along>30)rows.push({x,al:rc.along})}
