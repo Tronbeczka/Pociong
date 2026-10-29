@@ -1397,7 +1397,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 142</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 143</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1734,6 +1734,14 @@ fillVoices();
 $('vsel').onchange=e=>{voiceName=e.target.value;try{localStorage.setItem('vname',voiceName)}catch(_){}speak('Dzień dobry. Tak będę do Pana mówił.')};
 $('vbose').value=vbose;$('vbose').onchange=e=>{vbose=e.target.value;try{localStorage.setItem('vbose',vbose)}catch(_){}};
 var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch(e){return {}}})();
+// jedno ogłoszenie na obiekt i etap: raz z wyprzedzeniem ('far') i raz tuż przy nim ('near'); ten sam obiekt pod innym id (duplikaty w OSM, kilka list) to ten sam obiekt
+const annLog=[];
+function annOnce(kind,lat,lon,stage){
+  const now=Date.now();
+  for(let i=annLog.length-1;i>=0;i--){const a=annLog[i];if(now-a.t>600000){annLog.splice(i,1);continue}
+    if(a.k===kind&&a.st===stage&&Math.abs(a.lat-lat)<.0006&&Math.abs(a.lon-lon)<.0009&&dist(a.lat,a.lon,lat,lon)<45)return false}
+  annLog.push({k:kind,lat,lon,st:stage,t:now});return true;
+}
 function say(key,text,vib,short){if(window.preview)return;const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
   const cat=/^[tmxep]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
   if(vcOff[cat])return;
@@ -1819,14 +1827,15 @@ function evaluate(p){
   if(route&&!demo&&route.off<100){ // z trasą: liczą się tylko przejazdy leżące na trasie przed nami
     ahead=[];
     crossings.forEach(c=>{const rc=routeCross(c);
-      if(rc&&rc.off<35){const d=rc.along-route.along;if(d>-15&&d<Math.max(warnDist,1200))ahead.push({c,d:Math.max(0,d)})}});
+      if(rc&&rc.off<20){const d=rc.along-route.along;if(d>-15&&d<Math.max(warnDist,1200))ahead.push({c,d:Math.max(0,d)})}});
   }
   ahead.sort((a,b)=>a.d-b.d);
   aheadList=ahead.slice(0,6);
   {const n2=ahead[1];$('then').style.display=n2?'flex':'none';if(n2)$('then').textContent='Potem '+fmtD(n2.d)}
   if(!ahead.length){window._nearX=null;setDist('');$('then').style.display='none';
     if(arrivedAt&&!route&&Date.now()-arrivedAt<12000)setBanner('ok','Dojechaliśmy',arrivedSub);
-    else if(!xReady(p)){if(xErr&&Date.now()-xErr<180000)setBanner('warn','Brak danych o przejazdach','Nie udało się ich pobrać – ponawiam');else setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych')}   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
+    else if(!xReady(p)){if(route&&nav)setBanner('ok','Trasa','');   // na trasie baner pokazuje wskazówki zakrętów, a o brakującym pobraniu informuje pasek informacji
+      else if(xErr&&Date.now()-xErr<180000)setBanner('warn','Brak danych o przejazdach','Nie udało się ich pobrać – ponawiam');else setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych')}   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
     else setBanner('ok','0 przejazdów kolejowych',wide?'W najbliższych '+fmtKm(Math.max(warnDist,1200))+' wg danych, które mamy':'W pobliżu wg danych, które mamy');
     return}
 
@@ -1889,7 +1898,8 @@ function evaluate(p){
     if(gtfs&&!gKey&&!feedUrl){const nx=xNextInfo(near.c);tn=nx==null?' · rozkład się wczytuje':nx.m==null?' · brak pociągów pasażerskich w najbliższych 3 godzinach'+dataNote(nx,1):' · najbliższy pociąg '+(nx.m<1?'za chwilę':'za ok. '+(nx.m<60?nx.m+' min':Math.floor(nx.m/60)+' h '+(nx.m%60)+' min'))+dataNote(nx,1)}
     else tn=nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu';
     setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',((crossRisk(near.c)>=3&&!near.c.nb?'Wymaga szczególnej uwagi':'')+tn+feedNote).replace(/^\s*·\s*/,'').replace(/^./,ch=>ch.toUpperCase()));
-    say('x'+near.c.id,(near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`)+(crossRisk(near.c)>=3&&!near.c.nb?' Ten przejazd wymaga szczególnej uwagi.':''),near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy');
+    {const stg=near.d>150?'far':'near';   // zwykła zapowiedź przejazdu: raz z wyprzedzeniem i raz tuż przed nim (ostrzeżenia o pociągu powtarzają się osobno)
+      if(annOnce('x',near.c.lat,near.c.lon,stg))say('x'+near.c.id+stg,stg==='near'?(near.c.nb?'Przejazd kolejowy bez zapór.':'Przejazd kolejowy.'):(near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`)+(crossRisk(near.c)>=3&&!near.c.nb?' Ten przejazd wymaga szczególnej uwagi.':''),near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy')}
   }else setBanner('ok','Przejazd w oddali',`za ${n} m`);
 }
 // czas do pociągu w komunikacie: bez udawania dokładności do sekundy
@@ -2096,6 +2106,7 @@ function recenter(){
     $('carIcon').style.display='';$('tilt').style.display='block';
     if(!vec&&last)map.setView([last.lat,last.lon],map.getZoom(),{animate:false});
     vd=null;
+    setZoom(1);   // powrót do auta przywraca też odpowiednie przybliżenie (zależne od prędkości), a nie zostawia zbliżenia z przeglądania mapy
   }
   updRecenter();
 }
@@ -2343,21 +2354,32 @@ function arriveSay(){
 }
 // ---- Ograniczenie prędkości z danych OSM (maxspeed) ----
 let limShow=0,limV=null;
+// najbliższa droga zgodna z kierunkiem jazdy → jej limit (null = droga bez tagu maxspeed, undefined = brak drogi w pobliżu)
+function spPick(D,x,y,hd,maxd){
+  let best=1e9,w=null,sbB=0;
+  for(const sg of D.SP){const q=sg.p;
+    for(let i=0;i<q.length-1;i++){
+      const ax=q[i][0],ay=q[i][1],dx=q[i+1][0]-ax,dy=q[i+1][1]-ay,L2=dx*dx+dy*dy;
+      let t=L2>0?((x-ax)*dx+(y-ay)*dy)/L2:0;t=t<0?0:t>1?1:t;
+      const d=Math.hypot(ax+dx*t-x,ay+dy*t-y);
+      if(d>=maxd)continue;
+      const sb=(Math.atan2(dx,dy)*180/Math.PI+360)%360;let pen=0;
+      if(hd!=null&&L2>4){const df=Math.abs(sb-hd)%360,a=df>180?360-df:df;pen=Math.min(a,180-a)>50?30:(sg.ow&&((sg.ow>0)!==(a<90))?30:0)}
+      if(d+pen<best){best=d+pen;w=sg;sbB=sb}
+    }}
+  if(!w)return undefined;
+  if(w.vf!=null||w.vb!=null){
+    let fw=true;if(hd!=null){const df=Math.abs(sbB-hd)%360,a=df>180?360-df:df;fw=a<90}
+    if(w.ow<0)fw=!fw;
+    const dv=fw?w.vf:w.vb;if(dv!=null)return dv;
+  }
+  return w.v;
+}
 function updLimit(p){
   let v=null;
   if(vec&&vecData&&vecData.SP&&vecData.SP.length){
     const D=vecData,kx=111195*Math.cos(rad(D.lat)),x=(p.lon-D.lon)*kx,y=(p.lat-D.lat)*111195,hd=(p.speed||0)>1?lastH:null;
-    let best=1e9;
-    for(const sg of D.SP){const q=sg.p;
-      for(let i=0;i<q.length-1;i++){
-        const ax=q[i][0],ay=q[i][1],dx=q[i+1][0]-ax,dy=q[i+1][1]-ay,L2=dx*dx+dy*dy;
-        let t=L2>0?((x-ax)*dx+(y-ay)*dy)/L2:0;t=t<0?0:t>1?1:t;
-        const d=Math.hypot(ax+dx*t-x,ay+dy*t-y);
-        if(d>=25)continue;
-        let pen=0;
-        if(hd!=null&&L2>4){const sb=(Math.atan2(dx,dy)*180/Math.PI+360)%360,df=Math.abs(sb-hd)%180;pen=Math.min(df,180-df)>50?30:0}
-        if(d+pen<best){best=d+pen;v=sg.v}
-      }}
+    v=spPick(D,x,y,hd,22);if(v===undefined)v=null;
   }
   let imp=false;
   if(v==null){const dv=limDefault(p);if(dv!=null){v=dv;imp=true}}   // brak tagu maxspeed: przepisy domyślne (zabudowa 50, poza nią 90)
@@ -2492,7 +2514,10 @@ function routeUpdate(p){
     if(run)L.polyline(run.p,{color:JC[run.lv],weight:13,opacity:1,interactive:false}).addTo(jamLayer);
   }
   route.jamD=jamD;
-  if(jamD!=null&&jamD<1500&&!(route.jamSaid&&Date.now()-route.jamSaid<120000)){route.jamSaid=Date.now();say('jam','Za '+(jamD<1000?Math.round(jamD/50)*50+' metrów':(jamD/1000).toFixed(1).replace('.',',')+' kilometra')+' na trasie jest korek. Proszę zachować ostrożność.',[120,80,120],'Przed nami korek')}
+  if(jamD!=null){   // jeden ogólny komunikat na korek; w korku i do 90 s po wyjechaniu z niego nie powtarzamy
+    route.jamGone=0;
+    if(jamD<1500&&!route.jamSaid){route.jamSaid=Date.now();say('jam','Na trasie przed nami jest korek. Proszę zachować ostrożność.',[120,80,120],'Korek na trasie')}
+  }else if(route.jamSaid){route.jamGone=route.jamGone||Date.now();if(Date.now()-route.jamGone>90000){route.jamSaid=0;route.jamGone=0}}
   const rem=Math.max(0,route.len-r.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
   const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
   $('bsub').textContent=mins+' min · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
@@ -3039,7 +3064,7 @@ function earlyTrainWarn(p){
   if(!route||demo||!gtfs||route.off>100||(p.speed||0)<3)return;
   const nowS=Date.now()/1000;
   for(const c of crossings){
-    const rc=routeCross(c);if(!rc||rc.off>35)continue;
+    const rc=routeCross(c);if(!rc||rc.off>20)continue;
     const d=rc.along-route.along;if(d<500||d>3500)continue;
     if(earlyAt[c.id]&&Date.now()-earlyAt[c.id]<300000)continue;
     const carEta=d/Math.max(p.speed,8);
@@ -3216,14 +3241,8 @@ function showWait(th,s,nTr,ago){
 // limit prędkości z wyprzedzeniem (na trasie)
 function limAt(lat,lon,hd){
   const D=vecData;if(!D||!D.SP||!D.SP.length)return null;
-  const kx=111195*Math.cos(rad(D.lat)),x=(lon-D.lon)*kx,y=(lat-D.lat)*111195;let best=1e9,v=null;
-  for(const sg of D.SP){const q=sg.p;for(let i=0;i<q.length-1;i++){
-    const ax=q[i][0],ay=q[i][1],dx=q[i+1][0]-ax,dy=q[i+1][1]-ay,L2=dx*dx+dy*dy;
-    let t=L2>0?((x-ax)*dx+(y-ay)*dy)/L2:0;t=t<0?0:t>1?1:t;
-    const d=Math.hypot(ax+dx*t-x,ay+dy*t-y);if(d>=20)continue;
-    let pen=0;if(hd!=null&&L2>4){const sb=(Math.atan2(dx,dy)*180/Math.PI+360)%360,df=Math.abs(sb-hd)%180;pen=Math.min(df,180-df)>50?30:0}
-    if(d+pen<best){best=d+pen;v=sg.v}}}
-  return v;
+  const kx=111195*Math.cos(rad(D.lat)),x=(lon-D.lon)*kx,y=(lat-D.lat)*111195;
+  const v=spPick(D,x,y,hd,16);return v==null?null:v;   // droga bez tagu: nie zapowiadamy zmiany limitu
 }
 let limAheadAt=0,limAheadSaid={},limNext=null;
 function limitAhead(p){
@@ -4197,14 +4216,16 @@ function camTick(p){
   if(window.preview||(p.speed||0)<5||p.heading==null)return;
   const sg=typeof signs!=='undefined'&&signs&&signs.haz?signs.haz:null;
   for(const c of cams){
-    if(camAl[c.id]||c.role==='to')continue;const d=dist(p.lat,p.lon,c.lat,c.lon);if(d>500||d<40)continue;
+    if(c.role==='to')continue;const d=dist(p.lat,p.lon,c.lat,c.lon);if(d>500||d<25)continue;
+    const stg=d>130?'far':'near';if(camAl[c.id+stg])continue;
     if(angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading)>35)continue;
     if(c.dir!=null&&angDiff(c.dir,p.heading)>70)continue;
     if(route){   // z trasą: tylko to, co leży na trasie, a zwykłe fotoradary zgłasza już znak przy drodze
       if(routeHaz(c)!==true)continue;
       if(!c.avg&&sg&&sg.some(h=>h.id===c.id))continue;
     }
-    camAl[c.id]=1;const dm=Math.round(d/50)*50;
+    camAl[c.id+stg]=1;if(!annOnce(c.avg?'avg':'cam',c.lat,c.lon,stg))continue;const dm=Math.round(d/50)*50;
+    if(stg==='near'){say('cam'+c.id+'n',c.avg?'Odcinkowy pomiar prędkości.':'Fotoradar.',[150,80,150],c.avg?'Odcinkowy pomiar':'Fotoradar');break}
     if(c.avg)say('cam'+c.id,'Za '+dm+' metrów odcinkowy pomiar prędkości. Proszę zachować dozwoloną prędkość na całym odcinku.',[150,80,150],'Odcinkowy pomiar');
     else say('cam'+c.id,'Za '+dm+' metrów fotoradar. Proszę zachować dozwoloną prędkość.',[150,80,150],'Fotoradar');
     break;
@@ -4680,7 +4701,7 @@ try{
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(przeszkod)/.test(t)){reportEvent('obstacle');reply('Zgłaszam przeszkodę na drodze')
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(ślisk|slisk|mgł|mgl|gołoled)/.test(t)){reportEvent('hazard');reply('Zgłaszam trudne warunki na drodze')
     }else if(/ile.*przejazd/.test(t)){
-      const n=route&&route.xs?route.xs.filter(c=>{const rc=routeCross(c);return rc&&rc.off<35&&rc.along>route.along-15}).length:null;
+      const n=route&&route.xs?route.xs.filter(c=>{const rc=routeCross(c);return rc&&rc.off<20&&rc.along>route.along-15}).length:null;
       reply(n==null?'Nie ma wyznaczonej trasy':n===0?'Na trasie nie zostały już przejazdy kolejowe':'Na trasie '+(n===1?'został 1 przejazd kolejowy':'zostało '+n+' '+((n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'przejazdy kolejowe':'przejazdów kolejowych')))
     }else if(/(ile do celu|jak daleko|kiedy dojad|ile jeszcze)/.test(t)){reply(etaText()||'Nie ma wyznaczonej trasy')
     }else if(/(następny przejazd|nastepny przejazd|najbliższy przejazd|najblizszy przejazd|przejazd kolejowy)/.test(t)){
@@ -4893,10 +4914,14 @@ function signCheck(p){
   $('sigt').textContent='Za '+dd+' m '+({stop:'znak STOP',give_way:'ustąp pierwszeństwa',camera:(best.sg.avg?'odcinkowy pomiar prędkości':'fotoradar')+(best.sg.ms?' · limit '+best.sg.ms:''),bump:'próg zwalniający',crossing:'przejście dla pieszych'})[K];
   el.classList.add('on');
   const now=Date.now();
-  if($('sigsnd').checked&&(!sigSeen[best.sg.id]||now-sigSeen[best.sg.id]>90000)){
-    sigSeen[best.sg.id]=now;chime(K==='stop'?'stop':'give_way');if(navigator.vibrate)try{navigator.vibrate(30)}catch(e){}
-    if(K==='camera'){if(best.sg.avg)speak(vbose==='short'?'Odcinkowy pomiar':'Za '+dd+' metrów odcinkowy pomiar prędkości. Proszę zachować dozwoloną prędkość na całym odcinku.');else if(!playClip('camera',.9))speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.')}
-    else if(K==='bump'){if(!playClip('bump',.9))speak(vbose==='short'?'Próg zwalniający':'Za '+dd+' metrów próg zwalniający. Proszę zwolnić.')}
+  if($('sigsnd').checked){
+    const stg=K==='camera'&&best.d<=130?'near':'far';
+    if(annOnce(K==='camera'?(best.sg.avg?'avg':'cam'):K,best.sg.lat,best.sg.lon,stg)){
+      sigSeen[best.sg.id]=now;chime(K==='stop'?'stop':'give_way');if(navigator.vibrate)try{navigator.vibrate(30)}catch(e){}
+      if(K==='camera'&&stg==='near')speak(best.sg.avg?'Odcinkowy pomiar':'Fotoradar');
+      else if(K==='camera'){if(best.sg.avg)speak(vbose==='short'?'Odcinkowy pomiar':'Za '+dd+' metrów odcinkowy pomiar prędkości. Proszę zachować dozwoloną prędkość na całym odcinku.');else if(!playClip('camera',.9))speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.')}
+      else if(K==='bump'){if(!playClip('bump',.9))speak(vbose==='short'?'Próg zwalniający':'Za '+dd+' metrów próg zwalniający. Proszę zwolnić.')}
+    }
   }
 }
 const HZ={camera:{k:14,minD:150,max:500,min:1.5},bump:{k:8,minD:70,max:250,min:1.5},crossing:{k:5,minD:50,max:140,min:4.2}};
@@ -4918,7 +4943,7 @@ function updTrainCard(p){
   // tylko pociągi, które dojadą do przejazdu leżącego na naszej trasie (albo przed nami, gdy trasy nie ma)
   let cand=aheadList;
   if(route&&!demo&&route.off<100){
-    cand=[];crossings.forEach(c=>{const rc=routeCross(c);if(rc&&rc.off<35){const d=rc.along-route.along;if(d>-15&&d<8000)cand.push({c,d:Math.max(0,d)})}});
+    cand=[];crossings.forEach(c=>{const rc=routeCross(c);if(rc&&rc.off<20){const d=rc.along-route.along;if(d>-15&&d<8000)cand.push({c,d:Math.max(0,d)})}});
   }
   for(const t of trains){
     if(!t.tr||!t.tr.sh||t.sd==null||dist(p.lat,p.lon,t.lat,t.lon)>40000)continue;
@@ -4979,13 +5004,21 @@ const PAL={
  night:{tun:'#3d4866',bg:'#141926',water:'#173a57',waterEdge:'#21507a',park:'#1f3d2e',parkEdge:'#285040',farm:'#18202b',grass:'#1c3528',wood:'#173226',wet:'#1a2f31',sand:'#212633',resi:'#191f2f',ind:'#1b1e2f',inst:'#1c2234',sport:'#1d3829',cem:'#1b2f24',rland:'#1b202c',bld:'#273046',bldEdge:'#34405c',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#444e6b',rs:'#546082',tr:'#5f6c91',sc:'#6f6d98',pr:'#7f779c',mw:'#b98259',mwIn:'#cf9569',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',plbl:'#aab3c8',wnl:'#6fa4d6',route:'#5b94f7',routeEdge:'#c98a2b'}};
 // VEC-PURE-START
 function parseMax(v){
-  v=String(v).trim().toLowerCase();let m;
-  if(/^\d+$/.test(v))return +v;
+  v=String(v).trim().toLowerCase().replace(/\s*km\/h$/,'');let m;
+  if(/^\d+$/.test(v))return +v>=5&&+v<=140?+v:null;
   if(m=v.match(/^(\d+)\s*mph$/))return Math.round(m[1]*1.609/5)*5;
-  const d={'pl:urban':50,'pl:rural':90,'pl:expressway':120,'pl:motorway':140};
+  const d={'pl:urban':50,'pl:rural':90,'pl:expressway':120,'pl:motorway':140,'urban':50,'rural':90,'walk':20,'living_street':20};
   return d[v]||null;
 }
 const HW={motorway:'mw',trunk:'mw',motorway_link:'mw',trunk_link:'mw',primary:'pr',primary_link:'pr',secondary:'sc',secondary_link:'sc',tertiary:'tr',tertiary_link:'tr',unclassified:'rs',residential:'rs',living_street:'rs',service:'sv'};
+// droga do ustalania limitu prędkości: także bez tagu maxspeed (v=null → limit domyślny), żeby limit sąsiedniej drogi nie „przeciekał” na naszą; kierunkowe maxspeed:forward/backward
+function spEntry(t,pts){
+  if(!t||!t.highway||pts.length<2||/^(footway|path|cycleway|steps|pedestrian|bridleway|construction|proposed|corridor|elevator|track|raceway|platform|busway)$/.test(t.highway))return null;
+  const mv=t.maxspeed?parseMax(t.maxspeed):(t.highway==='motorway'?140:null);
+  if(mv==null&&t.highway==='service')return null;
+  const f=t['maxspeed:forward'],b=t['maxspeed:backward'];
+  return {p:pts,v:mv,vf:f?parseMax(f):null,vb:b?parseMax(b):null,ow:(t.oneway==='-1'||t.oneway==='reverse')?-1:(t.oneway==='yes'||t.oneway==='1'||t.junction==='roundabout'||t.highway==='motorway')?1:0};
+}
 function buildVec(j,lat,lon){
   const kx=111195*Math.cos(rad(lat)),ky=111195,P={},LB=[],SP=[];
   for(const w of j.elements||[]){
@@ -5007,7 +5040,7 @@ function buildVec(j,lat,lon){
       px=x;py=y;pts.push([x,y]);
     }
     if(fill)path.closePath();
-    if(t.highway&&pts.length>1){const mv=t.maxspeed?parseMax(t.maxspeed):(t.highway==='motorway'?140:null);if(mv)SP.push({p:pts,v:mv})}
+    {const e=spEntry(t,pts);if(e)SP.push(e)}
     if(t.highway&&t.name&&cls!=='sv'&&pts.length>1){
       let tot=0;for(let i=1;i<pts.length;i++)tot+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
       if(tot>140){let acc=0,i=1;for(;i<pts.length-1;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);if(acc+d>=tot/2)break;acc+=d}
@@ -5022,7 +5055,7 @@ var lastSnapD=null;
 function snapPoint(lat,lon,hr){
   const D=vecData;if(!D||!D.RS||!D.RS.length)return null;
   const g=snapGrid(D),CS=40,kx=111195*Math.cos(rad(D.lat)),X=(lon-D.lon)*kx,Y=(lat-D.lat)*111195;
-  let best=12,bx=0,by=0,found=false;const cx=Math.floor(X/CS),cy=Math.floor(Y/CS);
+  let best=18,bx=0,by=0,found=false;const cx=Math.floor(X/CS),cy=Math.floor(Y/CS);
   for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){
     const l=g.get(u+','+v);if(!l)continue;
     for(let j=0;j<l.length;j+=4){
@@ -5039,7 +5072,7 @@ function camFix(p,h){
   const now=performance.now(),d=vecCam0(now),sp=(p.speed||0)>1.5?p.speed:0,hr=rad(h||0);
   const nf={lat:p.lat,lon:p.lon,t:now,ve:sp*Math.sin(hr),vn:sp*Math.cos(hr)};
   // pozycja GPS bywa przesunięta o kilka metrów – gdy jedziemy bez trasy, przyciągamy ją do osi drogi o zgodnym kierunku
-  if(!route&&sp>3&&vecData&&vecData.RS){const q=snapPoint(p.lat,p.lon,hr);if(q){nf.lat=p.lat+(q[0]-p.lat)*.8;nf.lon=p.lon+(q[1]-p.lon)*.8;lastSnapD=q[2]}else lastSnapD=null}
+  if((!route||route.off>40)&&sp>2.5&&vecData&&vecData.RS){const q=snapPoint(p.lat,p.lon,hr);if(q){const w=q[2]<5?.95:.85;nf.lat=p.lat+(q[0]-p.lat)*w;nf.lon=p.lon+(q[1]-p.lon)*w;lastSnapD=q[2]}else lastSnapD=null}
   corr=d?{e:(d.lon-nf.lon)*111195*Math.cos(rad(nf.lat)),n:(d.lat-nf.lat)*111195}:{e:0,n:0};
   fix=nf;
   if(provCam){provCam=null;document.body.classList.remove('nofix')}   // pierwszy prawdziwy odczyt: kamera płynnie dojeżdża z ostatniej znanej pozycji
@@ -5053,7 +5086,7 @@ function vecCam(now){   // kamera = narysowane auto (na trasie: na swoim pasie) 
 }
 function vecCam0(now){   // sam samochód (przewidywanie ruchu)
   if(!fix)return provCam;
-  const dt=Math.min(2,(now-fix.t)/1000),w=Math.max(0,1-(now-fix.t)/700);
+  const dt=Math.min(1.3,(now-fix.t)/1000),w=Math.max(0,1-(now-fix.t)/700);   // przewidywanie ruchu najwyżej 1,3 s do przodu – na zakręcie auto nie wyjeżdża poza drogę
   const e=fix.ve*dt+corr.e*w,n=fix.vn*dt+corr.n*w;
   return {lat:fix.lat+n/111195,lon:fix.lon+e/(111195*Math.cos(rad(fix.lat)))};
 }
@@ -5314,15 +5347,14 @@ function buildSP(j,lat,lon){
   const kx=111195*Math.cos(rad(lat)),SP=[];
   for(const w of j.elements||[]){
     if(!w.geometry||w.geometry.length<2)continue;const t=w.tags||{};
-    const mv=t.maxspeed?parseMax(t.maxspeed):(t.highway==='motorway'?140:null);if(!mv)continue;
-    SP.push({p:w.geometry.map(g=>[(g.lon-lon)*kx,(g.lat-lat)*111195]),v:mv});
+    const e=spEntry(t,w.geometry.map(g=>[(g.lon-lon)*kx,(g.lat-lat)*111195]));if(e)SP.push(e);
   }
   return SP;
 }
 async function fetchSpeed(lat,lon,dat){   // ograniczenia prędkości: małe zapytanie w tle
   try{
     const R=1500,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
-    const j=await fetchOverpass('[out:json][timeout:20];(way["highway"]["maxspeed"]'+bb+';way["highway"="motorway"]'+bb+';);out tags geom qt;');
+    const j=await fetchOverpass('[out:json][timeout:20];(way["highway"]["maxspeed"]'+bb+';way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$"]'+bb+';);out tags geom qt;');
     if(vecData===dat)dat.SP=buildSP(j,lat,lon);
   }catch(e){}
 }
