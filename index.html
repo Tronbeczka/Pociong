@@ -1404,7 +1404,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 146</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 147</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7545,8 +7545,9 @@ function buildIdx(){
 const LV={busy:false,at:0,chk:0,ok:0,fails:0,src:'',news:0,last:'',gap:0,stamps:[],bytes:0,ms:0,parseAt:0,cool:0,probe:''};
 const LIVE_SRC=[{id:'mk',name:'mkuran.pl (na żywo)',heavy:true},{id:'gh',name:'kopia na GitHubie',heavy:false}];
 // opcjonalny własny przekaźnik (np. Cloudflare Worker z pliku przekaznik-cloudflare.js) – gdy mkuran.pl nie wpuszcza przeglądarki (CORS); adres wpisuje właściciel w Diagnostyce
-const LIVE_RELAY_DEF='';
+const LIVE_RELAY_DEF=window.__noRelayDef?'':'https://orange-term-adc2.oskar-cempura.workers.dev/';   // wbudowany przekaźnik (Cloudflare Worker); adres z Diagnostyki ma pierwszeństwo
 setTimeout(()=>{const e=$('liveRelayIn');if(e){e.value=LSget('liveRelay','')||'';e.onchange=()=>{const v=e.value.trim();if(v&&!/^https:\/\/[^\s]+$/.test(v)){note('Nieprawidłowy adres','Adres przekaźnika musi zaczynać się od https://');return}LSput('liveRelay',v);note('Zapisano','Przekaźnik zacznie działać po odświeżeniu aplikacji.')}}},0);
+{const e=$('liveRelayIn');if(e&&LIVE_RELAY_DEF)e.placeholder=LIVE_RELAY_DEF}
 {const u=String(LSget('liveRelay','')||LIVE_RELAY_DEF||'').trim();if(/^https:\/\/[^\s]+$/.test(u))LIVE_SRC.unshift({id:'rl',name:'przekaźnik (własny serwer)',heavy:true,url:u})}
 LIVE_SRC.forEach(S=>Object.assign(S,{lm:'',len:'',noHead:false,fails:0,nextAt:0,peekAt:0,reg:null,ok:0,err:''}));
 const STAMP_RE=/"timestamp"\s*:\s*"([^"]+)"/;
@@ -7719,8 +7720,8 @@ function liveDiagText(){
   if(LV.probe)L.push('',LV.probe);
   return L.join('\n');
 }
-async function liveProbeAll(){   // jednorazowy test obu źródeł: czy odpowiadają, jak szybko, jak duże i jak stare są dane (nic nie zmienia w aplikacji)
-  const L=[];
+async function liveProbeAll(){   // jednorazowy test źródeł: czy odpowiadają, jak szybko, jak duże i jak stare są dane (nic nie zmienia w aplikacji)
+  const L=[],age={};
   for(const S of LIVE_SRC){
     const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),15000),t0=performance.now();
     try{
@@ -7729,10 +7730,18 @@ async function liveProbeAll(){   // jednorazowy test obu źródeł: czy odpowiad
       if(r.ok&&r.body&&r.body.getReader){const rd=r.body.getReader(),dec=new TextDecoder();while(head.length<8000&&!m){const q=await rd.read();if(q.done)break;head+=dec.decode(q.value,{stream:true});m=STAMP_RE.exec(head)}}
       ctl.abort();
       const len=+r.headers.get('content-length')||0,t=m?isoSec(m[1])*1000:NaN;
+      if(r.ok&&!isNaN(t))age[S.id]=Date.now()-t;
       L.push((r.ok?'✓ ':'✗ ')+S.name+': HTTP '+r.status+' po '+((t1-t0)/1000).toFixed(1).replace('.',',')+' s'+(len?' · rozmiar '+liveMB(len):' · rozmiar nieznany')+(isNaN(t)?' · brak znacznika czasu':' · dane sprzed '+liveAgo(Date.now()-t)));
     }catch(e){L.push('✗ '+S.name+': '+(ctl.signal.aborted?'brak odpowiedzi w 15 s':'brak połączenia lub blokada przeglądarki (CORS)'))}
     clearTimeout(to);
   }
+  // ocena: świeżość najlepszego źródła i różnica między źródłami (aplikacja używa danych tylko do 40 min wieku)
+  const ids=Object.keys(age);
+  if(ids.length){
+    const best=ids.reduce((a,b)=>age[a]<=age[b]?a:b),a=age[best],nm=(LIVE_SRC.find(x=>x.id===best)||{}).name;
+    L.push('Ocena: najświeższe dane – '+nm+', sprzed '+liveAgo(a)+' → '+(a<=180000?'świeże (dokładne co do kilku minut)':a<=900000?'akceptowalne (źródło odświeża się rzadziej niż co 3 min)':a<2400000?'wyraźnie opóźnione, na granicy użyteczności':'za stare – aplikacja ich nie użyje'));
+    if(age.rl!=null&&age.gh!=null)L.push('Przekaźnik jest nowszy od kopii na GitHubie o '+liveAgo(Math.max(0,age.gh-age.rl)));
+  }else L.push('Ocena: żadne źródło nie zwróciło czasu danych');
   return 'Test źródeł ('+new Date().toLocaleTimeString('pl-PL')+'):\n'+L.join('\n');
 }
 {
