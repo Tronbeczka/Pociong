@@ -1397,7 +1397,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 144</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 145</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -4759,12 +4759,10 @@ const SIG_ICON={
  camera:'<svg viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="17" rx="4" fill="#37474f"/><circle cx="16" cy="16.5" r="5.5" fill="#fff"/><circle cx="16" cy="16.5" r="2.8" fill="#37474f"/><rect x="21" y="5" width="6" height="4" rx="1" fill="#37474f"/></svg>',
  bump:'<svg viewBox="0 0 32 32"><polygon points="16,3 30,28 2,28" fill="#ffd600" stroke="#d93025" stroke-width="3" stroke-linejoin="round"/><path d="M8 24q4-8 8 0t8 0" fill="none" stroke="#222" stroke-width="2.4"/></svg>',
  crossing:'<svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="5" fill="#1a73e8"/><path d="M7 25l3-14h3l3 14M19 25l3-14h3" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="11.5" cy="7.2" r="2" fill="#fff"/></svg>'};
-async function loadSigns(lat,lon){
-  if(signsBusy||Date.now()<signsNext)return;signsBusy=true;
-  try{
-    const R=1500,dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),bb='('+(lat-dg).toFixed(5)+','+(lon-dn).toFixed(5)+','+(lat+dg).toFixed(5)+','+(lon+dn).toFixed(5)+')';
-    const j=await cachedOverpass('s|'+Math.round(lat*40)+'|'+Math.round(lon*26),'[out:json][timeout:25];node["highway"~"^(stop|give_way)$"]'+bb+'->.w;(node["highway"~"^(traffic_signals|speed_camera|crossing)$"]'+bb+';node["traffic_calming"~"^(bump|hump|table|cushion)$"]'+bb+';node["enforcement"~"^(maxspeed|average_speed|speed_camera)$"]'+bb+';)->.o;(.w;.o;)->.s;.s out body;way(bn.w)["highway"];out geom qt;');
-    const byNode=new Map(),list=[],lights=[],haz=[];
+const SG_CELL={y:.02,x:.03};   // komórki ok. 2,2 × 2 km: znaki i światła pobieramy wokół auta i wzdłuż trasy, a nie tylko w małym kółku
+var sgCells=new Map(),sgBad=new Map(),sgFails=0,sgVer=0;
+function sgParse(j){
+  const byNode=new Map(),list=[],lights=[],haz=[];
     for(const w of j.elements)if(w.type==='way'&&w.nodes&&w.geometry)w.nodes.forEach((id,i)=>{let a=byNode.get(id);if(!a)byNode.set(id,a=[]);a.push([w,i])});
     const brg=(a,b)=>bear(a.lat,a.lon,b.lat,b.lon);
     for(const n of j.elements){
@@ -4785,9 +4783,33 @@ async function loadSigns(lat,lon){
       }
       if(hs.length)list.push({id:n.id,lat:n.lat,lon:n.lon,kind:t.highway==='stop'?'stop':'give_way',hs});
     }
-    // przejście tuż przy sygnalizacji świetlnej – wystarczy ikona świateł
-    signs={lat,lon,list,lights,haz:haz.filter(h=>h.kind!=='crossing'||!lights.some(l=>Math.abs(l.lat-h.lat)<.00018&&Math.abs(l.lon-h.lon)<.00028))};
-  }catch(e){signsNext=Date.now()+30000}
+  return {list,lights,haz};
+}
+// jeden zbiór ze wszystkich pobranych komórek; przejście dla pieszych tuż przy sygnalizacji świetlnej – wystarczy ikona świateł
+function sgMerge(lat,lon){
+  const list=[],lights=[],haz=[],seen=new Set();
+  for(const c of sgCells.values()){
+    for(const x of c.list)if(!seen.has('s'+x.id)){seen.add('s'+x.id);list.push(x)}
+    for(const x of c.lights)if(!seen.has('l'+x.id)){seen.add('l'+x.id);lights.push(x)}
+    for(const x of c.haz)if(!seen.has('h'+x.id)){seen.add('h'+x.id);haz.push(x)}
+  }
+  const B=new Map();for(const l of lights){const k=Math.floor(l.lat/.0004)+'|'+Math.floor(l.lon/.0006);let a=B.get(k);if(!a)B.set(k,a=[]);a.push(l)}
+  const nearL=h=>{const by=Math.floor(h.lat/.0004),bx=Math.floor(h.lon/.0006);
+    for(let u=-1;u<=1;u++)for(let w=-1;w<=1;w++){const a=B.get((by+u)+'|'+(bx+w));if(a&&a.some(l=>Math.abs(l.lat-h.lat)<.00018&&Math.abs(l.lon-h.lon)<.00028))return true}return false};
+  const hz=haz.filter(h=>h.kind!=='crossing'||!nearL(h));
+  signs={lat,lon,list,lights,haz:hz,all:list.concat(lights,hz),v:++sgVer};
+}
+async function loadSigns(lat,lon){   // pobiera jedną, najbliższą brakującą komórkę (wywołuje się kolejno, co ok. sekundę)
+  if(signsBusy||Date.now()<signsNext)return;
+  const miss=sgWant({lat,lon});if(!miss.length)return;
+  signsBusy=true;const c=miss[0];
+  try{
+    const y0=c.iy*SG_CELL.y,x0=c.ix*SG_CELL.x,bb='('+y0.toFixed(5)+','+x0.toFixed(5)+','+(y0+SG_CELL.y).toFixed(5)+','+(x0+SG_CELL.x).toFixed(5)+')';
+    const j=await cachedOverpass('s2|'+c.k,'[out:json][timeout:25];node["highway"~"^(stop|give_way)$"]'+bb+'->.w;(node["highway"~"^(traffic_signals|speed_camera|crossing)$"]'+bb+';node["traffic_calming"~"^(bump|hump|table|cushion)$"]'+bb+';node["enforcement"~"^(maxspeed|average_speed|speed_camera)$"]'+bb+';)->.o;(.w;.o;)->.s;.s out body;way(bn.w)["highway"];out geom qt;');
+    sgCells.set(c.k,sgParse(j));sgFails=0;
+    if(sgCells.size>70)for(const [k] of [...sgCells]){const [iy,ix]=k.split('|').map(Number);if(dist(lat,lon,(iy+.5)*SG_CELL.y,(ix+.5)*SG_CELL.x)>25000)sgCells.delete(k)}
+    sgMerge(lat,lon);signsNext=Date.now()+800;
+  }catch(e){sgFails++;sgBad.set(c.k,Date.now()+Math.min(300000,20000*sgFails));signsNext=Date.now()+Math.min(60000,5000*sgFails)}
   finally{signsBusy=false}
 }
 function chime(kind){   // dwie miękkie, ciche nutki
@@ -4804,8 +4826,9 @@ function chime(kind){   // dwie miękkie, ciche nutki
 }
 // znaki i światła tylko dla wyznaczonej trasy (stop, ustąp pierwszeństwa – tylko te dotyczące naszego kierunku jazdy)
 var rSigns=[];
+var rSignIds=new Set(),sgViewL=[],sgViewAt={v:-1,lat:0,lon:0};
 function routeSignsUpdate(){
-  rSigns=[];
+  rSigns=[];rSignIds=new Set();
   if(route&&route.inc&&route.len>0)for(const it of route.inc){   // wypadki i roboty drogowe z danych o ruchu
     const d=route.cum[it.i]-route.along;
     if(d>-8&&d<900){
@@ -4815,21 +4838,30 @@ function routeSignsUpdate(){
     }
   }
   if(!route||!signs||!(route.len>0))return;
-  const memo=route.sm||(route.sm=new Map()),all=signs.list.concat(signs.lights||[],signs.haz||[]);
+  // projekcja znaku na trasę tylko w oknie ok. 4,5 km przed autem (całe zbiory są duże); „nie na trasie” pamiętamy dla danego okna
+  const memo=route.sm||(route.sm=new Map()),all=signs.all||signs.list.concat(signs.lights||[],signs.haz||[]),P=route.pts;
+  const i0=Math.max(0,(route.idx||0)-6);let i1=Math.min(P.length-2,i0+6);while(i1<P.length-2&&route.cum[i1]<route.along+4500)i1++;
+  const cov=route.cum[i1],cl=Math.cos(rad(P[i0][0]));
+  rSignIds=new Set();
   for(const sg of all){
     let r=memo.get(sg.id);
-    if(r===undefined){
-      r=projRoute(route,sg.lat,sg.lon,0,route.pts.length-2);
-      if(r.off>16)r=null;
-      else{const a=routeAt(route,Math.max(0,r.along-12)),b=routeAt(route,Math.min(route.len,r.along+12));r.brg=bear(a[0],a[1],b[0],b[1]);
-        if(sg.hs&&!sg.hs.some(x=>angDiff(x,r.brg)<50))r=null}   // znak skierowany do przeciwnego ruchu
-      memo.set(sg.id,r);
+    if(r===undefined||(r&&r.n&&cov>r.n+1200)){
+      const dy=(sg.lat-P[route.idx||0][0])*111195,dx=(sg.lon-P[route.idx||0][1])*111195*cl;
+      if(dy*dy+dx*dx>36e6){if(r===undefined)continue}   // dalej niż 6 km w linii prostej: jeszcze nie sprawdzamy
+      else{
+        r=projRoute(route,sg.lat,sg.lon,i0,i1);
+        if(r.off>16)r={n:cov};
+        else{const a=routeAt(route,Math.max(0,r.along-12)),b=routeAt(route,Math.min(route.len,r.along+12));r.brg=bear(a[0],a[1],b[0],b[1]);
+          if(sg.hs&&!sg.hs.some(x=>angDiff(x,r.brg)<50))r={n:cov,rev:1}}   // znak skierowany do przeciwnego ruchu
+        memo.set(sg.id,r);
+      }
     }
-    if(!r)continue;
+    if(!r||r.n!==undefined)continue;
     const d=r.along-route.along;
-    if(d>-8&&d<900)rSigns.push({kind:sg.kind,lat:sg.lat,lon:sg.lon,brg:r.brg,d});
+    if(d>-8&&d<4000){rSigns.push({kind:sg.kind,lat:sg.lat,lon:sg.lon,brg:r.brg,d});rSignIds.add(sg.id)}
   }
 }
+// znaki i światła na całej widocznej mapie (nie tylko na trasie): rysowane w miejscu, mniejsze; ze względu na czytelność od pewnego oddalenia znikają
 function drawSignIcon(kind,x,y,u){   // małe oznaczenia: u = promień w px
   mx.save();mx.translate(x,y);mx.lineJoin='round';
   if(kind==='stop'){
@@ -4893,7 +4925,7 @@ function drawRouteSigns(){
 }
 function signCheck(p){
   const el=$('sig');
-  if((!signs||dist(signs.lat,signs.lon,p.lat,p.lon)>800)&&!signsBusy)loadSigns(p.lat,p.lon);
+  if(!signsBusy&&Date.now()>=signsNext)loadSigns(p.lat,p.lon);
   let best=null;
   if(signs&&(p.speed||0)>1.5){
     const h=lastH,Dw=Math.min(170,Math.max(70,(p.speed||0)*6));
@@ -5882,6 +5914,34 @@ const mk=$('mk'), mx=mk.getContext('2d');
 function sizeMk(){const r=window.devicePixelRatio||1,w=window.innerWidth,h=window.innerHeight;mk.width=w*r;mk.height=h*r;mk.style.width=w+'px';mk.style.height=h+'px';mx.setTransform(r,0,0,r,0,0)}
 window.addEventListener('resize',()=>{sizeMk();if(typeof sizeV==='function')sizeV()});sizeMk();
 // ten sam rachunek co CSS: obrót, nachylenie, perspektywa 900 px (sprawdzone z macierzami 4x4)
+// które komórki są potrzebne: wokół auta (promień zależy od oddalenia mapy) i na najbliższych ok. 7 km trasy
+function sgWant(p){
+  const W=window.innerWidth||400,H=window.innerHeight||800,R=Math.max(2800,Math.min(5000,.8*Math.max(W,H)/Math.max(.05,scaleCur||.5))),cl=Math.cos(rad(p.lat)),want=new Map(),now=Date.now();
+  const add=(la,lo,pri)=>{const iy=Math.floor(la/SG_CELL.y),ix=Math.floor(lo/SG_CELL.x),k=iy+'|'+ix;
+    if(sgCells.has(k)||(sgBad.get(k)||0)>now)return;
+    const d=dist(p.lat,p.lon,(iy+.5)*SG_CELL.y,(ix+.5)*SG_CELL.x)-pri,o=want.get(k);if(!o||d<o.d)want.set(k,{k,iy,ix,d})};
+  const nn=Math.ceil(R/1400);for(let i=-nn;i<=nn;i++)for(let j=-nn;j<=nn;j++){const dy=i*R/nn,dx=j*R/nn;if(dx*dx+dy*dy>R*R*1.0001)continue;add(p.lat+dy/111195,p.lon+dx/(111195*cl),0)}   // krok ≤ 1,4 km, czyli mniej niż komórka: żadna nie wypada
+  if(route&&route.len>0){const a=route.along||0;for(let d=0;d<=7000&&a+d<=route.len+700;d+=700){const q=routeAt(route,a+d);add(q[0],q[1],1500)}}
+  return [...want.values()].sort((x,y)=>x.d-y.d);
+}
+function drawAreaSigns(){
+  const car=vf&&vf.car?vf.car:last;if(!signs||!car||!(scaleCur>=.09))return;
+  const all=signs.all||signs.list.concat(signs.lights||[],signs.haz||[]);
+  if(sgViewAt.v!==signs.v||dist(sgViewAt.lat,sgViewAt.lon,car.lat,car.lon)>120){
+    const W=window.innerWidth,H=window.innerHeight,Rv=Math.min(6000,.9*Math.max(W,H)/scaleCur+300),cl=Math.cos(rad(car.lat)),L=[];
+    for(const sg of all){
+      if(sg.kind==='camera'||sg.kind==='crossing')continue;   // fotoradary rysuje osobna warstwa; przejścia dla pieszych tylko na trasie
+      const dy=(sg.lat-car.lat)*111195,dx=(sg.lon-car.lon)*111195*cl,d2=dy*dy+dx*dx;if(d2<Rv*Rv)L.push([d2,sg]);
+    }
+    L.sort((a,b)=>a[0]-b[0]);sgViewL=L.slice(0,500).map(x=>x[1]);sgViewAt={v:signs.v,lat:car.lat,lon:car.lon};
+  }
+  const W=window.innerWidth,H=window.innerHeight;
+  for(const sg of sgViewL){
+    if(rSignIds.has(sg.id))continue;
+    const q=proj(sg.lat,sg.lon);if(!q||q.x<-20||q.x>W+20||q.y<-20||q.y>H+20)continue;
+    drawSignIcon(sg.kind,q.x,q.y,Math.max(5.5,Math.min(9,7.5*q.k)));
+  }
+}
 function proj(lat,lon,hm){
   if(vec&&!vf)return null;
   const W=window.innerWidth,H=window.innerHeight,S=$('rot').clientWidth,q=vec?{x:S/2+vf.s*(lon-vf.cam.lon)*vf.kx,y:S/2-vf.s*(lat-vf.cam.lat)*111195}:map.latLngToContainerPoint([lat,lon]);
@@ -6545,7 +6605,7 @@ function drawMarkers(){
   drawBuildings3D();
   drawHeat();
   drawAlts();drawRouteTop();drawTurnArrow();drawLaneArrow();drawJunction();
-  drawRouteSigns();
+  drawAreaSigns();drawRouteSigns();
   drawTrail();
   drawPoi();drawEvents();drawCams();drawFriends();drawWx();drawSeasonFx();
   if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
