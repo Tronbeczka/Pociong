@@ -146,6 +146,7 @@ body.night #repSheet{background:#202228;color:#e8eaed}
 #repGrid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border-radius:18px;background:#f1f3f4;color:#202124;font-size:.95rem;font-weight:700}
 body.night #repGrid button{background:#2d3139;color:#e8eaed}
 #repGrid button span{font-size:2rem;line-height:1}
+#repBug{width:100%;margin-top:10px;padding:13px;border-radius:14px;background:rgba(127,127,127,.14);color:inherit;font-weight:700;font-size:.95rem}
 #repCancel{width:100%;margin-top:12px;padding:14px;border-radius:14px;background:transparent;color:inherit;font-weight:700;font-size:1rem;opacity:.75}
 #evToast{position:fixed;left:14px;right:70px;top:calc(env(safe-area-inset-top,0px) + 120px);z-index:3200;background:#202124ee;color:#fff;border-radius:18px;padding:12px 14px;display:none;box-shadow:0 10px 30px #0008;animation:cardIn .25s ease}
 #evToast b{display:block;font-size:1rem;margin-bottom:2px}#evToast .evb{display:flex;gap:8px;margin-top:10px}
@@ -1276,6 +1277,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="voice" checked> Głos</label>
   <label style="font-size:.9rem"><input type="checkbox" id="autonight" checked> Dzień/noc wg słońca</label>
   <select id="vsel" class="sec" style="max-width:100%"></select>
+  <select id="vmode" class="sec"><option value="all">Zakres komunikatów: wszystkie</option><option value="hazard">Zakres: tylko pociągi i zagrożenia</option></select>
   <select id="vbose" class="sec"><option value="full">Komunikaty: szczegółowe</option><option value="short">Komunikaty: krótkie</option><option value="beep">Tylko dźwięki (bez mowy)</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="sigsnd" checked> Znaki STOP / ustąp</label>
   <label style="font-size:.9rem"><input type="checkbox" id="vcTrain" checked> Głos: pociągi</label>
@@ -1284,6 +1286,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="eco"> Tryb oszczędny baterii</label>
   <label style="font-size:.9rem"><input type="checkbox" id="dmCb" checked> Widok kierowcy podczas trasy (szersze drogi, mgła, strzałki na trasie)</label>
   <label style="font-size:.9rem"><input type="checkbox" id="laneCb" checked> Pasy ruchu na drogach i na trasie (dane z OpenStreetMap)</label>
+  <select id="sigDens" class="sec"><option value="all">Znaki na mapie: wszystkie</option><option value="main">Znaki na mapie: światła i STOP</option><option value="route">Znaki na mapie: tylko na trasie</option><option value="off">Znaki na mapie: ukryte</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
@@ -1292,7 +1295,8 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <select id="uiSize" class="sec"><option value="0">Rozmiar interfejsu: normalny</option><option value="1">Rozmiar interfejsu: większy</option><option value="2">Rozmiar interfejsu: największy</option></select>
   <button id="parkSave" class="sec">🅿️ Zapamiętaj miejsce parkowania</button>
   <button id="parkShow" class="sec">🅿️ Pokaż zaparkowane auto</button>
-  <button id="dlarea" class="sec">Pobierz mapę okolicy (offline)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
+  <button id="dlarea" class="sec">Pobierz mapę okolicy (offline)</button>
+  <button id="dlroute" class="sec">Pobierz trasę offline (mapa, znaki, pasy)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
   <label style="font-size:.9rem"><input type="checkbox" id="wxMap" checked> Pokazuj pogodę na mapie</label>
   <label style="font-size:.9rem"><input type="checkbox" id="camShow" checked> Pokazuj fotoradary na mapie i ostrzegaj</label>
   <button id="hist" class="sec">Historia przejazdów</button>
@@ -1300,6 +1304,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <button id="xwatch" class="sec">Obserwowane i ukryte przejazdy</button>
   <label style="font-size:.9rem"><input type="checkbox" id="alarmOn" checked> Alarm pełnoekranowy przy pociągu</label>
   <button id="report" class="sec">Zgłoś błąd mapy</button>
+  <button id="bbList" class="sec">Zgłoszone problemy w aplikacji</button>
   <button id="logdl" class="sec">Pobierz log jazdy</button>
   <button id="errBtn" class="sec">Błędy aplikacji</button>
   <button id="errClr" class="sec">Wyczyść zapisane błędy</button>
@@ -1307,6 +1312,8 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <select id="theme" class="sec"><option value="classic">Motyw: klasyczny</option><option value="hc">Motyw: wysoki kontrast</option><option value="big">Motyw: duży interfejs</option></select>
   <select id="sndsel" class="sec"><option value="gong">Sygnał: gong</option><option value="bell">Sygnał: dzwonek</option><option value="none">Sygnał: brak (tylko głos)</option></select>
   <label style="font-size:.9rem">Głośność ostrzeżeń o pociągach <input type="range" id="volTrain" min="3" max="10" step="1" style="vertical-align:middle;width:110px"></label>
+  <label style="font-size:.9rem">Głośność wskazówek nawigacji <input type="range" id="volNav" min="3" max="10" step="1" style="vertical-align:middle;width:110px"></label>
+  <label style="font-size:.9rem">Głośność znaków, korków i limitów <input type="range" id="volRoad" min="3" max="10" step="1" style="vertical-align:middle;width:110px"></label>
   <label style="font-size:.9rem"><input type="checkbox" id="dimOn" checked> Przyciemnij ekran w nocy</label>
   <button id="logan" class="sec">Analiza i odtworzenie logu jazdy</button><input id="logFile" type="file" accept="application/json" style="display:none">
   <button id="about" class="sec">O dokładności danych</button>
@@ -1347,7 +1354,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
 <button id="mic" aria-label="Polecenia głosowe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/></svg></button><div id="micTo"></div>
 <div id="zoomb"><button id="zin" aria-label="Przybliż"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button id="zout" aria-label="Oddal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg></button></div>
-<div id="repSheet"><h3>Zgłoś zdarzenie dla innych kierowców</h3><p id="repSub">Zgłoszenie dotyczy Twojej obecnej pozycji.</p><div id="repGrid"></div><button id="repCancel" type="button">Anuluj</button></div>
+<div id="repSheet"><h3>Zgłoś zdarzenie dla innych kierowców</h3><p id="repSub">Zgłoszenie dotyczy Twojej obecnej pozycji.</p><div id="repGrid"></div><button id="repBug" type="button">Problem w aplikacji (trasa, znaki, komunikaty)</button><button id="repCancel" type="button">Anuluj</button></div>
 <div id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT"><div class="dlgc"><i id="dlgI" aria-hidden="true"></i><b id="dlgT"></b><p id="dlgP"></p><input id="dlgIn" type="text" autocomplete="off" maxlength="60"><div class="dlgb"><button type="button" id="dlgNo"></button><button type="button" id="dlgOk"></button></div></div></div>
 <div id="qs" role="dialog" aria-label="Szybkie ustawienia"><button type="button" data-q="voice"></button><button type="button" data-q="night"></button><button type="button" data-q="dm"></button><button type="button" data-q="set"></button></div>
 <div id="evToast"><div class="evh"><i id="evIc" aria-hidden="true"></i><div class="evx"><b id="evT1"></b><span id="evT2"></span></div></div><div class="evb" id="evB"></div><em id="evTm" aria-hidden="true"></em></div>
@@ -1397,7 +1404,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 145</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 146</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1703,9 +1710,11 @@ function navSay(st){
 }
 var ICON_X='<path d="M9 5.5L31 25.5M31 5.5L9 25.5" stroke="rgba(0,0,0,.26)" stroke-width="7.8" stroke-linecap="round"/><path d="M9 5.5L31 25.5M31 5.5L9 25.5" stroke="#fff" stroke-width="5.2" stroke-linecap="round"/><circle cx="12.5" cy="34" r="4.5" fill="rgba(0,0,0,.28)"/><circle cx="27.5" cy="34" r="4.5" fill="rgba(0,0,0,.28)"/><circle class="lmA" cx="12.5" cy="34" r="3.3" fill="#fff"/><circle class="lmB" cx="27.5" cy="34" r="3.3" fill="#fff"/>';
 
-var sndKind=(()=>{try{return localStorage.getItem('snd')||'gong'}catch(e){return 'gong'}})(),volTrain=(()=>{try{return +localStorage.getItem('volTrain')||.9}catch(e){return .9}})();
+var sndKind=(()=>{try{return localStorage.getItem('snd')||'gong'}catch(e){return 'gong'}})(),volTrain=(()=>{try{return +localStorage.getItem('volTrain')||.9}catch(e){return .9}})(),volNav=(()=>{try{return +localStorage.getItem('volNav')||.9}catch{return .9}})(),volRoad=(()=>{try{return +localStorage.getItem('volRoad')||.9}catch{return .9}})(),vmode=(()=>{try{return localStorage.getItem('vmode')||'all'}catch{return 'all'}})();
+const catVol=c=>c==='Train'?volTrain:c==='Nav'?volNav:volRoad;   // głośność wg rodzaju komunikatu
+const HAZ_KEYS=/^(cam|inc|ev|u|z|over|wx|detour|nodetour)/;   // komunikaty o zagrożeniach (poza pociągami)
 function beep(cat){if(sndKind==='none')return;try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
-  const vol=(cat==='Train'?volTrain:.8)/.8,tones=sndKind==='bell'?[[1100,0],[880,.16]]:[[660,0]];   // miękki, krótki dźwięk (gong albo dzwonek)
+  const vol=(cat==='Train'?volTrain:catVol(cat)*.8/.9)/.8,tones=sndKind==='bell'?[[1100,0],[880,.16]]:[[660,0]];   // miękki, krótki dźwięk (gong albo dzwonek)
   for(const [f,dl] of tones){const t=audio.currentTime+dl,o=audio.createOscillator(),g=audio.createGain();
     o.type=sndKind==='bell'?'triangle':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09*vol,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+.5);
     o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.55)}}catch(e){}}
@@ -1734,6 +1743,7 @@ fillVoices();
 $('vsel').onchange=e=>{voiceName=e.target.value;try{localStorage.setItem('vname',voiceName)}catch(_){}speak('Dzień dobry. Tak będę do Pana mówił.')};
 $('vbose').value=vbose;$('vbose').onchange=e=>{vbose=e.target.value;try{localStorage.setItem('vbose',vbose)}catch(_){}};
 var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch(e){return {}}})();
+function navOff(){return !!vcOff.Nav||vmode==='hazard'}   // wskazówki skrętów wyciszone ręcznie albo w trybie „tylko zagrożenia”
 // jedno ogłoszenie na obiekt i etap: raz z wyprzedzeniem ('far') i raz tuż przy nim ('near'); ten sam obiekt pod innym id (duplikaty w OSM, kilka list) to ten sam obiekt
 const annLog=[];
 function annOnce(kind,lat,lon,stage){
@@ -1745,9 +1755,10 @@ function annOnce(kind,lat,lon,stage){
 function say(key,text,vib,short){if(window.preview)return;const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
   const cat=/^[tmxep]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
   if(vcOff[cat])return;
-  {const sl=clipSlot(key);if(sl&&clips[sl]&&$('voice').checked&&!voiceMuted){if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}if(playClip(sl,cat==='Train'?volTrain:.9))return}}
+  if(vmode==='hazard'&&cat!=='Train'&&!HAZ_KEYS.test(key))return;   // tryb „tylko pociągi i zagrożenia”
+  {const sl=clipSlot(key);if(sl&&clips[sl]&&$('voice').checked&&!voiceMuted){if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}if(playClip(sl,catVol(cat)))return}}
   beep(cat);if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
-  speak(vbose==='short'&&short?short:text,cat==='Train'?volTrain:.9)}
+  speak(vbose==='short'&&short?short:text,catVol(cat))}
 
 // zapytanie Overpass z pamięcią podręczną: bez internetu użyjemy ostatniego wyniku dla tego obszaru
 async function cachedOverpass(key,q,ms){
@@ -1801,7 +1812,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
-  logSample(p);tripTick(p);achTick(p);fuelTick(p);evCheck(p);camTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
+  bbSample(p);logSample(p);tripTick(p);achTick(p);fuelTick(p);evCheck(p);camTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -2306,6 +2317,19 @@ function lnRender(L){
   }
   el.style.display='flex';
 }
+// słowna zapowiedź pasa: lewy / środkowy / prawy (numer 0 = pas skrajnie lewy); gdy wszystkie pasy prowadzą dalej albo wystarczy domyślny prawy pas – bez zapowiedzi
+function laneWords(L){
+  const n=L.lanes.length,v=[];for(let k=0;k<n;k++)if(L.valid[k])v.push(k);
+  if(!v.length||v.length===n)return null;
+  const a=v[0],b=v[v.length-1],ord=['pierwszy','drugi','trzeci','czwarty','piąty','szósty'];
+  if(b<n-1){   // prawy skrajny pas nie prowadzi dalej: trzeba przesunąć się w lewo
+    if(a===0)return (b===0&&n>2)?{full:'Proszę przygotować się do zjazdu na skrajny lewy pas',short:'Proszę zająć lewy pas'}:{full:'Proszę przygotować się do zmiany pasa na lewy',short:'Proszę zająć lewy pas'};
+    const sec=(a===b)?(n===3?'środkowy pas':'pas '+(ord[a]||(a+1)+'.')+' od lewej'):'środkowe pasy';
+    return {full:'Proszę przygotować się do zmiany pasa na '+sec,short:'Proszę zająć '+(a===b&&n===3?'środkowy pas':'pas '+(a+1)+' od lewej')};
+  }
+  if(a>0&&((a===b&&n>=3)||n>=4))return {full:'Proszę przygotować się do zjazdu na '+(a===b?'skrajny prawy pas':'prawe pasy'),short:'Proszę zająć prawy pas'};   // droga z kilkoma pasami: manewr tylko z prawych pasów
+  return null;
+}
 function laneUpdate(st,i,d){
   const s=st[i];
   const turn=s&&['turn','end of road','fork','on ramp','off ramp','roundabout','merge'].includes(s.type)&&!(s.type==='turn'&&!s.mod);
@@ -2317,8 +2341,8 @@ function laneUpdate(st,i,d){
   lnRender(s.lanes||null);
   const L=s.lanes;
   if(L&&d<320&&!s.laneSaid){
-    const n=L.lanes.length;let best=-1;for(let k=n-1;k>=0;k--)if(L.valid[k]){best=k;break}
-    if(best>=0&&best<n-1){s.laneSaid=1;say('lane'+i,best===0&&n>2?'Proszę przygotować się do zjazdu na skrajny lewy pas':'Proszę przygotować się do zmiany pasa na lewy',[100,60,100],'Proszę zająć lewy pas')}
+    const w=laneWords(L);
+    if(w){s.laneSaid=1;say('lane'+i,w.full,[100,60,100],w.short)}
   }
 }
 function navUpdate(){
@@ -2336,11 +2360,11 @@ function navUpdate(){
     const t=navSay(st[i]),dm=Math.max(50,Math.round(d/50)*50),sl=navSlot(st[i]);
     if(st[i].type==='arrive'){   // do celu jeszcze kawałek drogi: „dojechaliśmy” mówimy dopiero na miejscu (arriveSay)
       say('n'+i,'Za '+dm+' metrów dojedziemy do '+(i<st.length-1?'przystanku':'celu'),[120],'Cel za '+dm+' metrów');return}
-    if(clips[sl]&&$('voice').checked&&!voiceMuted&&!vcOff.Nav&&!window.preview){   // własne nagranie manewru
+    if(clips[sl]&&$('voice').checked&&!voiceMuted&&!navOff()&&!window.preview){   // własne nagranie manewru
       spoken['n'+i]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}
       const a=[];if(st[i].type!=='depart')a.push({tts:'Za '+dm+' metrów'});
       a.push({clip:sl});if(st[i].name&&st[i].type!=='depart')a.push({tts:st[i].name});
-      speakSeq(a,.9);return;
+      speakSeq(a,volNav);return;
     }
     say('n'+i,'Za '+dm+' metrów '+t.charAt(0).toLowerCase()+t.slice(1),[120],t);
   }
@@ -2349,7 +2373,7 @@ function navUpdate(){
 function arriveSay(){
   if(window.preview||!route)return;
   const k='n'+((route.steps&&route.steps.length)||1)+'z';
-  if(clips.arrive&&$('voice').checked&&!voiceMuted&&!vcOff.Nav){spoken[k]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}if(playClip('arrive',.9))return}
+  if(clips.arrive&&$('voice').checked&&!voiceMuted&&!navOff()){spoken[k]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}if(playClip('arrive',volNav))return}
   say(k,'Dojechaliśmy do celu',[120],'Jesteśmy na miejscu');
 }
 // ---- Ograniczenie prędkości z danych OSM (maxspeed) ----
@@ -3052,6 +3076,7 @@ $('errBtn').onclick=async()=>{
 };
 $('errClr').onclick=()=>{errLog=[];try{localStorage.removeItem('errlog')}catch(e){}note('Wyczyszczono','Zapisane błędy usunięto z tego urządzenia.')};
 
+
 // ================= Wersja 36: strzałki na pasie, cień auta, ostrzeżenia, nawyki, raport, FPS, kopia ustawień =================
 // cień samochodu wg Słońca
 let carShKey='';
@@ -3387,6 +3412,9 @@ try{themeK=localStorage.getItem('theme')||'classic'}catch(e){themeK='classic'}  
 $('theme').value=themeK;document.body.classList.toggle('big',themeK==='big');document.body.classList.toggle('hc',themeK==='hc');
 $('theme').onchange=()=>{themeK=$('theme').value;try{localStorage.setItem('theme',themeK)}catch(e){}document.body.classList.toggle('big',themeK==='big');document.body.classList.toggle('hc',themeK==='hc');vd=null};
 $('sndsel').value=sndKind;$('sndsel').onchange=()=>{sndKind=$('sndsel').value;try{localStorage.setItem('snd',sndKind)}catch(e){}beep('Train')};
+$('volNav').value=Math.round(volNav*10);$('volNav').onchange=()=>{volNav=+$('volNav').value/10;try{localStorage.setItem('volNav',volNav)}catch{}beep('Nav')};
+$('volRoad').value=Math.round(volRoad*10);$('volRoad').onchange=()=>{volRoad=+$('volRoad').value/10;try{localStorage.setItem('volRoad',volRoad)}catch{}beep('Road')};
+$('vmode').value=vmode;$('vmode').onchange=()=>{vmode=$('vmode').value;try{localStorage.setItem('vmode',vmode)}catch{}};
 $('volTrain').value=Math.round(volTrain*10);$('volTrain').onchange=()=>{volTrain=+$('volTrain').value/10;try{localStorage.setItem('volTrain',volTrain)}catch(e){}beep('Train')};
 $('dimOn').checked=dimPref;$('dimOn').onchange=()=>{dimPref=$('dimOn').checked;try{localStorage.setItem('dim',dimPref?'1':'0')}catch(e){}document.body.classList.toggle('dimon',dimPref)};
 // analiza i odtworzenie zapisanego logu jazdy
@@ -3599,16 +3627,16 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb']);
+  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
-  mv('snd',['vsel','vbose','sndsel','volTrain','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
+  mv('snd',['vsel','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['hudBtn','eco']);
   mv('diag',['liveDiag','liveChk','liveRelayIn','logon','fpsOn','logdl','errBtn','errClr','logan','logFile','expSet','impSet','impFile']);
-  mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlast','wxMap','camShow']);
-  mv('about',['about','report']);
+  mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlroute','dlast','wxMap','camShow']);
+  mv('about',['about','report','bbList']);
   G('adv').appendChild($('cfg'));
   // tytuły nad przełącznikami bez własnego opisu
   const mvLab={volTrain:'Głośność ostrzeżeń o pociągach'};
@@ -3616,13 +3644,13 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   // ---- v122: ustawienia w zakładkach ----
   const S=$('settings'),SB=S.querySelector('.sBody'),SH=S.querySelector('.sHead h2');
   const CATS=[
-    ['look','palette','Wygląd i mapa','Motyw, noc, rozmiar interfejsu, radar opadów',/^(Wygląd|Radar)/,''],
-    ['snd','volume','Głos i dźwięk','Głos, rodzaj komunikatów, sygnały',/^Głos/,''],
+    ['look','palette','Wygląd i mapa','Motyw, noc, rozmiar interfejsu, znaki na mapie, radar',/^(Wygląd|Radar)/,''],
+    ['snd','volume','Głos i dźwięk','Głos, głośności, zakres komunikatów, sygnały',/^Głos/,''],
     ['car','car','Samochód','Model, lakier, tablica, ślad, wygląd pociągów',/^Samochód/,''],
     ['drive','bolt','Jazda i bateria','Tryb HUD, oszczędzanie baterii',/^Jazda/,''],
     ['comm','people','Społeczność','Zgłoszenia kierowców, znajomi na mapie',/^(Zgłoszenia|Znajomi)/,'db'],
-    ['data','chart','Historia i dane','Historia, przejazdy, parking, mapa offline',/^Historia/,''],
-    ['about','info','O aplikacji','Informacje, dokładność danych, zgłoszenie błędu mapy',/^O aplikacji/,''],
+    ['data','chart','Historia i dane','Historia, przejazdy, parking, mapa i trasa offline',/^Historia/,''],
+    ['about','info','O aplikacji','Dokładność danych, błąd mapy, zgłoszone problemy w aplikacji',/^O aplikacji/,''],
     ['adv','sliders','Klucze i serwery','Mapa, rozkład jazdy, ruch, serwery tras',/^Źródła/,'own'],
     ['clips','mic','Własne nagrania','Własne komunikaty i wskazówki nawigacji',/^Własne/,'own'],
     ['diag','gear','Diagnostyka i kopia','Log jazdy, FPS, eksport i import ustawień',/^Diagnostyka/,'own'],
@@ -4707,6 +4735,7 @@ try{
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(wypad|kolizj)/.test(t)){reportEvent('accident');reply('Zgłaszam wypadek')
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(korek|korki)/.test(t)){reportEvent('jam');reply('Zgłaszam korek')
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(robot)/.test(t)){reportEvent('works');reply('Zgłaszam roboty drogowe')
+    }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(błąd|blad|problem)/.test(t)){bbReport('głosowo').then(()=>{});reply('Zapisałem zgłoszenie problemu')
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(przeszkod)/.test(t)){reportEvent('obstacle');reply('Zgłaszam przeszkodę na drodze')
     }else if(/zgłoś|zgłosz|zglos/.test(t)&&/(ślisk|slisk|mgł|mgl|gołoled)/.test(t)){reportEvent('hazard');reply('Zgłaszam trudne warunki na drodze')
     }else if(/ile.*przejazd/.test(t)){
@@ -4799,14 +4828,17 @@ function sgMerge(lat,lon){
   const hz=haz.filter(h=>h.kind!=='crossing'||!nearL(h));
   signs={lat,lon,list,lights,haz:hz,all:list.concat(lights,hz),v:++sgVer};
 }
+async function sgFetchCell(c){   // jedna komórka znaków i świateł: z sieci albo (bez internetu) z pamięci urządzenia
+    const y0=c.iy*SG_CELL.y,x0=c.ix*SG_CELL.x,bb='('+y0.toFixed(5)+','+x0.toFixed(5)+','+(y0+SG_CELL.y).toFixed(5)+','+(x0+SG_CELL.x).toFixed(5)+')';
+    const j=await cachedOverpass('s2|'+c.k,'[out:json][timeout:25];node["highway"~"^(stop|give_way)$"]'+bb+'->.w;(node["highway"~"^(traffic_signals|speed_camera|crossing)$"]'+bb+';node["traffic_calming"~"^(bump|hump|table|cushion)$"]'+bb+';node["enforcement"~"^(maxspeed|average_speed|speed_camera)$"]'+bb+';)->.o;(.w;.o;)->.s;.s out body;way(bn.w)["highway"];out geom qt;');
+    sgCells.set(c.k,sgParse(j));
+}
 async function loadSigns(lat,lon){   // pobiera jedną, najbliższą brakującą komórkę (wywołuje się kolejno, co ok. sekundę)
   if(signsBusy||Date.now()<signsNext)return;
   const miss=sgWant({lat,lon});if(!miss.length)return;
   signsBusy=true;const c=miss[0];
   try{
-    const y0=c.iy*SG_CELL.y,x0=c.ix*SG_CELL.x,bb='('+y0.toFixed(5)+','+x0.toFixed(5)+','+(y0+SG_CELL.y).toFixed(5)+','+(x0+SG_CELL.x).toFixed(5)+')';
-    const j=await cachedOverpass('s2|'+c.k,'[out:json][timeout:25];node["highway"~"^(stop|give_way)$"]'+bb+'->.w;(node["highway"~"^(traffic_signals|speed_camera|crossing)$"]'+bb+';node["traffic_calming"~"^(bump|hump|table|cushion)$"]'+bb+';node["enforcement"~"^(maxspeed|average_speed|speed_camera)$"]'+bb+';)->.o;(.w;.o;)->.s;.s out body;way(bn.w)["highway"];out geom qt;');
-    sgCells.set(c.k,sgParse(j));sgFails=0;
+    await sgFetchCell(c);sgFails=0;
     if(sgCells.size>70)for(const [k] of [...sgCells]){const [iy,ix]=k.split('|').map(Number);if(dist(lat,lon,(iy+.5)*SG_CELL.y,(ix+.5)*SG_CELL.x)>25000)sgCells.delete(k)}
     sgMerge(lat,lon);signsNext=Date.now()+800;
   }catch(e){sgFails++;sgBad.set(c.k,Date.now()+Math.min(300000,20000*sgFails));signsNext=Date.now()+Math.min(60000,5000*sgFails)}
@@ -4826,7 +4858,9 @@ function chime(kind){   // dwie miękkie, ciche nutki
 }
 // znaki i światła tylko dla wyznaczonej trasy (stop, ustąp pierwszeństwa – tylko te dotyczące naszego kierunku jazdy)
 var rSigns=[];
-var rSignIds=new Set(),sgViewL=[],sgViewAt={v:-1,lat:0,lon:0};
+var rSignIds=new Set(),sgViewL=[],sgViewAt={v:-1,lat:0,lon:0},sigDens=(()=>{try{return localStorage.getItem('sigDens')||'all'}catch{return 'all'}})();
+// co pokazać na mapie: wszystko / tylko światła i STOP / tylko na trasie / nic (wypadki i roboty drogowe na trasie zawsze)
+function sigShow(k){return k==='accident'||k==='works'||(sigDens==='all'||sigDens==='route'?true:sigDens==='main'?(k==='lights'||k==='stop'):false)}
 function routeSignsUpdate(){
   rSigns=[];rSignIds=new Set();
   if(route&&route.inc&&route.len>0)for(const it of route.inc){   // wypadki i roboty drogowe z danych o ruchu
@@ -4912,6 +4946,7 @@ function drawRouteSigns(){
   if(!rSigns.length||!route)return;
   const W=window.innerWidth,H=window.innerHeight;
   for(const sg of rSigns.slice().sort((a,b)=>b.d-a.d)){   // dalsze najpierw
+    if(!sigShow(sg.kind))continue;
     const q=proj(sg.lat,sg.lon);if(!q)continue;
     const k=q.k,u=Math.max(8,Math.min(12.5,10.5*k));
     // przesunięcie w metrach na prawo od osi drogi (tuż za prawym brzegiem jezdni), więc przy oddaleniu i pochyleniu znak trzyma się trasy
@@ -4960,8 +4995,8 @@ function signCheck(p){
     if(annOnce(K==='camera'?(best.sg.avg?'avg':'cam'):K,best.sg.lat,best.sg.lon,stg)){
       sigSeen[best.sg.id]=now;chime(K==='stop'?'stop':'give_way');if(navigator.vibrate)try{navigator.vibrate(30)}catch(e){}
       if(K==='camera'&&stg==='near')speak(best.sg.avg?'Odcinkowy pomiar':'Fotoradar');
-      else if(K==='camera'){if(best.sg.avg)speak(vbose==='short'?'Odcinkowy pomiar':'Za '+dd+' metrów odcinkowy pomiar prędkości. Proszę zachować dozwoloną prędkość na całym odcinku.');else if(!playClip('camera',.9))speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.')}
-      else if(K==='bump'){if(!playClip('bump',.9))speak(vbose==='short'?'Próg zwalniający':'Za '+dd+' metrów próg zwalniający. Proszę zwolnić.')}
+      else if(K==='camera'){if(best.sg.avg)speak(vbose==='short'?'Odcinkowy pomiar':'Za '+dd+' metrów odcinkowy pomiar prędkości. Proszę zachować dozwoloną prędkość na całym odcinku.');else if(!playClip('camera',volRoad))speak(vbose==='short'?'Fotoradar':'Za '+dd+' metrów fotoradar. Proszę zachować dozwoloną prędkość.')}
+      else if(K==='bump'){if(!playClip('bump',volRoad))speak(vbose==='short'?'Próg zwalniający':'Za '+dd+' metrów próg zwalniający. Proszę zwolnić.')}
     }
   }
 }
@@ -5544,7 +5579,7 @@ async function fasterCheck(){
     const ok=gain>=Math.max(180,curT*.1)&&(jamM>=200&&(cur||gain>=300)||big);
     old.fastN=ok?(old.fastN||0)+1:0;
     if(ok&&(old.fastN>=2||jamM>=1000&&gain>=300)){
-      setRoute(x.geometry.coordinates,x.duration,x.steps,x.jam,x.delay,x.inc);route.lastRr=Date.now();
+      bbEv('trasa','zmiana na szybszą: zysk '+Math.round(gain)+' s, korek '+Math.round(jamM)+' m');setRoute(x.geometry.coordinates,x.duration,x.steps,x.jam,x.delay,x.inc);route.lastRr=Date.now();
       say('faster','Znalazłem szybszą trasę. Zaoszczędzimy około '+Math.round(gain/60)+' minut.',[80,60,80],'Jest szybsza trasa');
     }else if(cur&&(jamAheadM(cur,0)>=200)!==(jamM>=200)){   // ta sama trasa, ale zmieniła się informacja o korkach – odświeżamy ją; w innym razie zostaje bez zmian (bez przeliczania wskazówek od nowa)
       setRoute(cur.geometry.coordinates,cur.duration,cur.steps,cur.jam,cur.delay,cur.inc);route.lastRr=Date.now()}
@@ -5925,12 +5960,12 @@ function sgWant(p){
   return [...want.values()].sort((x,y)=>x.d-y.d);
 }
 function drawAreaSigns(){
-  const car=vf&&vf.car?vf.car:last;if(!signs||!car||!(scaleCur>=.09))return;
+  const car=vf&&vf.car?vf.car:last;if(!signs||!car||!(scaleCur>=.09)||sigDens==='route'||sigDens==='off')return;
   const all=signs.all||signs.list.concat(signs.lights||[],signs.haz||[]);
   if(sgViewAt.v!==signs.v||dist(sgViewAt.lat,sgViewAt.lon,car.lat,car.lon)>120){
     const W=window.innerWidth,H=window.innerHeight,Rv=Math.min(6000,.9*Math.max(W,H)/scaleCur+300),cl=Math.cos(rad(car.lat)),L=[];
     for(const sg of all){
-      if(sg.kind==='camera'||sg.kind==='crossing')continue;   // fotoradary rysuje osobna warstwa; przejścia dla pieszych tylko na trasie
+      if(sg.kind==='camera'||sg.kind==='crossing'||!sigShow(sg.kind))continue;   // fotoradary rysuje osobna warstwa; przejścia dla pieszych tylko na trasie
       const dy=(sg.lat-car.lat)*111195,dx=(sg.lon-car.lon)*111195*cl,d2=dy*dy+dx*dx;if(d2<Rv*Rv)L.push([d2,sg]);
     }
     L.sort((a,b)=>a[0]-b[0]);sgViewL=L.slice(0,500).map(x=>x[1]);sgViewAt={v:signs.v,lat:car.lat,lon:car.lon};
@@ -8176,6 +8211,123 @@ setTimeout(()=>{   // w poniedziałek: krótkie podsumowanie minionego tygodnia
   }catch(e){}
 },16000);
 ownApply();
+// ================= Wersja 146: czarna skrzynka i zgłoszenie problemu =================
+// Ostatnie ~40 min jazdy (pozycja co 1 s, trasa, komunikaty, decyzje o trasie) zostają tylko na telefonie. Jedno dotknięcie (⚠ → „Problem w aplikacji”
+// albo głos „zgłoś błąd”) zapisuje zgłoszenie z ostatnich 15 min; wysyłasz je sam (Ustawienia → O aplikacji → Zgłoszone problemy). Nie zawiera kluczy ani kodów.
+const BB={s:[],e:[],rt:null,at:0,sv:0,ban:''};
+function bbEv(k,x){try{BB.e.push({t:Date.now(),k,x:String(x==null?'':x).slice(0,240)});if(BB.e.length>600)BB.e.splice(0,100)}catch{}}
+function bbSample(p){
+  if(demo||sim||window.preview)return;const now=Date.now();if(now-BB.at<1000)return;BB.at=now;
+  const r=route;
+  BB.s.push([now,+p.lat.toFixed(6),+p.lon.toFixed(6),p.speed!=null?+(p.speed*3.6).toFixed(1):null,p.heading!=null?Math.round(p.heading):null,r&&r.len>0?Math.round(r.along):null,r&&r.len>0?Math.round(r.off):null]);
+  if(BB.s.length>2400)BB.s.splice(0,400);
+  if(now-BB.sv>60000){BB.sv=now;bbSave()}
+}
+function bbSave(){try{idbSet('bb',{t:Date.now(),s:BB.s.slice(-1500),e:BB.e.slice(-300),rt:BB.rt}).catch(()=>{})}catch{}}
+function bbRoute(){
+  const R=route;if(!R||!(R.len>0)){return}
+  const n=R.pts.length,st=Math.max(1,Math.floor(n/500)),pts=[];
+  for(let i=0;i<n;i+=st)pts.push([+R.pts[i][0].toFixed(5),+R.pts[i][1].toFixed(5)]);
+  const l=R.pts[n-1];if(!pts.length||pts[pts.length-1][0]!==+l[0].toFixed(5))pts.push([+l[0].toFixed(5),+l[1].toFixed(5)]);
+  BB.rt={t:Date.now(),len:Math.round(R.len),dur:Math.round(R.dur||0),pts};
+  bbEv('trasa','nowa trasa: '+(R.len/1000).toFixed(1)+' km, '+Math.round((R.dur||0)/60)+' min'+(jamAheadM(R)>=200?', korek '+Math.round(jamAheadM(R))+' m':''));
+}
+{
+  const sr=setRoute;window.setRoute=function(){const r=sr.apply(this,arguments);try{bbRoute()}catch{}return r};
+  const sp=speak;window.speak=function(text){if(text!==undefined)bbEv('głos',text);return sp.apply(this,arguments)};
+  const sb=setBanner;window.setBanner=function(level,big){if(level+'|'+big!==BB.ban){BB.ban=level+'|'+big;bbEv('baner',level+': '+big)}return sb.apply(this,arguments)};
+  const fr=fetchRoute;window.fetchRoute=function(){bbEv('trasa','zapytanie o trasę');return fr.apply(this,arguments)};
+  const cr=clearRoute;window.clearRoute=function(){bbEv('trasa','koniec trasy');return cr.apply(this,arguments)};
+  idbGet('bb').then(d=>{if(d&&Array.isArray(d.s)&&Date.now()-d.t<6*3600000){BB.s=d.s.concat(BB.s);BB.e=(d.e||[]).concat(BB.e);if(!BB.rt)BB.rt=d.rt||null}bbEv('start','aplikacja uruchomiona')}).catch(()=>{});
+  window.addEventListener('pagehide',bbSave);
+}
+function bbSnapshot(why){
+  const now=Date.now(),cut=now-15*60000,r=route&&route.len>0?route:null;
+  const cfg={ver:($('ver')||{}).textContent||'',vbose,vmode,sigDens,laneOn,voice:$('voice').checked,camShow:$('camShow').checked,scale:+(+scaleCur||0).toFixed(3),
+    tilt:(typeof tiltE==='function')?Math.round(tiltE()):null,online:navigator.onLine!==false,haveTTKey:!!ttKey,gtfs:!!gtfs,trains:trains.length,crossings:crossings.length,vec:!!vecData,
+    signs:signs?{list:signs.list.length,lights:signs.lights.length,haz:signs.haz.length,cells:sgCells.size}:null,lanes:LANEW.size,screen:window.innerWidth+'x'+window.innerHeight,ua:navigator.userAgent};
+  return {kind:'przejazd-zgloszenie',v:2,t:now,iso:new Date(now).toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,why:why||'',
+    pos:last?{lat:+last.lat.toFixed(6),lon:+last.lon.toFixed(6)}:null,heading:Math.round(lastH||0),cfg,
+    banner:$('bmain').textContent+' | '+$('bsub').textContent,nav:nav?{txt:nav.txt,dist:nav.dist}:null,
+    routeNow:r?{along:Math.round(r.along),off:Math.round(r.off),len:Math.round(r.len),jam:Math.round(jamAheadM(r)),steps:(r.steps||[]).slice(0,40).map(x=>({t:x.type,m:x.mod||'',off:Math.round(x.off||0),n:x.name||''}))}:null,
+    route:BB.rt,samples:BB.s.filter(x=>x[0]>=cut),events:BB.e.filter(x=>x.t>=now-40*60000).slice(-300),
+    errors:(typeof errLog!=='undefined'?errLog.slice(-8).map(e=>({t:e.t,s:e.s,m:String(e.m).slice(0,200)})):[])};
+}
+async function bbReport(why){
+  const rep=bbSnapshot(why);bbEv('zgłoszenie',why||'ręczne');
+  let list=[];try{list=(await idbGet('bbrep'))||[]}catch{}
+  list.unshift(rep);list=list.slice(0,8);
+  try{await idbSet('bbrep',list)}catch{}
+  if(navigator.vibrate)try{navigator.vibrate([60,40,60])}catch{}
+  return rep;
+}
+function bbFile(rep){return new window.File([JSON.stringify(rep)],'przejazd-zgloszenie-'+new Date(rep.t).toISOString().slice(0,16).replace(/[:T]/g,'')+'.json',{type:'application/json'})}
+async function bbShare(rep){
+  const f=bbFile(rep);
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Zgłoszenie problemu – Przejazd'});return}}catch(e){if(e&&e.name==='AbortError')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();
+}
+function bbReplay(rep){   // odtworzenie zapisanego przejazdu na mapie (sama pozycja; korki i pociągi są takie jak teraz)
+  const d=(rep.samples||[]).map(x=>({t:x[0],lat:x[1],lon:x[2],v:x[3],h:x[4]}));if(d.length<2){note('Za mało danych do odtworzenia');return}
+  $('histbox').style.display='none';replayLog(d);
+}
+async function bbOpenList(){
+  let list=[];try{list=(await idbGet('bbrep'))||[]}catch{}
+  const b=$('histbox');b.innerHTML='<h3>Zgłoszone problemy w aplikacji</h3>';
+  if(!list.length){const o=document.createElement('div');o.className='it';o.textContent='Brak zgłoszeń. Dotknij ⚠ na mapie i wybierz „Problem w aplikacji”, gdy trasa, znak lub komunikat się nie zgadza – aplikacja zapisze ostatnie minuty jazdy.';b.appendChild(o)}
+  list.forEach((rep,i)=>{
+    const o=document.createElement('div');o.className='it';o.innerHTML='<b></b><br><small></small><br>';
+    o.firstChild.textContent=new Date(rep.t).toLocaleString('pl-PL')+(rep.why?' · '+rep.why:'');
+    o.querySelector('small').textContent=(rep.samples||[]).length+' próbek · '+(rep.events||[]).length+' zdarzeń'+(rep.route?' · trasa '+(rep.route.len/1000).toFixed(1)+' km':'')+' · '+(rep.banner||'');
+    const mk=(t,f)=>{const x=document.createElement('button');x.textContent=t;x.style.marginRight='6px';x.onclick=f;o.appendChild(x)};
+    mk('Wyślij / zapisz plik',()=>bbShare(rep));
+    mk('Odtwórz na mapie',()=>bbReplay(rep));
+    mk('Usuń',async()=>{list.splice(i,1);try{await idbSet('bbrep',list)}catch{}bbOpenList()});
+    b.appendChild(o);
+  });
+  const c=document.createElement('button');c.textContent='Zamknij';c.onclick=()=>b.style.display='none';b.appendChild(c);b.style.display='block';
+}
+$('repBug').onclick=async()=>{
+  $('repSheet').style.display='none';
+  await bbReport('ręczne zgłoszenie');
+  note('Zapisano zgłoszenie problemu','Wyślesz je później: Ustawienia → O aplikacji → Zgłoszone problemy.');
+};
+$('bbList').onclick=()=>{$('menu').classList.remove('open');bbOpenList()};
+
+// ================= Wersja 146: trasa offline =================
+// Przed wyjazdem (na Wi-Fi): kafelki mapy wzdłuż całej trasy, znaki i światła oraz pasy ruchu – zapisane na telefonie (kafelki 30 dni, reszta 14 dni).
+$('dlroute').onclick=async()=>{
+  const b=$('dlroute'),st=t=>{$('dlast').textContent=t};
+  if(b.disabled)return;
+  if(!route||!(route.len>0)){st('Najpierw wyznacz trasę, potem pobierz ją offline.');return}
+  b.disabled=true;
+  try{
+    const R=route,tpl=await ofmUrl(),z=14,n=Math.pow(2,z),tiles=new Map(),cells=new Map();
+    for(let d=0;d<=R.len+300;d+=500){
+      const q=routeAt(R,Math.min(d,R.len)),fx=(q[1]+180)/360*n,fy=(1-Math.log(Math.tan(rad(q[0]))+1/Math.cos(rad(q[0])))/Math.PI)/2*n,tx=Math.floor(fx),ty=Math.floor(fy);
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)tiles.set((tx+dx)+'/'+(ty+dy),[tx+dx,ty+dy]);
+      const iy=Math.floor(q[0]/SG_CELL.y),ix=Math.floor(q[1]/SG_CELL.x);cells.set(iy+'|'+ix,{iy,ix,k:iy+'|'+ix});
+    }
+    let tl=[...tiles.values()],cl=[...cells.values()],cut='';
+    if(tl.length>700){tl=tl.slice(0,700);cut=' (trasa jest bardzo długa – pobieram jej początek)'}
+    if(cl.length>45){cl=cl.slice(0,45)}
+    let ok=0;
+    for(let k=0;k<tl.length;k+=6){await Promise.allSettled(tl.slice(k,k+6).map(([x,y])=>tileBuf(tpl,z,x,y).then(()=>ok++)));st('Mapa trasy: '+ok+' / '+tl.length+' kafelków'+cut)}
+    let so=0,lo=0;
+    for(let k=0;k<cl.length;k++){
+      const c=cl[k];st('Znaki i pasy: komórka '+(k+1)+' / '+cl.length+cut);
+      if(!sgCells.has(c.k)){try{while(signsBusy)await new Promise(r=>setTimeout(r,200));signsBusy=true;try{await sgFetchCell(c);so++}finally{signsBusy=false}}catch{}}
+      try{await lnLoadCell(c.ix,c.iy);lo++}catch{}
+    }
+    try{sgMerge(last?last.lat:0,last?last.lon:0)}catch{}
+    st(ok?('Gotowe: trasa zapisana offline – '+ok+' kafelków mapy, '+so+' komórek znaków, '+lo+' komórek pasów.'+cut):'Nie udało się pobrać mapy trasy.');
+    bbEv('offline','pobrano trasę: '+ok+' kafelków');
+  }catch(e){st('Błąd: '+e.message)}
+  b.disabled=false;
+};
+
+$('sigDens').value=sigDens;$('sigDens').onchange=()=>{sigDens=$('sigDens').value;sgViewAt={v:-1,lat:0,lon:0};try{localStorage.setItem('sigDens',sigDens)}catch{}};
+
 </script>
 </body>
 </html>
