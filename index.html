@@ -1397,7 +1397,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 143</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 144</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1864,7 +1864,7 @@ function evaluate(p){
       if(td>5000)continue;
       if(t.heading!=null&&t.speed!=null){
         const sp=t.speed/3.6;
-        if(sp<1.5){if(route&&td<150&&a.d>120&&a.d<1500)detour(p,a.c);continue} // stoi
+        if(sp<1.5){if(route&&td<60&&a.d>120&&a.d<1500)detour(p,a.c);continue} // stoi
         if(angDiff(bear(t.lat,t.lon,a.c.lat,a.c.lon),t.heading)>35)continue; // oddala się / inna linia
         const eta=td/sp;
         if(eta<240&&(!threat||eta<threat.eta))threat={eta,a,t,td};
@@ -2494,7 +2494,7 @@ function routeUpdate(p){
   if(r.off>120)r=projRoute(route,p.lat,p.lon,0,n);
   route.idx=r.i;route.along=r.along;route.off=r.off;navUpdate();routeSignsUpdate();
   if(route.poiAt!=null&&route.len-route.along>8000&&route.along-route.poiAt>25000)loadPoi(route);
-  const lim=r.along+6000,seg=[[p.lat,p.lon]];  // rysujemy tylko najbliższe ~6 km
+  const lim=r.along+6000,seg=[r.off<40?routeAt(route,r.along):[p.lat,p.lon]];   // linia zaczyna się na trasie (a nie w zaszumionej pozycji GPS), chyba że jesteśmy wyraźnie obok  // rysujemy tylko najbliższe ~6 km
   const dpts=route.dp||route.pts;for(let i=r.i+1;i<route.pts.length&&route.cum[i]<=lim;i++)seg.push(dpts[i]);
   if(seg.length<2)seg.push(route.pts[route.pts.length-1]);
   rCase.setLatLngs(seg);rLine.setLatLngs(seg);routeSeg=seg;routeSegI=r.i;
@@ -2523,8 +2523,11 @@ function routeUpdate(p){
   $('bsub').textContent=mins+' min · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
   if(rem<40){const cmp=finishTrip();try{arriveSay()}catch(e){}arrivedAt=Date.now();arrivedSub='Jesteśmy u celu'+cmp;setBanner('ok','Dojechaliśmy',arrivedSub);clearRoute();setTimeout(()=>{try{evToast('🅿️ Dojechałeś na miejsce','Zapisać, gdzie zaparkowałeś?',[['Zapisz',saveParking],['Nie',()=>{}]],20000)}catch(e){}},2500);return}
   // zjechanie z trasy (zły skręt): po ~3 s poza trasą liczymy nową, najszybszą od bieżącej pozycji
-  route.offN=(r.off>45&&(p.speed||0)>2)?route.offN+1:0;
-  if((route.offN>=3||(route.offN>=2&&r.off>150))&&endPt&&!rerouting&&Date.now()-route.lastRr>8000){
+  // równoległa droga tuż obok trasy (do ~100 m) i jazda zgodnie z jej kierunkiem to nie zjechanie z trasy (błąd GPS, inny pas, dojazd do skrzyżowania)
+  let along_ok=false;
+  if(r.off>45&&r.off<100&&(p.speed||0)>2&&p.heading!=null){const a=routeAt(route,Math.max(0,r.along-15)),b=routeAt(route,Math.min(route.len,r.along+15));along_ok=angDiff(bear(a[0],a[1],b[0],b[1]),lastH)<35}
+  route.offN=(r.off>55&&!along_ok&&(p.speed||0)>2)?route.offN+1:0;
+  if((route.offN>=4||(route.offN>=2&&r.off>150))&&endPt&&!rerouting&&Date.now()-route.lastRr>8000){
     route.lastRr=Date.now();rerouting=true;const old=route;
     say('reroute','Szukam nowej trasy',[80]);navUpdate();
     fetchRoute(p,endPt,(p.speed||0)>2?lastH:null).then(x=>{
@@ -2575,6 +2578,12 @@ async function fetchTT(a,b,hdg){
   if(!all.length)throw new Error('TomTom: brak trasy');
   all.sort((x,y)=>x.duration-y.duration);
   const best=all[0];best.alts=all;return best;
+}
+function jamAheadM(R,from){   // długość odcinków z korkiem (≥ poziom 2) na trasie przed nami (R.jam; dla świeżej trasy from=0)
+  const J=R.jam||(R.jam0)||(R.geometry&&R.jam)||null;if(!J)return 0;
+  const P=R.pts||(R.geometry&&R.geometry.coordinates.map(c=>[c[1],c[0]]));if(!P)return 0;
+  let m=0;for(let i=from==null?Math.max(0,R.idx||0):0;i<P.length-1&&i<J.length;i++)if(J[i]>=2)m+=dist(P[i][0],P[i][1],P[i+1][0],P[i+1][1]);
+  return m;
 }
 // czy trasa kandydująca pokrywa się z bieżącą (próbkowanie pozostałej części)?
 function sameAsRoute(R,rt){
@@ -5490,19 +5499,26 @@ setInterval(()=>{
   if(!R.fsAt||Date.now()-R.fsAt>180000||(R.fsTo<R.len&&R.fsTo-R.along<15000))sampleFlow(R);
 },3000);
 // co ~2,5 min: sprawdź, czy nie ma szybszej trasy (np. przez nowy korek) i odśwież korki na trasie
-setInterval(async()=>{
+async function fasterCheck(){
   if(!ttKey||!route||!endPt||demo||sim||rerouting||!last||Date.now()-trChk<150000||Date.now()-route.lastRr<60000)return;
   trChk=Date.now();const old=route,rem=Math.max(0,old.len-old.along);if(rem<800)return;
   try{
     const x=await fetchTT({lat:last.lat,lon:last.lon},endPt,(gpsOk&&gpsOk.speed>2)?lastH:null);
     if(route!==old||rerouting)return;
     const cur=x.alts.find(a=>sameAsRoute(old,a)),curT=cur?cur.duration:old.dur*(rem/old.len);
-    if(x.duration<curT-90&&x.duration<curT*.92){
+    // zmiana trasy w czasie jazdy tylko z uzasadnieniem: na obecnej trasie jest korek/zamknięcie, a nowa jest wyraźnie szybsza (albo zysk jest bardzo duży),
+    // i tak wynika z dwóch kolejnych sprawdzeń – sama niewielka różnica w szacunkach czasu nie zmienia trasy
+    const gain=curT-x.duration,jamM=jamAheadM(old),big=gain>=Math.max(900,curT*.2);
+    const ok=gain>=Math.max(180,curT*.1)&&(jamM>=200&&(cur||gain>=300)||big);
+    old.fastN=ok?(old.fastN||0)+1:0;
+    if(ok&&(old.fastN>=2||jamM>=1000&&gain>=300)){
       setRoute(x.geometry.coordinates,x.duration,x.steps,x.jam,x.delay,x.inc);route.lastRr=Date.now();
-      say('faster','Znalazłem szybszą trasę. Zaoszczędzimy około '+Math.round((curT-x.duration)/60)+' minut.',[80,60,80],'Jest szybsza trasa');
-    }else if(cur){setRoute(cur.geometry.coordinates,cur.duration,cur.steps,cur.jam,cur.delay,cur.inc);route.lastRr=Date.now()}
+      say('faster','Znalazłem szybszą trasę. Zaoszczędzimy około '+Math.round(gain/60)+' minut.',[80,60,80],'Jest szybsza trasa');
+    }else if(cur&&(jamAheadM(cur,0)>=200)!==(jamM>=200)){   // ta sama trasa, ale zmieniła się informacja o korkach – odświeżamy ją; w innym razie zostaje bez zmian (bez przeliczania wskazówek od nowa)
+      setRoute(cur.geometry.coordinates,cur.duration,cur.steps,cur.jam,cur.delay,cur.inc);route.lastRr=Date.now()}
   }catch(e){}
-},20000);
+}
+setInterval(fasterCheck,20000);
 let vctx=null,vq=1,lastVt=0,vd=null,vqCap=1.8,slowN=0;   // ostrość mapy: do 1,8× rozdzielczości ekranu, automatycznie niżej na słabszym telefonie
 function sizeV(){const c=$('vmap'),S=$('rot').clientWidth;if(!S)return;vq=Math.min(vqCap,window.devicePixelRatio||1);c.width=c.height=Math.round(S*vq);vctx=c.getContext('2d');lastVt=0;vd=null}
 // Mapa jest rysowana RZADKO (gdy kamera odjedzie o ~12% płótna, zmieni się skala/dane/tryb nocny);
