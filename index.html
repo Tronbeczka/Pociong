@@ -217,6 +217,7 @@ body.night #sky{background:linear-gradient(var(--sky,#10141a) 12%,transparent)}
 body.flat #sky{display:none}
 #map{position:absolute;inset:0;background:transparent}
 body.night .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.8)}
+#carWrap{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:500}   /* ikona auta przesunięta ręcznie poza ekran nie może powiększać obszaru strony (w przeglądarkach mobilnych zmieniało to rzutowanie mapy w trakcie powrotu) */
 #carIcon{position:absolute;left:50%;top:var(--cy,68%);width:96px;height:77px;transform:translate(-50%,-80%);z-index:500;pointer-events:none;filter:drop-shadow(0 5px 5px #0009)}
 #carIcon svg{width:100%;height:100%;display:block}
 #carIcon svg{transform-origin:50% 85%}
@@ -1210,7 +1211,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
 <div id="splash"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#fff"/><rect x="5" y="5" width="90" height="90" rx="19" fill="#fff" stroke="#d32f2f" stroke-width="7"/><g stroke="#d32f2f" stroke-width="12" stroke-linecap="butt"><path d="M24 24L76 76"/><path d="M76 24L24 76"/></g><circle class="lt" cx="31" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2"/><circle class="lt" cx="69" cy="50" r="5" fill="#fff" stroke="#d32f2f" stroke-width="2" style="animation-delay:.5s"/></svg><div class="nm">Przejazd</div><div class="sb">alert kolejowy</div><div class="bar"><i></i></div><div class="scn"><svg viewBox="0 0 260 70" aria-hidden="true"><line x1="0" y1="52" x2="260" y2="52" stroke="#6b7b93" stroke-width="3"/><line x1="0" y1="60" x2="260" y2="60" stroke="#6b7b93" stroke-width="3"/><g stroke="#4a5873" stroke-width="3"><line x1="6" y1="49" x2="6" y2="63"/><line x1="22" y1="49" x2="22" y2="63"/><line x1="38" y1="49" x2="38" y2="63"/><line x1="54" y1="49" x2="54" y2="63"/><line x1="70" y1="49" x2="70" y2="63"/><line x1="86" y1="49" x2="86" y2="63"/><line x1="102" y1="49" x2="102" y2="63"/><line x1="118" y1="49" x2="118" y2="63"/><line x1="134" y1="49" x2="134" y2="63"/><line x1="150" y1="49" x2="150" y2="63"/><line x1="166" y1="49" x2="166" y2="63"/><line x1="182" y1="49" x2="182" y2="63"/><line x1="198" y1="49" x2="198" y2="63"/><line x1="214" y1="49" x2="214" y2="63"/><line x1="230" y1="49" x2="230" y2="63"/><line x1="246" y1="49" x2="246" y2="63"/></g><g class="trn"><rect x="0" y="30" width="62" height="24" rx="6" fill="#e8eaed"/><rect x="0" y="43" width="62" height="5" fill="#d32f2f"/><rect x="40" y="34" width="16" height="10" rx="2" fill="#4da3ff"/><rect x="8" y="34" width="12" height="10" rx="2" fill="#4da3ff"/><rect x="24" y="34" width="12" height="10" rx="2" fill="#4da3ff"/><circle cx="14" cy="56" r="4" fill="#2b3446"/><circle cx="48" cy="56" r="4" fill="#2b3446"/><circle cx="60" cy="40" r="3" fill="#ffd54f"/></g><g class="brr"><line x1="196" y1="48" x2="196" y2="20" stroke="#fff" stroke-width="4"/></g><g class="arm"><rect x="196" y="16" width="52" height="5" rx="2" fill="#fff"/><rect x="210" y="16" width="8" height="5" fill="#d32f2f"/><rect x="226" y="16" width="8" height="5" fill="#d32f2f"/><rect x="242" y="16" width="6" height="5" fill="#d32f2f"/><circle class="lt" cx="198" cy="12" r="3.5" fill="#ff3b30"/></g></svg></div></div>
 <div id="view"><div id="rot"><div id="map"></div><canvas id="vmap"></canvas></div><div id="sky"></div></div>
 <canvas id="mk"></canvas>
-<div id="carIcon"></div>
+<div id="carWrap"><div id="carIcon"></div></div>
 <div id="top">
  <div id="banner">
   <div id="bl"><svg id="bicon" viewBox="0 0 40 40"><path d="M9 5.5L31 25.5M31 5.5L9 25.5" stroke="rgba(0,0,0,.26)" stroke-width="7.8" stroke-linecap="round"/><path d="M9 5.5L31 25.5M31 5.5L9 25.5" stroke="#fff" stroke-width="5.2" stroke-linecap="round"/><circle cx="12.5" cy="34" r="4.5" fill="rgba(0,0,0,.28)"/><circle cx="27.5" cy="34" r="4.5" fill="rgba(0,0,0,.28)"/><circle class="lmA" cx="12.5" cy="34" r="3.3" fill="#fff"/><circle class="lmB" cx="27.5" cy="34" r="3.3" fill="#fff"/></svg><div id="dist"></div></div>
@@ -1411,7 +1412,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 152</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 153</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2119,6 +2120,7 @@ const clampS=v=>Math.max(.004,Math.min(5,v));   // oddalenie do ok. 100 km na sz
 function updRecenter(){$('recenter').style.display=(freeCam||Math.abs(rotOff)>3)?'flex':'none'}
 function enterFree(){
   if(freeCam)return;freeCam=true;tgtRot=curRot;   // przesuwanie nie zmienia widoku: nachylenie i obrót zostają
+  camHold();
   updRecenter();
 }
 var panGlide=null;   // płynny powrót kamery do auta (patrz glideStart przy pętli klatek)
@@ -2133,7 +2135,7 @@ function recenter(){
     if(!vec&&last)map.setView([last.lat,last.lon],map.getZoom(),{animate:false});
     vd=null;
     setZoom(1);   // powrót do auta przywraca też odpowiednie przybliżenie (zależne od prędkości), a nie zostawia zbliżenia z przeglądania mapy
-  }
+  }else if(window.glideStart&&window.glideStart(true))return;   // mapa tylko obrócona: kierunek jazdy wraca łagodnie, tą samą krzywą
   updRecenter();
 }
 function setZoom(z){
@@ -2151,7 +2153,7 @@ $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltDyn=0;tiltLbl(
   const vw=$('view'),ptrs=new Map();let pan=null,g0=null,lpT=null;
   const pair=()=>{const a=[...ptrs.values()];return {d:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y)||1,ang:Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)*180/Math.PI}};
   vw.addEventListener('pointerdown',e=>{
-    panGlide=null;   // dotknięcie mapy przerywa płynny powrót do auta
+    glideStop();   // dotknięcie mapy zatrzymuje powrót do auta tam, gdzie kamera właśnie jest
     ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});try{vw.setPointerCapture(e.pointerId)}catch(_){}
     if(ptrs.size===1){pan={x0:e.clientX,y0:e.clientY,moved:false};clearTimeout(lpT);const hx=e.clientX,hy=e.clientY;
       lpT=setTimeout(()=>{if(pan&&!pan.moved&&ptrs.size===1&&window.mapHold){pan.held=true;window.mapHold(hx,hy)}},650)}   // przytrzymanie = wybór miejsca
@@ -2170,7 +2172,7 @@ $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltDyn=0;tiltLbl(
     if(vec){panE-=cx/scaleCur;panN+=cy/scaleCur}else map.panBy([-cx,-cy],{animate:false});
   });
   ['pointerup','pointercancel'].forEach(t=>vw.addEventListener(t,e=>{clearTimeout(lpT);const tap=t==='pointerup'&&pan&&!pan.moved&&!pan.held&&ptrs.size===1;ptrs.delete(e.pointerId);g0=null;pan=null;if(ptrs.size===2)g0=pair();if(tap&&window.mapTap)window.mapTap(e.clientX,e.clientY)}));
-  vw.addEventListener('wheel',e=>{e.preventDefault();panGlide=null;setZoom(zoomMul*Math.exp(-e.deltaY*.0015))},{passive:false});
+  vw.addEventListener('wheel',e=>{e.preventDefault();glideStop();setZoom(zoomMul*Math.exp(-e.deltaY*.0015))},{passive:false});
   vw.addEventListener('contextmenu',e=>e.preventDefault());   // przytrzymanie wybiera miejsce – bez menu systemowego
 }
 function follow(p){
@@ -5177,9 +5179,13 @@ function camFix(p,h){
   if(provCam){provCam=null;document.body.classList.remove('nofix')}   // pierwszy prawdziwy odczyt: kamera płynnie dojeżdża z ostatniej znanej pozycji
 }
 var camOff={lat:0,lon:0};   // przesunięcie auta na pas ruchu i na oś trasy – kamera jedzie dokładnie za narysowanym autem
+function camHold(){   // wejście w tryb ręczny: przesunięcie na pas ruchu (camOff) przechodzi do przesunięcia ręcznego, więc kamera zostaje dokładnie tam, gdzie była i mapa nie drgnie przy pierwszym dotknięciu
+  if(vec&&vf&&vf.car&&(camOff.lat||camOff.lon)){panN+=camOff.lat*111195;panE+=camOff.lon*111195*Math.cos(rad(vf.car.lat))}
+}
 function vecCam(now){   // kamera = narysowane auto (na trasie: na swoim pasie) + ręczne przesunięcie
   let c=vecCam0(now);if(!c)return c;
-  if((camOff.lat||camOff.lon)&&!freeCam)c={lat:c.lat+camOff.lat,lon:c.lon+camOff.lon};
+  const f=freeCam?(panGlide?panGlide.k:0):1;   // tryb ręczny: bez przesunięcia na pas; w trakcie powrotu do auta kamera stopniowo (k = postęp 0…1) dochodzi do pasa auta, więc po dojechaniu nic się nie przesuwa
+  if(f&&(camOff.lat||camOff.lon))c={lat:c.lat+camOff.lat*f,lon:c.lon+camOff.lon*f};
   if(!(panE||panN))return c;
   return {lat:c.lat+panN/111195,lon:c.lon+panE/(111195*Math.cos(rad(c.lat)))};
 }
@@ -6950,17 +6956,25 @@ function updCarSnap(){
   const setOff=(la,lo)=>{camOff.lat+=(la-camOff.lat)*.35;camOff.lon+=(lo-camOff.lon)*.35;if(Math.abs(camOff.lat)<1e-9&&Math.abs(camOff.lon)<1e-9&&!la&&!lo){camOff.lat=0;camOff.lon=0}};
   const zf=Math.max(.36,Math.min(1,scaleCur/.85)),Rr=rw('tr',scaleCur),Wc=Math.round(Math.max(30,Math.min(96*zf,vec&&route?Rr*.8:96*zf)));   // rozmiar auta dopasowany do szerokości drogi (tylko na trasie)
   const base='translate(-50%,-80%)';
-  if(freeCam||window.preview||!(vec&&route&&vf&&vf.car&&!demo&&route.pts.length>1&&route.len>0))setOff(0,0);
-  if(freeCam&&!window.preview&&vec&&vf&&vf.car){   // mapa przesunięta ręcznie: to samo auto (ten sam model) jedzie po swoim miejscu na mapie
-    const q=proj(vf.car.lat,vf.car.lon),pr=el.offsetParent||document.body,rc=pr.getBoundingClientRect();
-    if(q){const Wf=Math.round(Math.max(30,Math.min(96*zf,route?Rr*.8:70*zf)));el.style.width=Wf+'px';el.style.height=Math.round(Wf*.8)+'px';
-      el.style.display=(q.x>-60&&q.x<window.innerWidth+60&&q.y>-60&&q.y<window.innerHeight+60)?'':'none';
-      el.style.transform='translate(calc(-50% + '+(q.x-(rc.left+rc.width*.5)).toFixed(1)+'px),calc(-80% + '+(q.y-(rc.top+rc.height*.68)).toFixed(1)+'px)) rotate('+(lastH+curRot).toFixed(1)+'deg)';return}
-  }
-  if(!(vec&&route&&vf&&vf.car&&!freeCam&&!demo&&route.pts.length>1&&route.len>0)){if(zf<1&&vec){el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px'}else{el.style.width='';el.style.height=''}el.style.transform='';return}
-  el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px';
+  const onRt=!!(vec&&route&&vf&&vf.car&&!demo&&route.pts.length>1&&route.len>0);
+  const free=!!(freeCam&&!window.preview&&vec&&vf&&vf.car);
+  const plain=()=>{if(zf<1&&vec){el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px'}else{el.style.width='';el.style.height=''}el.style.transform=''};
+  // mapa przesunięta ręcznie: to samo auto (ten sam model) jedzie po swoim miejscu na mapie. Kotwica ikony to ta sama wysokość (--cy), co w widoku kierowcy – inaczej po powrocie auto skakałoby.
+  // W czasie powrotu kamery rozmiar ikony dochodzi do zwykłego (bez trasy ikona jest w trybie ręcznym mniejsza).
+  const putFree=(lat,lon,yaw)=>{
+    const q=proj(lat,lon);if(!q)return false;
+    const pr=el.offsetParent||document.body,rc=pr.getBoundingClientRect(),Wf=Math.round(Math.max(30,Math.min(96*zf,route?Rr*.8:70*zf))),Wi=Math.round(Wf+(Wc-Wf)*(panGlide?panGlide.k:0));
+    el.style.width=Wi+'px';el.style.height=Math.round(Wi*.8)+'px';
+    el.style.display=(q.x>-60&&q.x<window.innerWidth+60&&q.y>-60&&q.y<window.innerHeight+60)?'':'none';
+    el.style.transform='translate(calc(-50% + '+(q.x-(rc.left+rc.width*.5)).toFixed(1)+'px),calc(-80% + '+(q.y-(rc.top+rc.height*cyCur)).toFixed(1)+'px)) rotate('+(lastH+curRot+yaw).toFixed(1)+'deg)';
+    return true;
+  };
+  if(window.preview||!onRt)setOff(0,0);
+  if(!onRt){if(!(free&&putFree(vf.car.lat,vf.car.lon,0)))plain();return}
+  if(freeCam&&!free){plain();return}   // podgląd trasy
+  if(!free){el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px'}
   const n=route.pts.length-2,m=projRoute(route,vf.car.lat,vf.car.lon,Math.max(0,route.idx-2),Math.min(n,route.idx+12));
-  if(m.off>30){setOff(0,0);el.style.transform=base;return}
+  if(m.off>30){setOff(0,0);if(free){if(!putFree(vf.car.lat,vf.car.lon,0))plain()}else el.style.transform=base;return}
   const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=dAt(route,m.along),a=dAt(route,Math.max(0,m.along-6)),b=dAt(route,Math.min(route.len,m.along+6));
   const brg=dist(a[0],a[1],b[0],b[1])>2?bear(a[0],a[1],b[0],b[1]):lastH;
   carAl=m.along;try{lnPlan(route)}catch(e){route.lp=null}
@@ -6968,8 +6982,14 @@ function updCarSnap(){
   const prev=laneCur;laneCur+=(tg-laneCur)*.07;laneYaw+=(Math.max(-9,Math.min(9,(laneCur-prev)*14))-laneYaw)*.2;   // płynna zmiana pasa + lekkie wychylenie auta
   const lanePx=laneCur,laneM=lanePx/scaleCur;
   const r=rad(brg+90),lat=c[0]+Math.cos(r)*laneM/111195,lon=c[1]+Math.sin(r)*laneM/(111195*Math.cos(rad(c[0])));
-  const q=proj(lat,lon),q0=proj(vf.cam.lat,vf.cam.lon);   // q0 = środek kamery (z przesunięciem camOff)
   carSnap={lat:c[0],lon:c[1]};
+  if(free){   // pas ruchu liczymy też w trybie ręcznym: auto stoi na swoim pasie, a kamera (camOff) już „wie”, dokąd ma dojechać po naciśnięciu przycisku powrotu
+    const ox=vf.car.lat+camOff.lat,oy=vf.car.lon+camOff.lon;   // tu byłaby kamera w widoku kierowcy
+    setOff(camOff.lat+(lat-ox)*w,camOff.lon+(lon-oy)*w);
+    if(!putFree(ox+(lat-ox)*w,oy+(lon-oy)*w,laneYaw))plain();
+    return;
+  }
+  const q=proj(lat,lon),q0=proj(vf.cam.lat,vf.cam.lon);   // q0 = środek kamery (z przesunięciem camOff)
   if(!q||!q0){el.style.transform=base;return}
   setOff(camOff.lat+(lat-vf.cam.lat)*w,camOff.lon+(lon-vf.cam.lon)*w);   // kamera dąży do narysowanego auta – auto zostaje na środku ekranu
   el.style.transform='translate(calc(-50% + '+((q.x-q0.x)*w).toFixed(1)+'px),calc(-80% + '+((q.y-q0.y)*w).toFixed(1)+'px)) rotate('+laneYaw.toFixed(1)+'deg)';
@@ -7506,35 +7526,60 @@ function dmStep(fk){
   const cyT=dmOn&&tiltDeg>8?.715:.68;
   if(Math.abs(cyT-cyCur)>.0004){cyCur+=(cyT-cyCur)*fk*.7;if(Math.abs(cyT-cyCur)<.0004)cyCur=cyT;document.documentElement.style.setProperty('--cy',(cyCur*100).toFixed(2)+'%')}
 }
-// Powrót do auta po ręcznym przesunięciu mapy: kamera dojeżdża do samochodu płynnie (przesunięcie, obrót i przybliżenie zmieniają się razem),
+// Powrót do auta po ręcznym przesunięciu mapy: kamera dojeżdża do samochodu płynnie (przesunięcie, obrót, przybliżenie i nachylenie zmieniają się razem),
 // a dopiero po dojechaniu wraca zwykły widok kierowcy. Auto przez cały ten czas jedzie po swoim miejscu na mapie (tryb ręczny trwa do końca).
+// Wersja 153: wszystkie składniki ruchu idą tą samą krzywą i kończą się w tej samej chwili (dawniej obrót i zbliżenie ruszały od razu pełną prędkością i „dogasały” po dojechaniu),
+// krzywa startuje od zera i wyhamowuje łagodnie, a przy bardzo dalekim powrocie kamera na chwilę się oddala, żeby mapa nie przelatywała przez ekran z zawrotną prędkością
+const glideK=u=>u<=0?0:u>=1?1:u*u*(6-8*u+3*u*u);   // 6u²−8u³+3u⁴: prędkość 0 na początku i na końcu, szczyt (1,8 × średnia) po 1/3 czasu, długie wyhamowanie
 function glideEnd(){
   panGlide=null;freeCam=false;panE=panN=0;applyRot();tiltLbl();
   $('carIcon').style.display='';$('tilt').style.display='block';
   updRecenter();
 }
+function glideStop(){   // przerwanie powrotu (dotknięcie mapy, kółko myszy): przesunięcie, obrót i zbliżenie zostają tam, gdzie doszły – bez nagłej zmiany prędkości
+  const g=panGlide;if(!g)return;
+  panGlide=null;
+  if(freeCam&&vec&&vf&&vf.car&&g.k){panN+=camOff.lat*111195*g.k;panE+=camOff.lon*111195*Math.cos(rad(vf.car.lat))*g.k}   // część przesunięcia na pas, którą kamera już przeszła (powrót samego obrotu nie jest w trybie ręcznym – tam pas jest w kamerze od początku)
+  rotOff=((curRot+lastH)%360+540)%360-180;tgtRot=curRot;
+  setZoom(scaleCur/Math.max(.004,scaleBase));
+  updRecenter();
+}
 function glideStep(now){
   const g=panGlide;if(!g)return;
-  const u=Math.min(1,Math.max(0,(now-g.t0)/g.dur)),k=u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;   // start i dojazd łagodne (easeInOutCubic)
+  const u=Math.min(1,Math.max(0,(now-g.t0)/g.dur)),k=glideK(u);g.k=k;   // k – postęp 0…1 (używa go też vecCam i ikona auta)
   panE=g.e0*(1-k);panN=g.n0*(1-k);
+  const dt=Math.min(.12,Math.max(.004,(now-g.tp)/1000)),fa=1-Math.pow(1-.12,dt*60);g.tp=now;   // wygładzanie niezależne od liczby klatek na sekundę
+  g.hd+=(((-lastH-g.hd)%360+540)%360-180)*Math.min(1,fa*1.25);   // kierunek jazdy zmienia się skokowo (co odczyt GPS) – cel obrotu wygładzamy, żeby skręt auta nie szarpnął mapą
+  let d=((g.hd-g.r0)%360+540)%360-180;if(g.sg*d<-150)d+=g.sg*360;   // obrót najkrótszą drogą do kierunku jazdy; strona obrotu nie zmienia się w trakcie, gdy auto skręca
+  curRot=g.r0+d*k;tgtRot=-lastH;
+  g.ls+=(Math.log(Math.max(.004,scaleTgt))-g.ls)*fa;   // cel zbliżenia (zależy od prędkości auta) zmienia się płynnie
+  scaleCur=Math.exp(g.l0+(g.ls-g.l0)*k+Math.log(1-g.a*4*k*(1-k)));   // zbliżenie po krzywej logarytmicznej (+ chwilowe oddalenie przy dalekim powrocie)
+  if(g.td!=null)tiltDyn=g.td+(tiltDynT-g.td)*k;   // nachylenie widoku kierowcy też dochodzi razem z resztą, a nie dopiero po dojechaniu
   if(u>=1)glideEnd();
 }
-window.glideStart=function(){
-  const px=Math.hypot(panE,panN)*scaleCur,still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(!vec||px<=3||still)return false;
-  // czas zależy od odległości (logarytmicznie): 100 px ≈ 0,5 s, 3000 px ≈ 0,9 s, bardzo daleko ≈ 1,3 s
-  panGlide={e0:panE,n0:panN,t0:performance.now(),dur:Math.min(1300,Math.max(450,380+170*Math.log(1+px/150)))};
-  setZoom(1);updRecenter();return true;
+window.glideStart=function(rotOnly){   // rotOnly: mapa nie jest przesunięta, tylko obrócona – wraca sam obrót
+  const still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!vec||still)return false;
+  if(!rotOnly)setZoom(1);
+  // kamera ma dojechać do auta wraz z jego przesunięciem na pas ruchu (camOff) – o tyle krótsza jest droga
+  const cE=vf&&vf.car?camOff.lon*111195*Math.cos(rad(vf.car.lat)):0,cN=camOff.lat*111195;
+  const s0=scaleCur,s1=Math.max(.004,scaleTgt),dr=((-lastH-curRot)%360+540)%360-180,dz=Math.abs(Math.log(s1/s0)),dist=rotOnly?0:Math.hypot(panE-cE,panN-cN);
+  const px=dist*Math.max(s0,s1),eff=px+8*Math.abs(dr)+450*dz;   // „wysiłek” ruchu w pikselach: przesunięcie + obrót (8 px na stopień) + zbliżenie
+  if(rotOnly?Math.abs(dr)<=3:(px<=3&&Math.abs(dr)<=3&&dz<.03))return false;
+  const far=dist*Math.min(s0,s1);   // przy dalekim powrocie (ponad ok. 1100 px przy mniejszym z zoomów) kamera na środku drogi oddala się nawet 2-krotnie
+  panGlide={k:0,hd:-lastH,tp:performance.now(),e0:rotOnly?0:panE,n0:rotOnly?0:panN,t0:performance.now(),dur:Math.min(1400,Math.max(600,520+200*Math.log(1+eff/180))),r0:curRot,sg:dr<0?-1:1,l0:Math.log(s0),ls:Math.log(s1),
+    a:far>1100?Math.min(.45,.08+.22*Math.log(far/1100)):0,td:(dmOn&&freeCam)?tiltDyn:null};
+  updRecenter();return true;
 };
 function frame(){
   if(ecoOn&&(fcnt++&1)){requestAnimationFrame(frame);return}
   const fnow=performance.now(),fdt=Math.min(.12,Math.max(.004,(fnow-(lastFt||fnow-16))/1000));lastFt=fnow;
   const fk=1-Math.pow(1-.08,fdt*60),fr=1-Math.pow(1-.15,fdt*60);   // wygładzanie niezależne od liczby klatek na sekundę
-  if(panGlide)glideStep(fnow);
-  scaleCur+=(scaleTgt-scaleCur)*fk;
+  const gl=!!panGlide;   // w trakcie powrotu do auta zbliżeniem i obrotem steruje sam powrót (glideStep), reszta czasu – wygładzanie wykładnicze
+  if(gl)glideStep(fnow);
+  else scaleCur+=(scaleTgt-scaleCur)*fk;
   dmStep(fk);
-  const d=((tgtRot-curRot)%360+540)%360-180;
-  curRot=Math.abs(d)<.05?tgtRot:curRot+d*fr;
+  if(!gl){const d=((tgtRot-curRot)%360+540)%360-180;curRot=Math.abs(d)<.05?tgtRot:curRot+d*fr}
   $('rot').style.transform='rotateX('+tiltE().toFixed(2)+'deg) rotate('+curRot+'deg)';
   {const t0=performance.now();drawMarkers();const dtm=performance.now()-t0;fpsRec(fnow,dtm);liteTick(dtm)}
   $('compass').style.transform='rotate('+curRot+'deg)';
