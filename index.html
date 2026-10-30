@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 154</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 155</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -4559,12 +4559,13 @@ function altPts(r,sc){
 function drawAlts(){
   const L=planRoute.alts;if(!L||L.length<2||!vf)return;
   if(!(window.preview||$('pick').style.display!=='none'))return;
+  const aw=Math.max(4.2,routeLw(vf.s,rw('tr',vf.s))*.68);   // wybrana trasa jest zawsze wyraźnie szersza od alternatyw
   L.forEach((r,i)=>{
     if(r===planRoute.r)return;
     const co=altPts(r,vf.s);let on=false;
     mx.save();mx.beginPath();
     for(let k=0;k<co.length;k++){const q=proj(co[k][1],co[k][0]);if(!q){on=false;continue}if(!on){mx.moveTo(q.x,q.y);on=true}else mx.lineTo(q.x,q.y)}
-    mx.lineJoin='round';mx.lineCap='round';mx.strokeStyle='rgba(255,255,255,.92)';mx.lineWidth=10;mx.stroke();mx.strokeStyle='#7b8798';mx.lineWidth=6;mx.stroke();
+    mx.lineJoin='round';mx.lineCap='round';mx.strokeStyle=night?'#1d2540':'#fff';mx.lineWidth=aw+3.4;mx.stroke();mx.strokeStyle=night?'#7683a5':'#808a9c';mx.lineWidth=aw;mx.stroke();
     mx.restore();
   });
 }
@@ -5195,8 +5196,8 @@ let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr=
 const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mw:{w:19,m:14}};   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
 const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4)*dmK;   // z bliska drogi są szerokie na tyle, by auto mieściło się na pasie
 const PAL={
- day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623'},
- night:{tun:'#3d4866',bg:'#141926',water:'#173a57',waterEdge:'#21507a',park:'#1f3d2e',parkEdge:'#285040',farm:'#18202b',grass:'#1c3528',wood:'#173226',wet:'#1a2f31',sand:'#212633',resi:'#191f2f',ind:'#1b1e2f',inst:'#1c2234',sport:'#1d3829',cem:'#1b2f24',rland:'#1b202c',bld:'#273046',bldEdge:'#34405c',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#444e6b',rs:'#546082',tr:'#5f6c91',sc:'#6f6d98',pr:'#7f779c',mw:'#b98259',mwIn:'#cf9569',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',plbl:'#aab3c8',wnl:'#6fa4d6',route:'#5b94f7',routeEdge:'#c98a2b'}};
+ day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623',rcase:'#173f8f',rhalo:'#ffffff',rcaseD:'#0a1226'},
+ night:{tun:'#3d4866',bg:'#141926',water:'#173a57',waterEdge:'#21507a',park:'#1f3d2e',parkEdge:'#285040',farm:'#18202b',grass:'#1c3528',wood:'#173226',wet:'#1a2f31',sand:'#212633',resi:'#191f2f',ind:'#1b1e2f',inst:'#1c2234',sport:'#1d3829',cem:'#1b2f24',rland:'#1b202c',bld:'#273046',bldEdge:'#34405c',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#444e6b',rs:'#546082',tr:'#5f6c91',sc:'#6f6d98',pr:'#7f779c',mw:'#b98259',mwIn:'#cf9569',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',plbl:'#aab3c8',wnl:'#6fa4d6',route:'#5b94f7',routeEdge:'#c98a2b',rcase:'#07102b',rhalo:'#7f97e6',rcaseD:'#03060f'}};
 // VEC-PURE-START
 function parseMax(v){
   v=String(v).trim().toLowerCase().replace(/\s*km\/h$/,'');let m;
@@ -6169,13 +6170,13 @@ function drawBridges(c,BR,o,only){
   const {pal,s,rwz,cwz,night,dm,rlw}=o,isR=b=>b.cls==='rail'||b.cls==='rsv'||b.cls==='tram';
   const list=BR.filter(b=>only==='rail'?isR(b):(!isR(b)&&(only!=='over'||b.over)&&!(b.cls==='sv'&&s<.3)&&!(b.cls==='rs'&&s<.14)));
   if(!list.length)return;
-  const shw=night?'rgba(0,0,0,.45)':'rgba(70,58,35,.24)',cs=night?'#06080d':'#7d786b',ed=night?'rgba(170,185,225,.22)':'rgba(255,255,255,.6)';
+  const far=s<.3,shw=night?'rgba(0,0,0,.45)':'rgba(70,58,35,.24)',cs=far?pal.casing:(night?'#06080d':'#7d786b'),ed=night?'rgba(170,185,225,.22)':'rgba(255,255,255,.6)';   // far: z oddali most rysujemy jak zwykłą drogę (ciemna obwódka robiła z krótkich mostów szare plamy)
   const wOf=b=>isR(b)?Math.max(3,rlw*1.9):rwz(b.cls);
   for(let i=0;i<list.length;){
     let j=i;while(j<list.length&&list[j].L===list[i].L)j++;
     const grp=list.slice(i,j);i=j;
     if(s>=.3){c.save();c.translate(3.2/s,-3.2/s);c.strokeStyle=shw;for(const b of grp){c.lineWidth=(wOf(b)+cwz+3)/s;c.stroke(b.pa)}c.restore()}   // cień obiektu
-    for(const b of grp){c.strokeStyle=cs;c.lineWidth=(wOf(b)+cwz+(s>=.5?3.2:1.6)+(dm?1.2:0))/s;c.stroke(b.pa)}   // obwódka
+    for(const b of grp){c.strokeStyle=cs;c.lineWidth=(wOf(b)+cwz+(far?0:s>=.5?3.2:1.6)+(dm?1.2:0))/s;c.stroke(b.pa)}   // obwódka
     if(s>=.5)for(const b of grp){c.strokeStyle=ed;c.lineWidth=(wOf(b)+1.6)/s;c.stroke(b.pa)}   // jasny brzeg (krawężnik / balustrada)
     for(const b of grp){
       if(isR(b)){
@@ -6441,9 +6442,12 @@ function fcol(h,f,bg){
   const a=hx3(h),b=hx3(bg),t=q/12;v='rgb('+a.map((x,i)=>Math.round(b[i]+(x-b[i])*t)).join(',')+')';
   if(FCM.size>400)FCM.clear();FCM.set(key,v);return v;
 }
+// szerokość niebieskiej linii: z bliska jak pas ruchu, z daleka (przegląd całej trasy) szersza – musi górować nad najszerszymi drogami (autostrady mają wtedy ok. 10 px)
+const rtOvF=sc=>Math.max(0,Math.min(1,(.3-sc)/.22));
+const routeLw=(sc,Rr)=>Math.max(singleLane?Math.max(6,Math.min(14,Rr*.5)):Math.max(5,Math.min(12,Rr*.34)),5.2+2.6*rtOvF(sc));
 function drawRouteTop(){
   if(!(vec&&route&&route.pts.length>1&&route.len>0&&vf))return;
-  const R=route,pal=PAL[night?'night':'day'],car=carSnap?[carSnap.lat,carSnap.lon]:[vf.car.lat,vf.car.lon];
+  const R=route,pal=PAL[night?'night':'day'],car=carSnap?[carSnap.lat,carSnap.lon]:[vf.car.lat,vf.car.lon],ovs=window.preview||(tiltE()<8&&scaleCur<.45);   // ovs: widok z góry (podgląd, przegląd całej trasy) – linia z jasną obwódką i strzałkami zamiast „dywanu” widoku kierowcy
   // jak daleko sięga widok: ekran ÷ skala (przy nachyleniu dalej) + odległość kamery od auta (mapa przesunięta ręcznie)
   const cd=freeCam?dist(vf.cam.lat,vf.cam.lon,vf.car.lat,vf.car.lon):0,vis=Math.hypot(window.innerWidth,window.innerHeight)*(tiltDeg>8?2.4:1.15)/scaleCur+cd;
   const {pts,jl}=routeAhead(R,car,scaleCur,(R.along||0)+Math.max(6000,vis));
@@ -6463,7 +6467,7 @@ function drawRouteTop(){
   const offAt=d=>{const p=singleLane?null:lnOffPx(R,ca+d);if(p==null)return d<60?lc:d>140?def:lc+(def-lc)*(d-60)/80;const w=Math.min(1,d/45);return lc*(1-w)+p*w};   // dalej niż 45 m: pas z planu
   const pAt=(la,lo,b,d)=>{const m=offAt(d)/scaleCur,r=rad(b+90);return proj(la+Math.cos(r)*m/111195,lo+Math.sin(r)*m/(111195*Math.cos(rad(la))))};
   const pr=pts.map((q,i)=>pAt(q[0],q[1],brg[i],dcum[i]));
-  const lw=singleLane?Math.max(6,Math.min(14,Rr*.5)):Math.max(5,Math.min(12,Rr*.34));
+  const lw=routeLw(scaleCur,Rr);
   // na drodze z liniami pasów pasek (z czarnymi brzegami) jest węższy niż pas – linie między pasami zostają widoczne po bokach
   const lfAt=d=>{const q=singleLane?null:lnAt(R,ca+d);if(!q)return 1;const P=q[0],i=q[1],j=Math.min(P.n-1,i+1),m=P.mf[i]+(P.mf[j]-P.mf[i])*q[2];if(m<.02)return 1;
     const fit=Math.max(.6,Math.min(1,rw(LN_K[P.kc[i]],scaleCur)/2*.78/(lw*1.55)));return Math.round((1-m*(1-fit))*25)/25};
@@ -6493,7 +6497,7 @@ function drawRouteTop(){
   }
   mx.lineCap='round';mx.lineJoin='round';
   const dm=dmA>.02,fadeA=r=>dm?Math.max(.22,Math.min(1,(r.ks/r.n-.26)/.5)):1;   // widok kierowcy: daleka część trasy blednie w mgle
-  if(dm&&!ecoOn&&!lite){   // „dywan” trasy: miękka poświata pod linią (w kolorze natężenia ruchu)
+  if(dm&&!ovs&&!ecoOn&&!lite){   // „dywan” trasy: miękka poświata pod linią (w kolorze natężenia ruchu)
     mx.lineCap='butt';   // przezroczyste kawałki nie mogą nakładać się zaokrąglonymi końcami (ciemniejsze kropki na złączeniach)
     for(const [wm,al] of [[3.3,.10],[2.2,.16]])for(const r of runs){
       mx.globalAlpha=al*fadeA(r)*dmA;mx.strokeStyle=r.lv?JC[r.lv]:pal.route;
@@ -6502,7 +6506,9 @@ function drawRouteTop(){
     }
     mx.globalAlpha=1;mx.lineCap='round';
   }
-  for(const [w,col] of [[lw*1.55,'#0b0b0d'],[lw*1.02,pal.route]]){   // niebieska linia z czarnymi paskami po bokach
+  const layers=[[lw*1.55,dm&&!ovs?pal.rcaseD:pal.rcase],[lw*1.02,pal.route]];   // niebieska linia z ciemnym obrysem po bokach (w widoku kierowcy prawie czarnym – tam kontrastuje z liniami pasów)
+  if(ovs)layers.unshift([lw*1.55+3.4,pal.rhalo]);   // z góry/z daleka: jasna obwódka oddziela linię od ciemnych dróg i torów
+  for(const [w,col] of layers){
     for(const r of runs){
       const jc=r.lv&&w<lw*1.2;   // natężenie ruchu: kolor drogi zależy od korka
       mx.strokeStyle=fcol(jc?JC[r.lv]:col,fadeA(r),pal.bg);
@@ -6511,7 +6517,22 @@ function drawRouteTop(){
     }
   }
   mx.globalAlpha=1;
-  if(dm&&!ecoOn&&!lite){   // białe strzałki kierunku jazdy przyklejone do drogi (co 26 m): płyną ku autu, bledną z odległością
+  if(ovs&&lw>=6.2&&pr.length>1){   // podgląd / przegląd całej trasy: białe strzałki kierunku jazdy co ok. 56 px linii
+    const W=window.innerWidth,H=window.innerHeight,SPX=64,u=Math.max(2.6,lw*.4);let acc=SPX*.6;
+    mx.strokeStyle='#fff';mx.lineWidth=Math.max(1.8,u*.62);mx.lineCap='round';mx.lineJoin='round';
+    for(let i=1;i<pr.length;i++){
+      const a=pr[i-1],b=pr[i];if(!a||!b)continue;
+      const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.01)continue;
+      if((a.x<-30&&b.x<-30)||(a.x>W+30&&b.x>W+30)||(a.y<-30&&b.y<-30)||(a.y>H+30&&b.y>H+30)){acc=Math.max(0,acc-L);continue}
+      let t=acc;
+      for(;t<L;t+=SPX){
+        const x=a.x+dx*t/L,y=a.y+dy*t/L,cx=dx/L,cy=dy/L;
+        mx.beginPath();mx.moveTo(x-cx*u*.7-cy*u,y-cy*u*.7+cx*u);mx.lineTo(x+cx*u*.6,y+cy*u*.6);mx.lineTo(x-cx*u*.7+cy*u,y-cy*u*.7-cx*u);mx.stroke();
+      }
+      acc=t-L;
+    }
+  }
+  if(dm&&!ovs&&!ecoOn&&!lite){   // białe strzałki kierunku jazdy przyklejone do drogi (co 26 m): płyną ku autu, bledną z odległością
     const SP=26;let d=Math.ceil((ca+9)/SP)*SP-ca,j=0;
     mx.strokeStyle='#fff';
     for(;d<230&&j<pr.length-1;d+=SP){
@@ -8268,17 +8289,17 @@ function eachRow(text,fn){
 }
 const tsec=s=>{if(!s)return NaN;const a=s.trim().split(':');return +a[0]*3600+ +a[1]*60+ +a[2]};
 const ymd=d=>d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
-// doba rozkładu liczona wg czasu polskiego (Europe/Warsaw), niezależnie od strefy urządzenia; t0 = północ w Polsce (s UTC)
+// doba rozkładu liczona wg czasu polskiego (Europe/Warsaw), niezależnie od strefy urządzenia; t0 = początek doby rozkładu (s UTC) wg specyfikacji GTFS:
+// „południe minus 12 godzin”. To północ w Polsce – z wyjątkiem dwóch dni w roku ze zmianą czasu (doba ma wtedy 23 albo 25 godzin i godziny w rozkładzie
+// liczą się od poprzedniego dnia: 05:00 w rozkładzie to zawsze 05:00 na zegarze). Dawniej t0 było północą, więc w te dni rozkład (a z nim opóźnienia
+// liczone jako różnica godziny z danych na żywo i godziny z rozkładu) przesuwał się o godzinę
 const WF=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
 function wParts(ms){const o={};WF.formatToParts(ms).forEach(x=>o[x.type]=+x.value);return o}
 function warsawDay(now,off){
-  const q=wParts(now.getTime()),u=Date.UTC(q.year,q.month-1,q.day+(off||0));
-  let t=u;                                                  // północ „naiwna” (UTC)
-  let o=Date.UTC(...(()=>{const w=wParts(t);return [w.year,w.month-1,w.day,w.hour,w.minute,w.second]})())-t; // przesunięcie strefy
-  t=u-o;
-  o=Date.UTC(...(()=>{const w=wParts(t);return [w.year,w.month-1,w.day,w.hour,w.minute,w.second]})())-t;  // poprawka na zmianę czasu
-  t=u-o;
-  const d=new Date(u);return {ymd:d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate(),dow:d.getUTCDay(),t0:t/1000};
+  const q=wParts(now.getTime()),u=Date.UTC(q.year,q.month-1,q.day+(off||0),12);   // południe „naiwne” (jakby było w UTC)
+  const sh=t=>{const w=wParts(t);return Date.UTC(w.year,w.month-1,w.day,w.hour,w.minute,w.second)-t};   // przesunięcie strefy w danej chwili
+  let t=u-sh(u);t=u-sh(t);                                  // południe w Polsce (ms UTC); drugie przejście poprawia na zmianę czasu
+  const d=new Date(u);return {ymd:d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate(),dow:d.getUTCDay(),t0:t/1000-43200};
 }
 const wToday=()=>warsawDay(new Date(),0).ymd;
 const nearC=(c,lat,lon)=>{const dy=(lat-c.lat)*KM,dx=(lon-c.lon)*KM*Math.cos(rad(c.lat));return dx*dx+dy*dy<c.r*c.r};
@@ -8417,7 +8438,7 @@ async function buildGtfs(f,now,center,say){
 // pozycja: wzdłuż toru (jeśli dopasowany), inaczej prosta między stacjami
 const TA=(tr,i)=>tr.t0+tr.st[i][0]+(tr.dly?tr.dly.a[i]:0), TD=(tr,i)=>tr.t0+tr.st[i][1]+(tr.dly?tr.dly.d[i]:0);   // godziny z rozkładu + opóźnienie na żywo
 // ruch między stacjami: pociąg rusza i hamuje (profil trapezowy), a nie jedzie ze stałą prędkością – dzięki temu czas przy przejazdach tuż za stacją jest dokładniejszy
-const ACC=.6,PASSED_MAX=260,LQ_S={q:'sched',unc:240,age:null};
+const ACC=.6,PASSED_MAX=260,LQ_S={q:'sched',unc:360,age:null};
 function segProf(L,T){
   if(!(L>0&&T>0))return null;
   const disc=T*T-4*L/ACC;if(disc<0)return null;
@@ -8470,9 +8491,12 @@ function gtfsPos(tr,nowS){
 function liveQ(tr,nowS,eta){
   if(!tr.dly)return LQ_S;
   const age=Math.max(0,nowS-(tr.liveAt||0)/1000);
-  // zapas na spóźnienie ponad prognozę: błąd prognozy rośnie z tym, jak daleko w przód sięga (od chwili jej wykonania do mijania przejazdu);
-  // na kolejnych wersjach danych z sieci (ok. 5 tys. porównań prognozy z faktem) 90% błędów mieściło się w 60 s + 1/4 tego odstępu
-  let unc=Math.min(360,60+.25*(age+Math.max(0,eta||0)));
+  // zapas na spóźnienie ponad prognozę: błąd prognozy rośnie z tym, jak daleko w przód sięga (od chwili jej wykonania do mijania przejazdu),
+  // ale i tuż przed przyjazdem bywa duży (pociąg staje, czeka na sygnał) – stąd wysoka wartość początkowa. Pomiar na danych z dwóch dni
+  // (ok. 7,8 tys. porównań prognozy z faktem): pociąg spóźniony o więcej niż zapas + 30 s zdarzał się w prognozach na ≤ 5 min naprzód
+  // w 7,5% i 17% przypadków (z zapasem 60 s + 1/4 odstępu: 13% i 24%), na dalsze – w 4–11% (dawniej 7–16%). Spóźnienia są prawostronne
+  // (przed prognozą więcej niż o zapas – mniej niż 1% przypadków), więc zapas dotyczy tylko strony „pociąg po czasie”
+  let unc=Math.min(450,120+.3*(age+Math.max(0,eta||0)));
   if(tr.cl>=0){const g=nowS-TA(tr,tr.cl);if(g>600)unc+=Math.min(90,(g-600)*.05)}   // im dawniej ostatnie potwierdzenie, tym mniej pewna prognoza
   return {q:age<=480?'live':age<=1800?'old':'stale',unc,age};
 }
