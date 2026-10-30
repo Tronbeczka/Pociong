@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 155</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 156</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -5570,13 +5570,14 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
       const brg=(!wide&&isTr&&pr.brunnel==='bridge'&&BRCLS[cls])?{cls,L:Math.max(1,Math.min(4,Math.round(+pr.layer)||1)),pa:new Path2D(),pb:null,pbk:'',pc:null,ras:[],over:false}:null;
       const pa=brg?brg.pa:gp(cls);let pb=null;   // pb: oś jezdni (przerywana na drogach dwukierunkowych, ciągła na autostradach)
       if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr')){pb=brg?(brg.pb=new Path2D()):gp('cl');if(brg)brg.pbk='cl'}else if(cls==='mw'){pb=brg?(brg.pb=new Path2D()):gp('cm');if(brg)brg.pbk='cm'}}
+      const rbr=!!brg&&(cls==='rail'||cls==='rsv'||cls==='tram');   // oś mostu kolejowego i tramwajowego służy tylko do wycinania trasy spod obiektu (Wersja 156); nie trafia do RS – po torach nie jeździmy
       const pc=one?(brg?(brg.pc=new Path2D()):gp('one1')):null,pe=(fill&&!wide&&(cls==='water'||cls==='park'))?gp(cls+'E'):null;   // pe: obrys bez odcinków leżących na brzegu kafelka (to cięcie geometrii, nie brzeg wody – inaczej na wodzie widać „szwy”)
       for(const rg of f.r){
         if(rg.length<4)continue;
         const x0=(ox+rg[0]*k-cx)*cl,y0=(oy-rg[1]*k-cy)*cl;
         if(cut<1e8&&x0*x0+y0*y0>cut*cut)continue;
         pa.moveTo(x0,y0);if(pb)pb.moveTo(x0,y0);if(pc)pc.moveTo(x0,y0);
-        let px=x0,py=y0;const ra=(!wide&&isTr&&(cls==='mw'||cls==='pr'||cls==='sc'||cls==='tr'||cls==='rs'||cls==='sv'))?[x0,y0]:null;
+        let px=x0,py=y0;const ra=(!wide&&isTr&&(rbr||cls==='mw'||cls==='pr'||cls==='sc'||cls==='tr'||cls==='rs'||cls==='sv'))?[x0,y0]:null;
         for(let i=2;i+1<rg.length;i+=2){
           const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;if(ra)ra.push(x,y);
           if(Math.abs(x-px)+Math.abs(y-py)<1.1&&i+3<rg.length)continue;   // dokładniejsze łuki
@@ -5588,7 +5589,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
             if((ax===bx&&(ax<=0||ax>=E))||(ay===by&&(ay<=0||ay>=E))){pen=false;continue}
             if(!pen){pe.moveTo((ox+ax*k-cx)*cl,(oy-ay*k-cy)*cl);pen=true}
             pe.lineTo((ox+bx*k-cx)*cl,(oy-by*k-cy)*cl)}}
-        if(ra&&ra.length>=4){ra.k=cls;if(brg){ra.lv=1;brg.ras.push(ra)}RS.push(ra)}
+        if(ra&&ra.length>=4){ra.k=cls;if(brg){ra.lv=1;brg.ras.push(ra)}if(!rbr)RS.push(ra)}
       }
       if(brg)BF.push(brg);
       if(tfk){const rs=[];for(const rg of f.r){if(rg.length<6)continue;const a=[];for(let i=0;i+1<rg.length;i+=2)a.push((ox+rg[i]*k-cx)*cl,(oy-rg[i+1]*k-cy)*cl);rs.push(a)}if(rs.length)TF.push({k:tfk,r:rs})}
@@ -6569,6 +6570,153 @@ setVec(true);   // zawsze startujemy z mapą wektorową (kafelki rastrowe tylko 
 const mk=$('mk'), mx=mk.getContext('2d');
 function sizeMk(){const r=window.devicePixelRatio||1,w=window.innerWidth,h=window.innerHeight;mk.width=w*r;mk.height=h*r;mk.style.width=w+'px';mk.style.height=h+'px';mx.setTransform(r,0,0,r,0,0)}
 window.addEventListener('resize',()=>{sizeMk();if(typeof sizeV==='function')sizeV()});sizeMk();
+// ---- trasa pod mostem lub wiaduktem (Wersja 156) ----
+// Linia trasy leży na warstwie nad mapą, więc trasa przejeżdżająca POD obiektem (most, wiadukt drogowy, kolejowy lub tramwajowy) była widoczna nad jego jezdnią.
+// Raz na trasę i dane mapy (routeUnder) szukamy przecięć trasy z osiami obiektów pod kątem ≥ 40° (trasa pod obiektem, nie wzdłuż niego). Co klatkę
+// (routeCutBegin) z rysowania trasy i alternatyw wycinamy – przez przycinanie, więc budynki 3D, znaki i reszta warstwy zostają – pas o szerokości jezdni obiektu,
+// liczony na płaszczyźnie ziemi i dopiero potem rzutowany (w widoku 3D pas jest tak samo „spłaszczony” jak jezdnia); pod spodem widać jezdnię obiektu z mapy.
+// Nie wycinamy: tras jadących po obiekcie (wzdłuż niego tuż przed albo za przecięciem, albo po obiekcie tego samego lub wyższego poziomu), skrzyżowań
+// przy samym końcu obiektu (boczna ulica przy przyczółku) i obiektów usługowych (sv).
+let ruC=null;
+const RU_ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mw:.56};
+function routeUnder(R,D){
+  const P=R.dp||R.pts;
+  if(ruC&&ruC.D===D&&ruC.P===P&&ruC.n===P.length&&ruC.S===R.snapFor)return ruC.list;
+  const list=[];ruC={D,P,n:P.length,S:R.snapFor,list};
+  try{
+    const BRs=D&&D.BR;if(!BRs||!BRs.length||P.length<2)return list;
+    const kx=111195*Math.cos(rad(D.lat)),ky=111195,n=P.length,X=new Float64Array(n),Y=new Float64Array(n),CS=80,G=new Map();
+    for(let i=0;i<n;i++){X[i]=(P[i][1]-D.lon)*kx;Y[i]=(P[i][0]-D.lat)*ky}
+    const clamp=v=>Math.max(-9000,Math.min(9000,v));
+    for(let i=0;i<n-1;i++){   // siatka 80 m z odcinkami trasy
+      const x1=clamp(X[i]),y1=clamp(Y[i]),x2=clamp(X[i+1]),y2=clamp(Y[i+1]);
+      for(let gx=Math.floor(Math.min(x1,x2)/CS);gx<=Math.floor(Math.max(x1,x2)/CS);gx++)for(let gy=Math.floor(Math.min(y1,y2)/CS);gy<=Math.floor(Math.max(y1,y2)/CS);gy++){const k=gx+','+gy;let l=G.get(k);if(!l)G.set(k,l=[]);l.push(i)}
+    }
+    const isR=b=>b.cls==='rail'||b.cls==='rsv'||b.cls==='tram';
+    const bbOf=ra=>ra.bb||(ra.bb=(()=>{let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;for(let i=0;i+1<ra.length;i+=2){const x=ra[i],y=ra[i+1];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}return [x0,y0,x1,y1]})());
+    const near=(b,x,y,r)=>{   // czy punkt (x,y) leży w odległości r od osi obiektu b; zwraca kierunek najbliższego odcinka (rad) albo null
+      for(const ra of b.ras){
+        const q=bbOf(ra);if(x<q[0]-r||x>q[2]+r||y<q[1]-r||y>q[3]+r)continue;
+        for(let i=0;i+3<ra.length;i+=2){
+          const ax=ra[i],ay=ra[i+1],bx=ra[i+2],by=ra[i+3],dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;
+          let t=L2>0?((x-ax)*dx+(y-ay)*dy)/L2:0;t=Math.max(0,Math.min(1,t));
+          if(Math.hypot(ax+dx*t-x,ay+dy*t-y)<=r)return Math.atan2(dy,dx);
+        }
+      }
+      return null;
+    };
+    const at=(i,qx,qy,s)=>{   // punkt trasy w odległości |s| m (s<0 – wstecz) od punktu (qx,qy) leżącego na odcinku i: [x,y,kierunek odcinka] albo null (koniec trasy)
+      let rem=Math.abs(s),k=i,cx=qx,cy=qy;const fw=s>0;
+      for(let g=0;g<2000;g++){
+        const tx=fw?X[k+1]:X[k],ty=fw?Y[k+1]:Y[k],seg=Math.hypot(tx-cx,ty-cy);
+        if(seg>=rem&&seg>1e-9){const f=rem/seg;return [cx+(tx-cx)*f,cy+(ty-cy)*f,Math.atan2(Y[k+1]-Y[k],X[k+1]-X[k])]}
+        rem-=seg;cx=tx;cy=ty;k+=fw?1:-1;
+        if(k<0||k>=n-1)return null;
+      }
+      return null;
+    };
+    const seen=[];
+    for(const b of BRs){
+      if(b.cls==='sv'||!b.ras||!b.ras.length)continue;
+      for(const ra of b.ras){
+        for(let j=0;j+3<ra.length;j+=2){
+          const x3=ra[j],y3=ra[j+1],x4=ra[j+2],y4=ra[j+3],l2=Math.hypot(x4-x3,y4-y3);if(l2<.01)continue;
+          let cand=null;
+          for(let gx=Math.floor(Math.min(x3,x4)/CS);gx<=Math.floor(Math.max(x3,x4)/CS);gx++)for(let gy=Math.floor(Math.min(y3,y4)/CS);gy<=Math.floor(Math.max(y3,y4)/CS);gy++){const l=G.get(gx+','+gy);if(l){if(!cand)cand=new Set();for(const i of l)cand.add(i)}}
+          if(!cand)continue;
+          for(const i of cand){
+            const x1=X[i],y1=Y[i],x2=X[i+1],y2=Y[i+1],l1=Math.hypot(x2-x1,y2-y1);if(l1<.01)continue;
+            const d=(x2-x1)*(y4-y3)-(y2-y1)*(x4-x3);if(Math.abs(d)/(l1*l2)<.64)continue;   // tylko przecięcia pod kątem ≥ 40° (trasa pod obiektem, nie wzdłuż niego)
+            const t=((x3-x1)*(y4-y3)-(y3-y1)*(x4-x3))/d,u=((x3-x1)*(y2-y1)-(y3-y1)*(x2-x1))/d;
+            if(t<0||t>1||u<0||u>1)continue;
+            const qx=x1+t*(x2-x1),qy=y1+t*(y2-y1);
+            if(Math.hypot(qx-ra[0],qy-ra[1])<7||Math.hypot(qx-ra[ra.length-2],qy-ra[ra.length-1])<7)continue;   // przy samym końcu osi: boczna ulica przy przyczółku (albo cięcie kafelka), nie przejazd pod obiektem
+            if(seen.some(o=>o.b===b&&Math.hypot(o.x-qx,o.y-qy)<12))continue;
+            // trasa jedzie WZDŁUŻ tego samego obiektu 10–35 m przed albo za przecięciem (wjeżdża na most lub zjeżdża z niego) – nie jest pod nim; punkty liczone po długości trasy, więc rzadkie wierzchołki nie mają znaczenia
+            let along=false;
+            for(const sd of [-35,-20,-10,10,20,35]){
+              const pt=at(i,qx,qy,sd);if(!pt)continue;
+              const ad=near(b,pt[0],pt[1],4);
+              if(ad!=null){const da=Math.abs(((ad-pt[2]+Math.PI*3)%(Math.PI*2))-Math.PI);if(Math.min(da,Math.PI-da)<.52){along=true;break}}
+            }
+            if(along)continue;
+            // trasa jedzie po innym obiekcie tego samego lub wyższego poziomu (np. rampa, estakada)? wtedy nie jest pod żadnym
+            const rd=Math.atan2(y2-y1,x2-x1);let onTop=false;
+            for(const a of BRs){
+              if(a===b||isR(a)||a.cls==='sv'||(a.L||0)<(b.L||0))continue;
+              const ad=near(a,qx,qy,7);
+              if(ad!=null){const da=Math.abs(((ad-rd+Math.PI*3)%(Math.PI*2))-Math.PI),par=Math.min(da,Math.PI-da);if(par<.52){onTop=true;break}}   // równolegle (< 30°)
+            }
+            if(onTop)continue;
+            seen.push({b,x:qx,y:qy});
+            // oś obiektu: kawałek do 40 m w obie strony od przecięcia (krótszy, gdy obiekt się kończy)
+            const walk=(dir)=>{
+              let rem=40,cx=qx,cy=qy,k=j;const out=[];
+              while(rem>0){
+                if(k<0||k+3>=ra.length)break;
+                const tx=dir>0?ra[k+2]:ra[k],ty=dir>0?ra[k+3]:ra[k+1];
+                const seg=Math.hypot(tx-cx,ty-cy);
+                if(seg>=rem){out.push([cx+(tx-cx)/seg*rem,cy+(ty-cy)/seg*rem]);rem=0;break}
+                out.push([tx,ty]);rem-=seg;cx=tx;cy=ty;k+=dir>0?2:-2;
+              }
+              return out;
+            };
+            const fw=walk(1),bw=walk(-1);
+            list.push({b,cls:b.cls,rail:isR(b),q:[qx,qy],m:[...bw.reverse(),[qx,qy],...fw]});
+            if(list.length>60)return list;
+          }
+        }
+      }
+    }
+  }catch(e){errNote('trasa pod mostem',e)}
+  return list;
+}
+function ruPoly(m,hw){   // pas o połowie szerokości hw wokół łamanej m ([x,y] w metrach): lewy brzeg, potem prawy od końca (ostre załamania ścięte do 2·hw)
+  const n=m.length,nx=[],ny=[],Lp=[],Rp=[];
+  for(let i=0;i<n-1;i++){const dx=m[i+1][0]-m[i][0],dy=m[i+1][1]-m[i][1],l=Math.hypot(dx,dy)||1;nx.push(-dy/l);ny.push(dx/l)}
+  for(let i=0;i<n;i++){
+    const ax=i>0?nx[i-1]:nx[0],ay=i>0?ny[i-1]:ny[0],bx=i<n-1?nx[i]:nx[n-2],by=i<n-1?ny[i]:ny[n-2];
+    let ux=ax+bx,uy=ay+by,ml=Math.hypot(ux,uy);
+    if(ml<.3){ux=ax;uy=ay;ml=1}   // zawrotka: bez mitra
+    ux/=ml;uy/=ml;
+    const f=hw/Math.max(.5,ux*ax+uy*ay);
+    Lp.push([m[i][0]+ux*f,m[i][1]+uy*f]);Rp.push([m[i][0]-ux*f,m[i][1]-uy*f]);
+  }
+  return Lp.concat(Rp.reverse());
+}
+function routeCutPolys(){   // pasy do wycięcia z rysowania trasy w bieżącej klatce: wielokąty we współrzędnych ekranu ([] w widoku z góry, podglądzie i z daleka)
+  if(!(vec&&route&&route.pts.length>1&&vf&&vecData&&vecData.BR&&vecData.BR.length))return [];
+  if(window.preview||(tiltE()<8&&scaleCur<.45)||scaleCur<.3)return [];
+  const L=routeUnder(route,vecData);if(!L.length)return [];
+  const D=vecData,s=scaleCur,ky=111195,kx=111195*Math.cos(rad(D.lat)),dm=dmA>.02,rlw=Math.max(2.2,Math.min(6,1.6+s*7)),zq=Math.max(0,Math.min(1,(s-.1)/.4)),cwz=2.4+1.6*zq,W=window.innerWidth,H=window.innerHeight,polys=[];
+  const cam=vf.cam,cx=(cam.lon-D.lon)*kx,cy=(cam.lat-D.lat)*ky,Rv=2.2*Math.max(W,H)/Math.max(s,.05);   // dalsze obiekty niż widać na ekranie (z zapasem na perspektywę) pomijamy bez liczenia pasów
+  for(const o of L){
+    if(Math.abs(o.q[0]-cx)>Rv||Math.abs(o.q[1]-cy)>Rv)continue;
+    const zf=RU_ZF[o.cls]||.5,wpx=o.rail?Math.max(3,rlw*1.9):Math.max(1.6,rw(o.cls,s)*(zf+(1-zf)*zq));   // jak w drawBridges: szerokość jezdni (albo toru) i obwódka
+    const hw=(wpx+cwz+(s>=.5?3.2:1.6)+(dm?1.2:0)+1.6)/(2*s);   // połowa szerokości obwódki obiektu + 0,8 px zapasu na wygładzanie krawędzi, w metrach
+    const poly=ruPoly(o.m,hw),q=[];let ok=true;
+    for(const p of poly){const a=proj(D.lat+p[1]/ky,D.lon+p[0]/kx);if(!a){ok=false;break}q.push(a)}
+    if(!ok||q.length<3)continue;
+    if(q.every(a=>a.x<-80)||q.every(a=>a.x>W+80)||q.every(a=>a.y<-80)||q.every(a=>a.y>H+80))continue;
+    polys.push(q);if(polys.length>=10)break;
+  }
+  return polys;
+}
+function routeCutBegin(){   // przycięcie rysowania trasy do obszaru poza jezdniami mostów, pod którymi trasa przejeżdża; zwraca 1, gdy trzeba wywołać routeCutEnd
+  let on=0;
+  try{
+    const polys=routeCutPolys();if(!polys.length)return 0;
+    const W=window.innerWidth,H=window.innerHeight;
+    mx.save();on=1;
+    for(const q of polys){   // jedno przycięcie na pas: kolejne się przecinają, więc wycięta jest suma pasów (także zachodzących na siebie)
+      mx.beginPath();mx.rect(-100,-100,W+200,H+200);
+      mx.moveTo(q[0].x,q[0].y);for(let i=1;i<q.length;i++)mx.lineTo(q[i].x,q[i].y);mx.closePath();
+      mx.clip('evenodd');
+    }
+    return 1;
+  }catch(e){errNote('trasa pod mostem',e);return on}
+}
+function routeCutEnd(on){if(on)mx.restore()}
 // ten sam rachunek co CSS: obrót, nachylenie, perspektywa 900 px (sprawdzone z macierzami 4x4)
 // które komórki są potrzebne: wokół auta (promień zależy od oddalenia mapy) i na najbliższych ok. 7 km trasy
 function sgWant(p){
@@ -7545,7 +7693,7 @@ function drawMarkers(){
   try{drawZebras()}catch(e){errNote('pasy dla pieszych',e)}
   drawBuildings3D();
   drawHeat();
-  drawAlts();drawRouteTop();altLabels();drawTurnArrow();drawLaneArrow();drawJunction();
+  const rcut=routeCutBegin();try{drawAlts();drawRouteTop()}finally{routeCutEnd(rcut)}altLabels();drawTurnArrow();drawLaneArrow();drawJunction();
   drawAreaSigns();drawRouteSigns();
   drawTrail();
   drawPoi();drawEvents();drawCams();drawFriends();drawWx();drawSeasonFx();
