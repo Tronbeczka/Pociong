@@ -1108,6 +1108,9 @@ body.night #pick .alt .rcw{color:#f5a524}
 /* notatki pod kartami */
 #pick #fuelInfo,#pick #rxinfo,#pick #evinfo,#pick #wxinfo{margin:10px 2px 0;font-size:.88rem;line-height:1.38;color:var(--u-ink2);opacity:1}
 #pick #fuelInfo:empty,#pick #rxinfo:empty,#pick #evinfo:empty,#pick #wxinfo:empty{display:none}
+#pick #relev{margin:10px 2px 0;font-size:.88rem;line-height:1.38;color:var(--u-ink2)}
+#pick #relev:empty{display:none}
+#pick #relev svg{display:block;width:100%;height:42px;margin-top:6px;overflow:visible}
 #pick #fuelInfo.warn{color:#b3261e;font-weight:600}
 body.night #pick #fuelInfo.warn{color:#ff8a80}
 :is(body,body.night) #pick #dlmap{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--u-surf2);color:var(--u-ink);font-size:.92rem;font-weight:600;text-align:center;box-shadow:none}
@@ -1225,7 +1228,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
 <li data-ic="warn"><div><b>Gdy dane są stare lub ich brak</b>, na górze ekranu pojawi się czerwony pasek z ostrzeżeniem.</div></li>
 <li data-ic="phone"><div><b>Trzymaj ekran włączony.</b> Gdy telefon się wygasi, przeglądarka wstrzyma GPS i ostrzeżenia nie dojdą.</div></li>
 <li data-ic="car"><div><b>Nie obsługuj telefonu w czasie jazdy.</b> Ustaw trasę przed ruszeniem albo użyj poleceń głosowych.</div></li>
-<li data-ic="map"><div>Ograniczenia prędkości i pasy pochodzą z OpenStreetMap i mogą być nieaktualne lub niepełne.</div></li>
+<li data-ic="map"><div>Ograniczenia prędkości i pasy pochodzą z OpenStreetMap i mogą być nieaktualne lub niepełne. Wysokości budynków, rzeźba terenu i ostrzeżenia o stromych zjazdach są przybliżone.</div></li>
 </ul><button id="introOk">Rozumiem</button></div></div>
 <div id="fps" style="display:none"></div><div id="dim"></div><canvas id="jp" width="240" height="240" style="display:none"></canvas><div id="wait" style="display:none"></div><div id="alarm" role="alertdialog" aria-label="Nadjeżdża pociąg"><div class="alb t"></div><svg class="alx" viewBox="0 0 120 100" aria-hidden="true"><g stroke="#fff" stroke-width="15" stroke-linecap="butt"><path d="M22 14L98 86M98 14L22 86"/></g></svg><div class="lamps"><i></i><i></i></div><div class="al1">NADJEŻDŻA POCIĄG</div><div class="al2" id="alT">–</div><div class="al3" id="alD"></div><button id="alOk" type="button">Widzę</button><div class="alb b"></div></div>
 <div id="histbox" style="display:none"></div>
@@ -1287,6 +1290,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="dmCb" checked> Widok kierowcy podczas trasy (szersze drogi, mgła, strzałki na trasie)</label>
   <label style="font-size:.9rem"><input type="checkbox" id="laneCb" checked> Pasy ruchu na drogach i na trasie (dane z OpenStreetMap)</label>
   <select id="sigDens" class="sec"><option value="all">Znaki na mapie: wszystkie</option><option value="main">Znaki na mapie: światła i STOP</option><option value="route">Znaki na mapie: tylko na trasie</option><option value="off">Znaki na mapie: ukryte</option></select>
+  <select id="terrSel" class="sec"><option value="soft">Rzeźba terenu: delikatna</option><option value="strong">Rzeźba terenu: wyraźna</option><option value="off">Rzeźba terenu: wyłączona</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
@@ -1296,7 +1300,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <button id="parkSave" class="sec">🅿️ Zapamiętaj miejsce parkowania</button>
   <button id="parkShow" class="sec">🅿️ Pokaż zaparkowane auto</button>
   <button id="dlarea" class="sec">Pobierz mapę okolicy (offline)</button>
-  <button id="dlroute" class="sec">Pobierz trasę offline (mapa, znaki, pasy)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
+  <button id="dlroute" class="sec">Pobierz trasę offline (mapa, znaki, pasy, wysokość)</button><small id="dlast" style="display:block;padding:2px 0 8px"></small>
   <label style="font-size:.9rem"><input type="checkbox" id="wxMap" checked> Pokazuj pogodę na mapie</label>
   <label style="font-size:.9rem"><input type="checkbox" id="camShow" checked> Pokazuj fotoradary na mapie i ostrzegaj</label>
   <button id="hist" class="sec">Historia przejazdów</button>
@@ -1319,6 +1323,8 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <button id="about" class="sec">O dokładności danych</button>
   <div id="liveDiag" class="sInfo" style="white-space:pre-line"></div>
   <button id="liveChk" class="sec">Sprawdź źródła opóźnień pociągów</button>
+  <div id="d3Diag" class="sInfo" style="white-space:pre-line"></div>
+  <button id="d3Chk" class="sec">Sprawdź dane 3D: budynki, mosty, wysokość terenu</button>
   <label data-own style="font-size:.85rem">Przekaźnik danych (https://…, opcjonalnie)<input id="liveRelayIn" type="url" placeholder="https://twoj-przekaznik.workers.dev/" style="width:100%;margin-top:4px"></label>
   <button id="expSet" class="sec">Eksport ustawień</button>
   <button id="impSet" class="sec">Import ustawień</button><input id="impFile" type="file" accept="application/json" style="display:none">
@@ -1399,12 +1405,12 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
     <button id="cmpdep" class="sec" type="button">Porównaj godziny wyjazdu (teraz, +20, +40, +60, +90, +120 min)</button>
     <div id="depcmp"></div>
     </details>
-    <div id="rinfo"></div><div id="altlist"></div><div id="fuelInfo"></div><div id="rxinfo"></div><div id="evinfo"></div><div id="wxinfo"></div>
+    <div id="rinfo"></div><div id="altlist"></div><div id="fuelInfo"></div><div id="rxinfo"></div><div id="relev"></div><div id="evinfo"></div><div id="wxinfo"></div>
     <button id="dlmap" class="sec" style="display:none;margin-top:6px" data-ic="down">Pobierz mapę trasy (offline)</button><small id="dlst"></small>
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 150</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 151</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1817,7 +1823,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 function evaluate(p){
-  bbSample(p);logSample(p);tripTick(p);achTick(p);fuelTick(p);evCheck(p);camTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);
+  bbSample(p);logSample(p);tripTick(p);achTick(p);fuelTick(p);evCheck(p);camTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);gradeCheck(p);
   follow(p);
   updInfo(p);
   updTrainCard(p);
@@ -2229,6 +2235,7 @@ function setRoute(coords,dur,steps,jam,delay,inc){
   rCase.setLatLngs(route.pts);rLine.setLatLngs(route.pts);
   try{saveResume()}catch(e){}   // trasa do wznowienia po odświeżeniu strony
   try{camRouteAt=Date.now();camRoute(0)}catch(e){}   // fotoradary i odcinkowe pomiary wzdłuż trasy
+  try{demRoute(route)}catch{}   // profil wysokości i strome zjazdy (Wersja 151)
 }
 
 // ---- Wskazówki dojazdu (kroki z OSRM) ----
@@ -3479,7 +3486,7 @@ function snapGrid(D){
   const g=new Map(),CS=40;
   for(const ra of D.RS||[])for(let i=0;i+3<ra.length;i+=2){
     const x1=ra[i],y1=ra[i+1],x2=ra[i+2],y2=ra[i+3],ax=Math.floor(Math.min(x1,x2)/CS),bx=Math.floor(Math.max(x1,x2)/CS),ay=Math.floor(Math.min(y1,y2)/CS),by=Math.floor(Math.max(y1,y2)/CS);
-    for(let a=ax;a<=bx;a++)for(let b=ay;b<=by;b++){const k=a+','+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(x1,y1,x2,y2)}
+    for(let a=ax;a<=bx;a++)for(let b=ay;b<=by;b++){const k=a+','+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(x1,y1,x2,y2);(l.v||(l.v=[])).push(ra.lv||0)}   // l.v: poziom odcinka (0 = na ziemi, 1 = most/wiadukt)
   }
   return D.grid=g;
 }
@@ -3636,14 +3643,14 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens']);
+  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens','terrSel']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
   mv('snd',['vsel','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['hudBtn','eco']);
-  mv('diag',['liveDiag','liveChk','liveRelayIn','logon','fpsOn','logdl','errBtn','errClr','logan','logFile','expSet','impSet','impFile']);
+  mv('diag',['liveDiag','liveChk','d3Diag','d3Chk','liveRelayIn','logon','fpsOn','logdl','errBtn','errClr','logan','logFile','expSet','impSet','impFile']);
   mv('data',['hist','xstat','xwatch','share','sharePos','parkSave','parkShow','dlarea','dlroute','dlast','wxMap','camShow']);
   mv('about',['about','report','bbList']);
   G('adv').appendChild($('cfg'));
@@ -5140,23 +5147,24 @@ function buildVec(j,lat,lon){
   return {lat,lon,P,LB,SP};
 }
 // kamera: ostatni odczyt GPS + przewidywanie ruchu (dead reckoning), płynne dociąganie do nowego odczytu
-var lastSnapD=null;
+var lastSnapD=null,snapLv=0;   // snapLv: poziom drogi, do której ostatnio przyciągnęliśmy auto (0 = ziemia, 1 = most/wiadukt)
 // najbliższy punkt na osi drogi (do 12 m, kierunek ±35°) – zwraca [lat,lon,odległość]
 function snapPoint(lat,lon,hr){
   const D=vecData;if(!D||!D.RS||!D.RS.length)return null;
   const g=snapGrid(D),CS=40,kx=111195*Math.cos(rad(D.lat)),X=(lon-D.lon)*kx,Y=(lat-D.lat)*111195;
-  let best=18,bx=0,by=0,found=false;const cx=Math.floor(X/CS),cy=Math.floor(Y/CS);
+  let best=18,bd=0,bx=0,by=0,found=false,blv=0;const cx=Math.floor(X/CS),cy=Math.floor(Y/CS);
   for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){
     const l=g.get(u+','+v);if(!l)continue;
     for(let j=0;j<l.length;j+=4){
       const dx=l[j+2]-l[j],dy=l[j+3]-l[j+1],L2=dx*dx+dy*dy;if(L2<.01)continue;
       let t=((X-l[j])*dx+(Y-l[j+1])*dy)/L2;t=t<0?0:t>1?1:t;
-      const px=l[j]+dx*t,py=l[j+1]+dy*t,d=Math.hypot(px-X,py-Y);if(d>=best)continue;
+      const px=l[j]+dx*t,py=l[j+1]+dy*t,d=Math.hypot(px-X,py-Y),lv=l.v?l.v[j>>2]:0,sc=d+(lv!==snapLv?5:0);if(sc>=best)continue;   // odcinek na innym poziomie (most ↔ ziemia) niż ostatnio – kara 5 m: nie przeskakujemy na drogę nad/pod nami
       let da=Math.abs(Math.atan2(dx,dy)-hr)%Math.PI;da=Math.min(da,Math.PI-da);if(da>.6)continue;
-      best=d;bx=px;by=py;found=true;
+      best=sc;bd=d;bx=px;by=py;found=true;blv=lv;
     }
   }
-  return found?[D.lat+by/111195,D.lon+bx/kx,best]:null;
+  if(found)snapLv=blv;
+  return found?[D.lat+by/111195,D.lon+bx/kx,bd]:null;
 }
 function camFix(p,h){
   const now=performance.now(),d=vecCam0(now),sp=(p.speed||0)>1.5?p.speed:0,hr=rad(h||0);
@@ -5262,6 +5270,7 @@ function mvtDecode(buf){
   }
   return out;
 }
+const BRCLS={mw:1,pr:1,sc:1,tr:1,rs:1,sv:1,rail:1,rsv:1,tram:1};   // klasy rysowane jako mosty/wiadukty
 const MV_ROAD={motorway:'mw',trunk:'mw',primary:'pr',secondary:'sc',tertiary:'tr',minor:'rs',service:'sv'};
 // tereny: pokrycie (las, łąka, pole, mokradło, piasek) i użytkowanie (zabudowa, przemysł, szkoły, boiska, cmentarze, tereny kolejowe)
 const MV_LC={wood:'wood',grass:'grass',farmland:'farm',wetland:'wet',sand:'sand'};
@@ -5271,9 +5280,39 @@ const MV_PL={city:1,town:2,village:3,island:3,suburb:4,hamlet:4,quarter:5,neighb
 const yieldMain=()=>new Promise(ok=>{const sc=window.scheduler;if(sc&&sc.yield)sc.yield().then(ok,ok);else setTimeout(ok,0)});
 function buildMvt(tiles,lat0,lon0,wide){const g=buildMvtG(tiles,lat0,lon0,wide);let r;do{r=g.next()}while(!r.done);return r.value}
 async function buildMvtAsync(tiles,lat0,lon0,wide){const g=buildMvtG(tiles,lat0,lon0,wide);for(;;){const r=g.next();if(r.done)return r.value;await yieldMain()}}
+// czy dwie łamane (płaskie tablice x,y,x,y…) się przecinają
+function polyHit(a,b){
+  for(let i=0;i+3<a.length;i+=2){
+    const x1=a[i],y1=a[i+1],x2=a[i+2],y2=a[i+3];
+    for(let j=0;j+3<b.length;j+=2){
+      const x3=b[j],y3=b[j+1],x4=b[j+2],y4=b[j+3],d=(x2-x1)*(y4-y3)-(y2-y1)*(x4-x3);
+      if(Math.abs(d)<1e-9)continue;
+      const t=((x3-x1)*(y4-y3)-(y3-y1)*(x4-x3))/d,u=((x3-x1)*(y2-y1)-(y3-y1)*(x2-x1))/d;
+      if(t>=0&&t<=1&&u>=0&&u<=1)return true;
+    }
+  }
+  return false;
+}
+// ---- Wersja 151: budynki 3D – wysokość z obrysu, części budynków, kolory z OSM ----
+// wysokość budynku bez danych w OSM: z powierzchni obrysu (m²) – domy ok. 6–7 m, duże hale ok. 10 m; j∈[0,1) to stałe „rozrzucenie” (zależne od miejsca), żeby rzędy domów nie były idealnie równe
+const BH_T=[[8,2.8],[25,3.2],[50,4.4],[100,6],[180,7],[350,8.4],[700,10],[1500,10.5],[4000,9.5],[12000,10.5]];
+function bldEst(a,j){
+  const T=BH_T,n=T.length;let y=T[n-1][1];
+  if(a<=T[0][0])y=T[0][1];
+  else for(let i=0;i<n-1;i++)if(a<T[i+1][0]){y=T[i][1]+(T[i+1][1]-T[i][1])*Math.log(a/T[i][0])/Math.log(T[i+1][0]/T[i][0]);break}
+  return Math.round(y*(.9+.2*j)*2)/2;
+}
+// kolor budynku z OSM (building:colour): #rgb, #rrggbb albo nazwa angielska; nazwy mają stonowane odcienie, żeby mapa nie krzyczała
+const BCOL={white:'#ecebe6',black:'#4a4a4a',grey:'#a3a3a3',gray:'#a3a3a3',silver:'#b9b9b9',lightgrey:'#c4c4c4',lightgray:'#c4c4c4',darkgrey:'#7c7c7c',darkgray:'#7c7c7c',red:'#b9594d',brown:'#8d6a52',maroon:'#8a4a45',yellow:'#dcc57c',beige:'#d8c8a4',cream:'#e6dcc0',tan:'#cdb48f',orange:'#d99a5c',green:'#7fa383',blue:'#7b97b8',pink:'#d9a5a5',purple:'#9a85a8'};
+function bldCol(v){
+  v=String(v).trim().toLowerCase();
+  if(Object.prototype.hasOwnProperty.call(BCOL,v))return BCOL[v];
+  let m=/^#([0-9a-f]{3})$/.exec(v);if(m)return '#'+m[1].split('').map(x=>x+x).join('');
+  m=/^#([0-9a-f]{6})$/.exec(v);return m?'#'+m[1]:null;
+}
 function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko tereny, wody, drogi główne i tory – bez ulic, budynków, nazw ulic i wykrywania przejazdów)
   const W=40075016.686,cl=Math.cos(rad(lat0)),cx=lon0/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(lat0)/2));
-  const P={},LB=[],B=[],RS=[],XR=[],XD=[],PL=[],WN=[],WB=[],bb=[1e12,1e12,-1e12,-1e12];
+  const P={},LB=[],B=[],RS=[],XR=[],XD=[],PL=[],WN=[],WB=[],bb=[1e12,1e12,-1e12,-1e12],ST={n:0,est:0,part:0,col:0,hid:0,br:0,over:0},BF=[];
   const gp=k=>P[k]||(P[k]=new Path2D());
   let nfc=0,sliceEnd=performance.now()+7;
   for(const t of tiles){
@@ -5325,9 +5364,11 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
       if(!cls)continue;
       // rysujemy wprost do ścieżek klas (bez osobnego Path2D na każdy obiekt i bez closePath – to był najdroższy fragment budowy mapy)
       const isTr=f.l==='transportation',one=cls==='rs'&&isTr&&(pr.oneway==1||pr.oneway===true);   // jednokierunkowe ulice osiedlowe = jeden pas
-      const pa=gp(cls);let pb=null;   // pb: oś jezdni (przerywana na drogach dwukierunkowych, ciągła na autostradach)
-      if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr'))pb=gp('cl');else if(cls==='mw')pb=gp('cm')}
-      const pc=one?gp('one1'):null,pe=(fill&&!wide&&(cls==='water'||cls==='park'))?gp(cls+'E'):null;   // pe: obrys bez odcinków leżących na brzegu kafelka (to cięcie geometrii, nie brzeg wody – inaczej na wodzie widać „szwy”)
+      // most/wiadukt (brunnel=bridge): osobne ścieżki, rysowane później, od najniższego poziomu (layer), z cieniem i obwódką
+      const brg=(!wide&&isTr&&pr.brunnel==='bridge'&&BRCLS[cls])?{cls,L:Math.max(1,Math.min(4,Math.round(+pr.layer)||1)),pa:new Path2D(),pb:null,pbk:'',pc:null,ras:[],over:false}:null;
+      const pa=brg?brg.pa:gp(cls);let pb=null;   // pb: oś jezdni (przerywana na drogach dwukierunkowych, ciągła na autostradach)
+      if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr')){pb=brg?(brg.pb=new Path2D()):gp('cl');if(brg)brg.pbk='cl'}else if(cls==='mw'){pb=brg?(brg.pb=new Path2D()):gp('cm');if(brg)brg.pbk='cm'}}
+      const pc=one?(brg?(brg.pc=new Path2D()):gp('one1')):null,pe=(fill&&!wide&&(cls==='water'||cls==='park'))?gp(cls+'E'):null;   // pe: obrys bez odcinków leżących na brzegu kafelka (to cięcie geometrii, nie brzeg wody – inaczej na wodzie widać „szwy”)
       for(const rg of f.r){
         if(rg.length<4)continue;
         const x0=(ox+rg[0]*k-cx)*cl,y0=(oy-rg[1]*k-cy)*cl;
@@ -5345,19 +5386,30 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
             if((ax===bx&&(ax<=0||ax>=E))||(ay===by&&(ay<=0||ay>=E))){pen=false;continue}
             if(!pen){pe.moveTo((ox+ax*k-cx)*cl,(oy-ay*k-cy)*cl);pen=true}
             pe.lineTo((ox+bx*k-cx)*cl,(oy-by*k-cy)*cl)}}
-        if(ra&&ra.length>=4)RS.push(ra);
+        if(ra&&ra.length>=4){if(brg){ra.lv=1;brg.ras.push(ra)}RS.push(ra)}
       }
-      if(cls==='bld'&&B.length<2200&&!(pr.render_min_height>0)){   // bryły 3D: obrysy budynków z wysokością
-        let sg=0;
-        for(const rg of f.r){
-          if(rg.length<8)continue;let a=0;
-          for(let i=0,n=rg.length;i<n;i+=2){const j=(i+2)%n;a+=rg[i]*rg[j+1]-rg[j]*rg[i+1]}
-          if(!a)continue;if(!sg)sg=Math.sign(a);if(Math.sign(a)!==sg)continue;
-          const pts=[];let sx=0,sy=0;
-          for(let i=0;i+1<rg.length;i+=2){const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;pts.push(x,y);sx+=x;sy+=y}
-          const m=pts.length/2,mx_=sx/m,my_=sy/m;if(mx_*mx_+my_*my_>520*520)continue;
-          const h=pr.render_height>0?pr.render_height:5+Math.abs(Math.round(mx_*3+my_*5))%9;
-          B.push({p:pts,h:Math.min(h,160),cx:mx_,cy:my_});
+      if(brg)BF.push(brg);
+      if(cls==='bld'&&B.length<2600){   // bryły 3D: obrysy budynków z wysokością; części wiszące (render_min_height) też; budynek z częściami (hide_3d) rysują same części
+        if(pr.hide_3d&&pr.hide_3d!=='false')ST.hid++;
+        else{
+          const mh=pr.render_min_height>0?pr.render_min_height:0,rh=pr.render_height>0?pr.render_height:0,bc=pr.colour?bldCol(pr.colour):null;
+          let sg=0;
+          for(const rg of f.r){
+            if(rg.length<8)continue;let a=0;
+            for(let i=0,n=rg.length;i<n;i+=2){const j=(i+2)%n;a+=rg[i]*rg[j+1]-rg[j]*rg[i+1]}
+            if(!a)continue;if(!sg)sg=Math.sign(a);if(Math.sign(a)!==sg)continue;
+            const pts=[];let sx=0,sy=0;
+            for(let i=0;i+1<rg.length;i+=2){const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;pts.push(x,y);sx+=x;sy+=y}
+            const m=pts.length/2,mx_=sx/m,my_=sy/m;if(mx_*mx_+my_*my_>520*520)continue;
+            let h=rh,est=false;
+            if(!(h>0)){   // brak wysokości w OSM: z powierzchni obrysu (pola w m², bo punkty są już w metrach)
+              let A=0;for(let i=0;i<pts.length;i+=2){const j=(i+2)%pts.length;A+=pts[i]*pts[j+1]-pts[j]*pts[i+1]}
+              h=mh>0?mh+3:bldEst(Math.abs(A)/2,((Math.round(mx_*3+my_*5)%97)+97)%97/97);est=true;
+            }
+            if(mh>0&&h<mh+.5)continue;
+            B.push({p:pts,h:Math.min(h,160),m:Math.min(mh,150),cx:mx_,cy:my_,est,col:bc});
+            ST.n++;if(est)ST.est++;if(mh>0)ST.part++;if(bc)ST.col++;
+          }
         }
       }
     }
@@ -5380,7 +5432,24 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
   }
   const uniq=A=>{const o=[];for(const a of A)if(!o.some(b=>b.n===a.n&&Math.hypot(a.x-b.x,a.y-b.y)<500))o.push(a);return o};   // ta sama nazwa z sąsiednich kafelków
   const WN2=uniq(WN).map(w=>{let e=0;for(const b of WB)if(w.x>=b[0]&&w.x<=b[2]&&w.y>=b[1]&&w.y<=b[3])e=Math.max(e,b[2]-b[0],b[3]-b[1]);w.e=e;return w}).filter(w=>w.e>0&&w.n.length<=30);
-  return {lat:lat0,lon:lon0,P,LB,B,RS,SP:[],XC,PL:uniq(PL),WN:WN2,bb};
+  // mosty i wiadukty: jezdnia na obiekcie, którego oś przecina tor leżący na ziemi, musi być narysowana jeszcze raz PO torach (tor widać pod nią)
+  const BR=BF.slice().sort((a,b)=>a.L-b.L);
+  if(BR.length&&XR.length){
+    const bbox=a=>{let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;for(let i=0;i+1<a.length;i+=2){if(a[i]<x0)x0=a[i];if(a[i]>x1)x1=a[i];if(a[i+1]<y0)y0=a[i+1];if(a[i+1]>y1)y1=a[i+1]}return [x0,y0,x1,y1]};
+    const xb=XR.map(bbox);
+    for(const b of BR){
+      if(b.cls==='rail'||b.cls==='rsv'||b.cls==='tram')continue;
+      loop:for(const ra of b.ras){
+        const q=bbox(ra);
+        for(let n=0;n<XR.length;n++){
+          const e=xb[n];if(e[2]<q[0]||e[0]>q[2]||e[3]<q[1]||e[1]>q[3])continue;
+          if(polyHit(ra,XR[n])){b.over=true;ST.over++;break loop}
+        }
+      }
+    }
+  }
+  ST.br=BR.length;
+  return {lat:lat0,lon:lon0,P,LB,B,RS,SP:[],XC,PL:uniq(PL),WN:WN2,bb,ST,BR};
 }
 async function ofmUrl(force){
   let c=null;try{c=JSON.parse(localStorage.getItem('ofm')||'null');if(!force&&c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
@@ -5469,12 +5538,12 @@ async function loadVec(lat,lon){
       if(!ready){
         const d1=await buildMvtAsync([first],lat,lon);
         if(!Object.keys(d1.P).length)throw new Error('pusta mapa');
-        vecData=d1;xDerAdd(d1.XC);$('attr').textContent='© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap';
+        vecData=d1;xDerAdd(d1.XC);$('attr').textContent=vecAttr();
       }
       const all=[first,...(await done).filter(r=>r.status==='fulfilled').map(r=>r.value)];
       const dat=await buildMvtAsync(all,lat,lon);dat.tx=tx;dat.ty=ty;dat.z=z;
       if(!Object.keys(dat.P).length)throw new Error('pusta mapa');
-      vecData=dat;xDerAdd(dat.XC);$('attr').textContent='© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap';
+      vecData=dat;xDerAdd(dat.XC);$('attr').textContent=vecAttr();
       fetchSpeed(lat,lon,dat);
       return;
     }catch(e){tileMem.clear()}
@@ -5609,6 +5678,310 @@ function themePal(p){if(themeK!=='hc')return p;const nt={farm:null,grass:null,wo
 var FONT_UI='Barlow,system-ui,sans-serif',FONT_NUM='"Barlow Semi Condensed",Barlow,system-ui,sans-serif';
 (function(){if(!document.fonts||!document.fonts.load)return;   // gdy czcionki się wczytają, mapa i etykiety rysują się od nowa
   Promise.all(['400 14px Barlow','600 14px Barlow','700 14px Barlow','700 14px "Barlow Semi Condensed"'].map(f=>document.fonts.load(f))).then(()=>{vd=null}).catch(()=>{})})();
+// ================= Wersja 151: wysokość terenu (DEM) =================
+// Kafelki wysokości „Terrarium” (AWS Terrain Tiles): wysokość [m] = R·256 + G + B/256 − 32768. Służą do (1) cieniowania rzeźby na mapie,
+// (2) profilu wzniesień trasy i (3) ostrzeżeń o stromych zjazdach. Zapis w pamięci urządzenia (IndexedDB 'dem|'), więc działają też bez internetu.
+var terrK=(()=>{try{return localStorage.getItem('terr')||'soft'}catch{return 'soft'}})();   // off | soft | strong
+const DEM_URL=['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png','https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'];
+const DEM_Z=12,DEM_MAXLEN=350000,demMem=new Map(),demSt={ok:0,fail:0,err:'',ms:0,host:'',mos:null,mosMs:0,busy:false,next:0,tries:0,drawn:0,probe:'',om:''};
+async function demDecode(buf){   // PNG → wysokości [m] (Float32Array 256×256; NaN = brak danych)
+  const blob=new Blob([buf],{type:'image/png'});let bmp;
+  try{bmp=await window.createImageBitmap(blob,{colorSpaceConversion:'none',premultiplyAlpha:'none'})}catch{bmp=await window.createImageBitmap(blob)}   // bez korekty kolorów – to liczby, nie obraz
+  const w=bmp.width,h=bmp.height,OC=window.OffscreenCanvas,cv=OC?new OC(w,h):Object.assign(document.createElement('canvas'),{width:w,height:h}),g=cv.getContext('2d',{willReadFrequently:true});
+  g.drawImage(bmp,0,0);try{bmp.close()}catch{}
+  const d=g.getImageData(0,0,w,h).data,H=new Float32Array(w*h);
+  for(let i=0;i<H.length;i++){const o=i*4;H[i]=d[o+3]<250?NaN:d[o]*256+d[o+1]+d[o+2]/256-32768}
+  H.w=w;return H;
+}
+function vecAttr(){return '© OpenFreeMap © OpenMapTiles · dane © OpenStreetMap'+(terrK!=='off'&&demSt.mos&&!window.ecoOn&&!lite?' · teren: Mapzen / AWS':'')}
+function demAttr(){const a=$('attr');if(a&&a.textContent.startsWith('© OpenFreeMap'))a.textContent=vecAttr()}   // podpis mapy: źródło rzeźby tylko wtedy, gdy jest rysowana
+function demTile(z,x,y){   // kafelek wysokości: pamięć podręczna → pamięć urządzenia (rok) → sieć (dwa adresy tego samego zasobu)
+  const k=z+'/'+x+'/'+y,m=demMem.get(k);if(m)return m;
+  const pr=(async()=>{
+    const key='dem|'+k;let c=null,buf=null;try{c=await idbGet(key)}catch{}
+    if(c&&c.buf&&Date.now()-c.t<365*864e5)buf=c.buf;
+    if(!buf){
+      let err=null;
+      for(const u of DEM_URL){
+        const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),12000);
+        try{const t0=performance.now(),r=await fetch(u.replace('{z}',z).replace('{x}',x).replace('{y}',y),{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);buf=await r.arrayBuffer();demSt.ms=Math.round(performance.now()-t0);demSt.host=u.split('/')[2];err=null;idbSet(key,{t:Date.now(),buf}).catch(()=>{});break}
+        catch(e){err=e;buf=null}
+        finally{clearTimeout(tm)}
+      }
+      if(!buf){if(c&&c.buf)buf=c.buf;else{demSt.fail++;demSt.err=String((err&&err.message)||err||'brak danych').slice(0,70);throw err||new Error('brak danych')}}
+    }
+    const H=await demDecode(buf);demSt.ok++;return H;
+  })();
+  demMem.set(k,pr);pr.catch(()=>demMem.delete(k));
+  if(demMem.size>60)demMem.delete(demMem.keys().next().value);
+  return pr;
+}
+const demFxy=(lat,lon,z)=>{const n=Math.pow(2,z);return [(lon+180)/360*n,(1-Math.log(Math.tan(rad(lat))+1/Math.cos(rad(lat)))/Math.PI)/2*n]};
+function demAt(tiles,z,lat,lon){   // wysokość w punkcie (interpolacja dwuliniowa); tiles: Map 'x/y' → Float32Array; NaN, gdy brak kafelka
+  const [fx,fy]=demFxy(lat,lon,z),tx=Math.floor(fx),ty=Math.floor(fy),H=tiles.get(tx+'/'+ty);if(!H)return NaN;
+  const w=H.w,qx=(fx-tx)*w-.5,qy=(fy-ty)*w-.5,x0=Math.floor(qx),y0=Math.floor(qy),ax=qx-x0,ay=qy-y0;
+  const pxl=(x,y)=>{   // piksel także z sąsiedniego kafelka na brzegu (a gdy go nie ma – najbliższy piksel tego kafelka)
+    if(x>=0&&x<w&&y>=0&&y<w)return H[y*w+x];
+    const t=tiles.get((tx+(x<0?-1:x>=w?1:0))+'/'+(ty+(y<0?-1:y>=w?1:0)));
+    if(t)return t[((y+w)%w)*w+(x+w)%w];
+    return H[Math.max(0,Math.min(w-1,y))*w+Math.max(0,Math.min(w-1,x))];
+  };
+  return (pxl(x0,y0)*(1-ax)+pxl(x0+1,y0)*ax)*(1-ay)+(pxl(x0,y0+1)*(1-ax)+pxl(x0+1,y0+1)*ax)*ay;
+}
+// ---- cieniowanie rzeźby na mapie: mozaika 3×3 kafelków wokół środka mapy, światło z północnego zachodu ----
+const DEM_LZ=.616,DEM_LH=.788;   // wysokość słońca ~38°
+async function demShadeBuild(h,W,mpp){   // „światłocień”: różnica jasności względem terenu płaskiego (0 = płasko, <0 cień, >0 oświetlenie); liczony porcjami, żeby nie zacinać mapy
+  const rel=new Float32Array(W*W),LX=-DEM_LH*.7071,LY=DEM_LH*.7071,at=(x,y)=>h[(y<0?0:y>=W?W-1:y)*W+(x<0?0:x>=W?W-1:x)];
+  for(let y=0;y<W;y++)for(let x=0;x<W;x++){
+    const a=at(x-1,y-1),b=at(x,y-1),c=at(x+1,y-1),d=at(x-1,y),f=at(x+1,y),g=at(x-1,y+1),q=at(x,y+1),i=at(x+1,y+1);
+    const dx=((c+2*f+i)-(a+2*d+g))/(8*mpp),dy=((a+2*b+c)-(g+2*q+i))/(8*mpp),sh=(-dx*LX-dy*LY+DEM_LZ)/Math.sqrt(dx*dx+dy*dy+1);   // dx na wschód, dy na północ
+    rel[y*W+x]=sh===sh?sh-DEM_LZ:0;
+    if(x===W-1&&(y&63)===63)await yieldMain();
+  }
+  return rel;
+}
+async function demMosaic(cx,cy,lat){
+  const T=256,W=T*3,res=await Promise.allSettled([-1,0,1].flatMap(dy=>[-1,0,1].map(dx=>demTile(DEM_Z,cx+dx,cy+dy).then(H=>({dx,dy,H}))))),ok=res.filter(r=>r.status==='fulfilled'&&r.value.H.w===T).map(r=>r.value);
+  if(!ok.some(o=>!o.dx&&!o.dy))throw new Error(demSt.err||'brak kafelka wysokości');
+  const h=new Float32Array(W*W).fill(NaN);
+  for(const o of ok)for(let y=0;y<T;y++)h.set(o.H.subarray(y*T,y*T+T),((o.dy+1)*T+y)*W+(o.dx+1)*T);
+  const mpp=40075016.686/Math.pow(2,DEM_Z)/T*Math.cos(rad(lat));
+  return {z:DEM_Z,cx,cy,tx0:cx-1,ty0:cy-1,W,mpp,rel:await demShadeBuild(h,W,mpp),cv:{},n:ok.length,lat};
+}
+function demCanvas(M,night){   // obraz cieniowania (półprzezroczysty): kolor i siła zależą od ustawienia i trybu nocnego
+  const key=(night?'n':'d')+terrK;if(M.cv[key])return M.cv[key];
+  const W=M.W,st=terrK==='strong',OC=window.OffscreenCanvas,cv=OC?new OC(W,W):Object.assign(document.createElement('canvas'),{width:W,height:W}),g=cv.getContext('2d'),im=g.createImageData(W,W),d=im.data,rel=M.rel;
+  const gS=st?2.3:1.15,aS=st?.45:.27,gH=st?2:1,aH=st?.28:.16,sc=night?[0,4,16]:[44,52,72],hc=night?[120,140,190]:[255,252,238],kS=night?.85:1,kH=night?.3:1,DZ=.012;
+  for(let i=0;i<rel.length;i++){
+    const r=rel[i],o=i*4;
+    if(r<-DZ){d[o]=sc[0];d[o+1]=sc[1];d[o+2]=sc[2];d[o+3]=Math.min(aS,(-r-DZ)*gS)*kS*255}
+    else if(r>DZ){d[o]=hc[0];d[o+1]=hc[1];d[o+2]=hc[2];d[o+3]=Math.min(aH,(r-DZ)*gH)*kH*255}
+  }
+  g.putImageData(im,0,0);M.cv[key]=cv;return cv;
+}
+function demPlace(M,lat0,lon0){   // położenie mozaiki względem początku układu mapy (tak samo jak kafelki wektorowe i korki)
+  const Wd=40075016.686,cl=Math.cos(rad(lat0)),cx=lon0/360*Wd,cy=Wd/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(lat0)/2)),T=Wd/Math.pow(2,M.z);
+  return {x0:(-Wd/2+M.tx0*T-cx)*cl,y0:(Wd/2-M.ty0*T-cy)*cl,w:T*3*cl};
+}
+function demDraw(c,lat0,lon0,s,night){   // wywoływane z paintVec: po terenach i parkach, przed wodą, budynkami i drogami
+  const M=demSt.mos;if(!M||terrK==='off'||window.ecoOn||lite||themeK==='hc'||!(s>=.01))return;
+  const cv=demCanvas(M,night),q=demPlace(M,lat0,lon0);
+  c.save();c.translate(q.x0,q.y0);c.scale(1,-1);try{c.imageSmoothingQuality='high'}catch{}c.drawImage(cv,0,0,q.w,q.w);c.restore();demSt.drawn++;
+}
+async function demTick(){   // mozaika dla kafelka, w którym leży środek wczytanych danych mapy (po zmianie kafelka – nowa)
+  if(terrK==='off'||window.ecoOn||lite||!vec||!vecData||demSt.busy||Date.now()<demSt.next)return;   // tryb oszczędny i uproszczona mapa: bez rzeźby
+  const D=vecData,[fx,fy]=demFxy(D.lat,D.lon,DEM_Z),cx=Math.floor(fx),cy=Math.floor(fy),M=demSt.mos;
+  if(M&&M.cx===cx&&M.cy===cy)return;
+  demSt.busy=true;
+  try{const t0=performance.now(),m=await demMosaic(cx,cy,D.lat);demCanvas(m,night);demSt.mos=m;demSt.tries=0;demSt.mosMs=Math.round(performance.now()-t0);demAttr();vd=null}
+  catch(e){demSt.tries++;demSt.next=Date.now()+Math.min(300000,20000*Math.pow(2,Math.min(4,demSt.tries-1)));demSt.err=String((e&&e.message)||e).slice(0,70)}   // po błędzie ponawiamy z coraz dłuższą przerwą (20 s … 5 min)
+  demSt.busy=false;
+}
+setInterval(()=>{try{demTick()}catch{}},2000);
+// ---- profil wysokości trasy i stromy zjazd ----
+async function demSample(pts,z){   // wysokości w punktach: kafelki leżące na trasie (do 48) pobierane po 4 naraz
+  const need=new Map();
+  for(const q of pts){const [fx,fy]=demFxy(q[0],q[1],z),tx=Math.floor(fx),ty=Math.floor(fy);need.set(tx+'/'+ty,[tx,ty])}
+  if(need.size>48)throw new Error('trasa wymaga zbyt wielu kafelków ('+need.size+')');
+  const tiles=new Map(),list=[...need.values()];let i=0,fail=0;
+  const work=async()=>{while(i<list.length){if(fail>=4&&!tiles.size)return;const [x,y]=list[i++];try{tiles.set(x+'/'+y,await demTile(z,x,y))}catch{fail++}}};
+  await Promise.all([work(),work(),work(),work()]);
+  if(!tiles.size||fail>list.length*.25)throw new Error('brak '+fail+' z '+list.length+' kafelków: '+demSt.err);
+  return Float32Array.from(pts,q=>demAt(tiles,z,q[0],q[1]));
+}
+async function demElevOM(pts){   // zapas: Open-Meteo Elevation API (do 100 punktów w zapytaniu)
+  const out=new Float32Array(pts.length).fill(NaN);
+  for(let i=0;i<pts.length;i+=100){
+    const part=pts.slice(i,i+100),r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+part.map(q=>q[0].toFixed(4)).join(',')+'&longitude='+part.map(q=>q[1].toFixed(4)).join(','));
+    if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);
+    const j=await r.json();(j.elevation||[]).forEach((v,k)=>{if(typeof v==='number')out[i+k]=v});
+  }
+  return out;
+}
+function demProfile(R,e0,step,src){   // wygładzony profil, sumy podjazdów i zjazdów, odcinki stromych zjazdów (≥7% przez ≥450 m)
+  const n=e0.length,e=Float32Array.from(e0);
+  let v=NaN;for(let i=0;i<n;i++){if(isFinite(e[i]))v=e[i];else e[i]=v}
+  v=NaN;for(let i=n-1;i>=0;i--){if(isFinite(e[i]))v=e[i];else e[i]=v}
+  if(n<4||!isFinite(e[0]))return false;
+  const med=new Float32Array(n),sm=new Float32Array(n),w=Math.max(1,Math.round(200/step)),h=Math.max(1,Math.round(150/step));
+  for(let i=0;i<n;i++){const a=[];for(let k=-2;k<=2;k++)a.push(e[Math.max(0,Math.min(n-1,i+k))]);a.sort((p,q)=>p-q);med[i]=a[2]}   // mediana z 5 próbek: pojedyncze „dziury” pod mostami znikają
+  for(let i=0;i<n;i++){let s=0,c=0;for(let k=-w;k<=w;k++){const j=i+k;if(j>=0&&j<n){s+=med[j];c++}}sm[i]=s/c}
+  let up=0,dn=0,ref=sm[0],mx=-1e9,mn=1e9;
+  for(let i=0;i<n;i++){const d=sm[i]-ref;if(d>=4){up+=d;ref=sm[i]}else if(d<=-4){dn-=d;ref=sm[i]}if(sm[i]>mx)mx=sm[i];if(sm[i]<mn)mn=sm[i]}   // zmiany poniżej 4 m to szum
+  const g=new Float32Array(n);let gd=0,gu=0;
+  for(let i=0;i<n;i++){const a=Math.max(0,i-h),b=Math.min(n-1,i+h);g[i]=b>a?(sm[b]-sm[a])/((b-a)*step)*100:0;if(-g[i]>gd)gd=-g[i];if(g[i]>gu)gu=g[i]}
+  const segs=[];let a0=-1;
+  const close=i=>{
+    const L=(i-a0)*step,drop=sm[a0]-sm[i],mean=L>0?drop/L*100:0;
+    if(L>=450&&mean>=7){const p=segs[segs.length-1];
+      if(p&&a0*step-p.b<400){p.b=i*step;p.len=p.b-p.a;p.drop=sm[Math.round(p.a/step)]-sm[i];p.g=p.drop/p.len*100}   // dwa zjazdy blisko siebie – jedno ostrzeżenie
+      else segs.push({a:a0*step,b:i*step,len:L,g:mean,drop})}
+    a0=-1;
+  };
+  for(let i=0;i<n;i++){if(a0<0){if(g[i]<=-7)a0=i}else if(g[i]>-5)close(i)}
+  if(a0>=0)close(n-1);
+  segs.forEach((z,k)=>{const q=routeAt(R,z.a);z.id=k;z.lat=q[0];z.lon=q[1]});
+  R.el={e:sm,step,src,n};R.up=up;R.dn=dn;R.emax=mx;R.emin=mn;R.steep=segs;R.gdn=gd;R.gup=gu;
+  return true;
+}
+async function demRoute(R){   // wywoływane po wyznaczeniu trasy; wynik w R.el / R.steep, linia „Wzniesienia” w panelu trasy
+  const el=$('relev');if(el)el.innerHTML='';
+  if(!R||!R.pts||!(R.len>=500))return;
+  R.el=null;R.steep=[];R.elSt='ładowanie';
+  const L=Math.min(R.len,DEM_MAXLEN),step=Math.max(120,Math.min(400,L/700)),n=Math.floor(L/step)+1,pts=[];   // profil: najwyżej pierwsze 350 km trasy
+  for(let i=0;i<n;i++)pts.push(routeAt(R,Math.min(L,i*step)));
+  let e=null,src='',err='';
+  try{const z=L>250000?10:L>120000?11:12;e=await demSample(pts,z);src='kafelki z'+z}catch(x){err=String(x&&x.message||x)}
+  if(!e&&route===R){try{e=await demElevOM(pts);src='Open-Meteo';demSt.om='ok'}catch(x){err+=(err?' · ':'')+String(x&&x.message||x);demSt.om=String(x&&x.message||x).slice(0,50)}}
+  if(route!==R)return;   // trasa zmieniła się w trakcie pobierania
+  if(!e||!demProfile(R,e,step,src)){R.elSt='brak danych';R.elErr=err;return}
+  R.elSt='ok';demUI(R);
+  try{bbEv('wysokość',src+': podjazdy '+Math.round(R.up)+' m, zjazdy '+Math.round(R.dn)+' m, strome zjazdy: '+R.steep.length)}catch{}
+}
+function demUI(R){
+  const el=$('relev');if(!el)return;
+  if(!R||!R.el){el.innerHTML='';return}
+  const fm=m=>m>=1000?(m/1000).toFixed(m>=10000?0:1).replace('.',',')+' km':Math.max(10,Math.round(m/10)*10)+' m',rng=R.emax-R.emin,flat=rng<12&&R.up<25&&R.dn<25;
+  let t=flat?'Trasa płaska (różnica wysokości '+Math.round(rng)+' m)':'Wzniesienia: podjazdy '+Math.round(R.up)+' m · zjazdy '+Math.round(R.dn)+' m · od '+Math.round(R.emin)+' do '+Math.round(R.emax)+' m n.p.m.';
+  const s=R.steep.length?R.steep.reduce((p,q)=>q.g>p.g?q:p):null;
+  if(s)t+=' · stromy zjazd '+Math.round(s.g)+'% na odcinku '+fm(s.len)+' (po '+fm(s.a)+' jazdy)';
+  if(R.len>DEM_MAXLEN)t+=' · dotyczy pierwszych 350 km trasy';
+  let svg='';
+  if(!flat){
+    const e=R.el.e,n=R.el.n,lo=R.emin,hi=Math.max(R.emax,lo+30),X=i=>(i/(n-1)*300).toFixed(1),Y=q=>(37-(q-lo)/(hi-lo)*32).toFixed(1),sk=Math.max(1,Math.floor(n/160));
+    let d='';for(let i=0;i<n;i+=sk)d+=(d?'L':'M')+X(i)+' '+Y(e[i]);d+='L300 '+Y(e[n-1]);
+    let red='';for(const z of R.steep){const a=Math.round(z.a/R.el.step),b=Math.min(n-1,Math.round(z.b/R.el.step));let q='';for(let i=a;i<=b;i++)q+=(q?'L':'M')+X(i)+' '+Y(e[i]);red+='<path d="'+q+'" fill="none" stroke="#d93025" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round"/>'}
+    svg='<svg viewBox="0 0 300 40" preserveAspectRatio="none" role="img" aria-label="Profil wysokości trasy"><path d="'+d+'L300 40L0 40Z" fill="currentColor" opacity=".13"/><path d="'+d+'" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke" opacity=".75"/>'+red+'</svg>';
+  }
+  el.innerHTML='<div>'+t+'</div>'+svg;
+}
+setInterval(()=>{const el=$('relev');if(el&&el.firstChild&&!route)el.innerHTML=''},2000);   // trasa usunięta – znika też profil
+const demKmW=m=>{const k=m/1000;if(k<1)return Math.max(50,Math.round(m/50)*50)+' metrów';const r=Math.round(k*10)/10;if(Math.abs(r-Math.round(r))<.05){const q=Math.round(r);return q+(q===1?' kilometr':q<=4?' kilometry':' kilometrów')}return String(r).replace('.',',')+' kilometra'};
+var steepSaid={},demTc=null;
+function demTun(R,z){   // czy początek stromego zjazdu leży w tunelu (wg mapy)? Wtedy spadek jest pozorny: model terenu pokazuje górę nad tunelem
+  const D=vecData;if(!D||!D.P||!D.P.tun)return false;
+  try{
+    const c=demTc||(demTc=document.createElement('canvas').getContext('2d')),kx=111195*Math.cos(rad(D.lat));c.lineWidth=16;let n=0;
+    for(let k=0;k<6;k++){const q=routeAt(R,Math.min(R.len,z.a+k*80));if(c.isPointInStroke(D.P.tun,(q[1]-D.lon)*kx,(q[0]-D.lat)*111195))n++}
+    return n>=2;
+  }catch{return false}
+}
+function gradeCheck(p){   // ostrzeżenie o stromym zjeździe z wyprzedzeniem ~20 s jazdy (jeden raz na odcinek)
+  const R=route;if(!R||!R.steep||!R.steep.length||demo||R.off>80||!R.el)return;
+  const look=Math.max(350,Math.min(900,(p.speed||0)*22));
+  for(const z of R.steep){
+    const d=z.a-R.along,k=Math.round(z.lat*400)+'|'+Math.round(z.lon*250);if(d<30||d>look||steepSaid[k])continue;
+    steepSaid[k]=1;
+    if(z.tun===undefined)z.tun=demTun(R,z);
+    if(z.tun)continue;
+    say('zs'+k,'Za około '+Math.max(50,Math.round(d/50)*50)+' metrów stromy zjazd, '+Math.round(z.g)+' procent, przez '+demKmW(z.len)+'. Proszę zwolnić i hamować silnikiem.',[120,80,120],'Stromy zjazd '+Math.round(z.g)+'%');
+    break;
+  }
+}
+async function demPrefetchRoute(R){   // trasa offline: kafelki wysokości wzdłuż trasy (profil i ostrzeżenia działają bez internetu)
+  const L=Math.min(R.len,DEM_MAXLEN),z=L>250000?10:L>120000?11:12,need=new Map();
+  for(let d=0;d<=L+300;d+=Math.max(200,L/900)){const q=routeAt(R,Math.min(d,R.len)),[fx,fy]=demFxy(q[0],q[1],z),tx=Math.floor(fx),ty=Math.floor(fy);need.set(tx+'/'+ty,[tx,ty])}
+  const list=[...need.values()].slice(0,48);let ok=0;
+  for(let k=0;k<list.length;k+=4)await Promise.allSettled(list.slice(k,k+4).map(([x,y])=>demTile(z,x,y).then(()=>ok++)));
+  return ok;
+}
+// ---- diagnostyka danych 3D (Ustawienia → Diagnostyka, tylko właściciel) ----
+var d3Acc={tiles:new Set(),n:0,est:0,col:0,part:0,hid:0,br:0,over:0,last:null};   // suma z obszarów odwiedzonych w tej sesji (obszar ≈ 1 km)
+setInterval(()=>{try{const D=vecData;if(!D||!D.ST||D===d3Acc.last)return;d3Acc.last=D;const k=D.lat.toFixed(2)+'|'+D.lon.toFixed(2);if(d3Acc.tiles.has(k))return;d3Acc.tiles.add(k);for(const q of ['n','est','col','part','hid','br','over'])d3Acc[q]+=D.ST[q]||0}catch{}},4000);
+function d3Rate(n,est){return n<15?'za mało budynków w okolicy, by ocenić':(()=>{const q=(n-est)/n;return q>=.9?'bardzo dobra':q>=.6?'dobra':q>=.3?'średnia (wiele wysokości szacowanych)':'słaba (prawie wszystkie wysokości szacowane)'})()}
+function d3Text(){
+  const D=vecData,S=D&&D.ST,L=[],pc=(a,b)=>b>0?Math.round(a/b*100)+'%':'–';
+  L.push('DANE 3D WOKÓŁ AUTA');
+  if(!S)L.push('Mapa szczegółowa jeszcze się nie wczytała.');
+  else{
+    L.push('Budynki: '+S.n+' (wysokość z danych '+(S.n-S.est)+' = '+pc(S.n-S.est,S.n)+' · szacowana z obrysu '+S.est+' · z kolorem '+S.col+' · części budynków '+S.part+' · ukryte '+S.hid+')');
+    L.push('Ocena wysokości budynków: '+d3Rate(S.n,S.est));
+    L.push('Mosty i wiadukty: '+S.br+' (nad drogą lub torami: '+S.over+')');
+  }
+  if(d3Acc.tiles.size>1)L.push('Cała jazda ('+d3Acc.tiles.size+' obszarów): budynków '+d3Acc.n+', wysokość z danych '+pc(d3Acc.n-d3Acc.est,d3Acc.n)+', mostów '+d3Acc.br+' – ocena: '+d3Rate(d3Acc.n,d3Acc.est));
+  const M=demSt.mos;
+  L.push('Rzeźba terenu: '+(terrK==='off'?'wyłączona':terrK==='strong'?'wyraźna':'delikatna')+(M?' · mozaika '+M.n+'/9 kafelków z'+M.z+' ('+M.mpp.toFixed(1).replace('.',',')+' m/px, '+demSt.mosMs+' ms) · narysowana '+demSt.drawn+'×':terrK==='off'?'':' · brak danych'+(demSt.err?' ('+d3Err(demSt.err)+')':demSt.busy?' (pobieranie…)':'')));
+  L.push('Kafelki wysokości: pobrane '+demSt.ok+' · błędy '+demSt.fail+(demSt.host?' · ostatnio '+demSt.host+' w '+demSt.ms+' ms':'')+(demSt.fail&&demSt.err?' · ostatni błąd: '+d3Err(demSt.err):''));
+  const R=route;
+  if(R&&R.el)L.push('Trasa: profil z „'+R.el.src+'” · podjazdy '+Math.round(R.up)+' m · zjazdy '+Math.round(R.dn)+' m · stromych zjazdów '+R.steep.length+(R.steep.length?' (najstromiej '+Math.round(Math.max(...R.steep.map(z=>z.g)))+'%)':'')+(demSt.om?' · Open-Meteo: '+demSt.om:''));
+  else if(R)L.push('Trasa: '+(R.elSt==='brak danych'?'brak danych o wysokości'+(R.elErr?' ('+String(R.elErr).slice(0,80)+')':''):R.elSt==='ładowanie'?'pobieram profil wysokości…':R.len<500?'za krótka na profil':'profil niedostępny'));
+  if(demSt.probe)L.push('',demSt.probe);
+  return L.join('\n');
+}
+function d3Err(e){const m=String((e&&e.message)||e||'');return e&&e.name==='AbortError'?'brak odpowiedzi w 10 s':/HTTP \d+/.test(m)?'odrzucone ('+m.match(/HTTP \d+/)[0]+')':/Failed to fetch|NetworkError|Load failed/i.test(m)?'niedostępne (brak internetu albo blokada przeglądarki)':m.slice(0,80)}
+async function d3Probe(){   // aktywne sprawdzenie źródeł wysokości w miejscu, w którym jest auto
+  const c=last||(vecData?{lat:vecData.lat,lon:vecData.lon}:null);if(!c)return 'Brak pozycji – poczekaj na sygnał GPS.';
+  const [fx,fy]=demFxy(c.lat,c.lon,DEM_Z),tx=Math.floor(fx),ty=Math.floor(fy),out=['SPRAWDZENIE ŹRÓDEŁ WYSOKOŚCI (miejsce: '+c.lat.toFixed(4)+', '+c.lon.toFixed(4)+')'];let hT=NaN,hO=NaN;
+  for(const u of DEM_URL){
+    const host=u.split('/')[2],t0=performance.now(),ac=new AbortController(),tm=setTimeout(()=>ac.abort(),10000);
+    try{
+      const r=await fetch(u.replace('{z}',DEM_Z).replace('{x}',tx).replace('{y}',ty),{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);
+      const buf=await r.arrayBuffer(),H=await demDecode(buf);hT=demAt(new Map([[tx+'/'+ty,H]]),DEM_Z,c.lat,c.lon);
+      out.push('Kafelki wysokości, '+host+': działają · '+Math.round(performance.now()-t0)+' ms · '+Math.round(buf.byteLength/1024)+' KB · tu '+(isFinite(hT)?Math.round(hT)+' m n.p.m.':'brak danych w tym punkcie'));break;
+    }catch(e){out.push('Kafelki wysokości, '+host+': '+d3Err(e))}
+    finally{clearTimeout(tm)}
+  }
+  try{const t0=performance.now(),a=await demElevOM([[c.lat,c.lon]]);hO=a[0];out.push('Open-Meteo (zapas dla profilu trasy): działa · '+Math.round(performance.now()-t0)+' ms · tu '+(isFinite(hO)?Math.round(hO)+' m n.p.m.':'brak danych'))}
+  catch(e){out.push('Open-Meteo (zapas dla profilu trasy): '+d3Err(e))}
+  if(isFinite(hT)&&isFinite(hO))out.push('Zgodność źródeł: różnica '+Math.abs(Math.round(hT-hO))+' m'+(Math.abs(hT-hO)>40?' – duża (np. teren górzysty lub obiekt na zboczu)':''));
+  if(!isFinite(hT)&&!isFinite(hO))out.push('Bez żadnego źródła wysokości nie będzie rzeźby terenu, profilu trasy ani ostrzeżeń o stromych zjazdach.');
+  try{bbEv('3D','sprawdzenie źródeł: kafelki '+(isFinite(hT)?'ok':'brak')+', Open-Meteo '+(isFinite(hO)?'ok':'brak'))}catch{}
+  return out.join('\n');
+}
+{
+  const el=$('d3Diag'),btn=$('d3Chk');
+  if(el&&btn){
+    setInterval(()=>{try{if(OWNER&&el.offsetParent!==null)el.textContent=d3Text()}catch{}},1000);
+    btn.onclick=async()=>{if(!OWNER)return;btn.disabled=true;demSt.probe='Sprawdzam źródła wysokości…';try{el.textContent=d3Text();demSt.probe=await d3Probe()}catch(e){demSt.probe='Nie udało się sprawdzić: '+String(e&&e.message||e).slice(0,80)}btn.disabled=false;try{el.textContent=d3Text()}catch{}};
+  }
+}
+$('terrSel').value=terrK;$('terrSel').onchange=()=>{terrK=$('terrSel').value;try{localStorage.setItem('terr',terrK)}catch{}demSt.next=0;demAttr();vd=null};
+// tory (zwykłe i boczne) w trzech stopniach szczegółowości zależnie od przybliżenia; Rr / Rs – ścieżki torów głównych i bocznych
+function drawRailSet(c,Rr,Rs,s,night,rlw){
+    if(Rr||Rs){
+      if(s<.3){if(Rr){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(Rr)}}   // oddalenie: cienka ciągła linia
+      else if(s<.6){   // średnio: ciągła linia bez „podkładów” (stacje nie robią zebry), tory boczne bardzo cienkie i blade
+        if(Rs){c.strokeStyle=night?'#4d5873':'#c5c9d1';c.lineWidth=Math.max(1.2,rlw*.36)/s;c.stroke(Rs)}
+        if(Rr){c.strokeStyle=night?'#8f9bb8':'#6b7380';c.lineWidth=Math.max(1.6,rlw*.6)/s;c.stroke(Rr)}
+      }else{   // z bliska: smukła linia z poprzecznymi „podkładami” (jak na mapach kolejowych), tory boczne jeszcze delikatniejsze
+        if(Rs){c.strokeStyle=night?'#5a6683':'#b3b8c2';c.lineWidth=Math.max(.9,rlw*.22)/s;c.stroke(Rs);
+          c.strokeStyle=night?'#4f5a76':'#c0c4cc';c.lineWidth=rlw*.7/s;c.setLineDash([1.3/s,7/s]);c.lineCap='butt';c.stroke(Rs);c.setLineDash([]);c.lineCap='round'}
+        if(Rr){c.strokeStyle=night?'#7f8bab':'#8c94a2';c.lineWidth=Math.max(1,rlw*.3)/s;c.stroke(Rr);
+          c.strokeStyle=night?'#6e7a99':'#a0a7b3';c.lineWidth=rlw*1.05/s;c.setLineDash([1.5/s,5.5/s]);c.lineCap='butt';c.stroke(Rr);c.setLineDash([]);c.lineCap='round'}
+      }
+    }
+}
+// mosty i wiadukty (Wersja 151): od najniższego poziomu – cień, ciemna obwódka, jasny brzeg i jezdnia (albo tory); wyższy poziom zasłania niższy
+// only: 'road' = jezdnie (przed pasami ruchu), 'over' = jezdnie nad torami (poprawka po narysowaniu torów), 'rail' = tory na obiektach
+function drawBridges(c,BR,o,only){
+  const {pal,s,rwz,cwz,night,dm,rlw}=o,isR=b=>b.cls==='rail'||b.cls==='rsv'||b.cls==='tram';
+  const list=BR.filter(b=>only==='rail'?isR(b):(!isR(b)&&(only!=='over'||b.over)&&!(b.cls==='sv'&&s<.3)&&!(b.cls==='rs'&&s<.14)));
+  if(!list.length)return;
+  const shw=night?'rgba(0,0,0,.45)':'rgba(70,58,35,.24)',cs=night?'#06080d':'#7d786b',ed=night?'rgba(170,185,225,.22)':'rgba(255,255,255,.6)';
+  const wOf=b=>isR(b)?Math.max(3,rlw*1.9):rwz(b.cls);
+  for(let i=0;i<list.length;){
+    let j=i;while(j<list.length&&list[j].L===list[i].L)j++;
+    const grp=list.slice(i,j);i=j;
+    if(s>=.3){c.save();c.translate(3.2/s,-3.2/s);c.strokeStyle=shw;for(const b of grp){c.lineWidth=(wOf(b)+cwz+3)/s;c.stroke(b.pa)}c.restore()}   // cień obiektu
+    for(const b of grp){c.strokeStyle=cs;c.lineWidth=(wOf(b)+cwz+(s>=.5?3.2:1.6)+(dm?1.2:0))/s;c.stroke(b.pa)}   // obwódka
+    if(s>=.5)for(const b of grp){c.strokeStyle=ed;c.lineWidth=(wOf(b)+1.6)/s;c.stroke(b.pa)}   // jasny brzeg (krawężnik / balustrada)
+    for(const b of grp){
+      if(isR(b)){
+        c.strokeStyle=night?'#262e44':'#cfccc2';c.lineWidth=wOf(b)/s;c.stroke(b.pa);   // podłoże toru na obiekcie
+        if(b.cls==='tram'){if(s>=.3){c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(b.pa)}}
+        else drawRailSet(c,b.cls==='rail'?b.pa:null,b.cls==='rsv'?b.pa:null,s,night,rlw);
+        continue;
+      }
+      const w=rwz(b.cls);
+      c.strokeStyle=pal[b.cls];c.lineWidth=w/s;c.stroke(b.pa);
+      if(b.cls==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(b.pa)}
+      if(b.pb&&s>=(dm?.5:.7)){
+        if(b.pbk==='cm'){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(b.pb)}
+        else{c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):(night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)');c.lineWidth=Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash([9/s,11/s]);c.lineCap='butt';c.stroke(b.pb);c.setLineDash([]);c.lineCap='round'}
+      }
+    }
+  }
+}
 const TERR=['resi','ind','farm','grass','wood','wet','sand','inst','sport','cem','rland'];   // kolejność rysowania terenów (od spodu)
 function paintVec(cam,sh){   // cam – środek płótna; sh – o ile px ekranu (wschód, północ) leży przed kamerą (widok 3D)
   const S=$('rot').clientWidth,s=scaleCur,kx=111195*Math.cos(rad(cam.lat)),pal=themePal(PAL[night?'night':'day']),c=vctx,she=sh?sh[0]:0,shn=sh?sh[1]:0;
@@ -5625,6 +5998,7 @@ function paintVec(cam,sh){   // cam – środek płótna; sh – o ile px ekranu
     c.save();c.translate(S/2,S/2);c.scale(s,-s);c.translate(-wx,-wy);c.lineCap='round';c.lineJoin='round';
     terr(Q);
     if(Q.park){c.fillStyle=pal.park;c.fill(Q.park)}
+    try{demDraw(c,Wd.lat,Wd.lon,s,night)}catch(e){errNote('rzeźba',e)}   // rzeźba terenu (cieniowanie) pod wodą, drogami i budynkami
     if(Q.water){c.fillStyle=pal.water;c.fill(Q.water)}
     if(Q.wline){c.strokeStyle=pal.water;c.lineWidth=4/s;c.stroke(Q.wline)}
     const wo=['sc','pr','mw'];
@@ -5642,6 +6016,7 @@ function paintVec(cam,sh){   // cam – środek płótna; sh – o ile px ekranu
     if(Wd&&D.bb){c.fillStyle=pal.bg;c.fillRect(D.bb[0],D.bb[1],D.bb[2]-D.bb[0],D.bb[3]-D.bb[1])}   // szczegółowy obszar rysujemy od czystego tła (bez „duchów” z uproszczonych kafelków)
     terr(P);
     if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.parkE||P.park)}
+    try{demDraw(c,D.lat,D.lon,s,night)}catch(e){errNote('rzeźba',e)}
     if(P.water){c.fillStyle=pal.water;c.fill(P.water);c.strokeStyle=pal.waterEdge;c.lineWidth=1.2/s;c.stroke(P.waterE||P.water)}
     if(P.wline){c.strokeStyle=pal.water;c.lineWidth=7/s;c.stroke(P.wline)}
     if(P.tun&&s>=.18){c.save();c.setLineDash([7/s,6/s]);c.lineCap='butt';c.strokeStyle=pal.tun;c.lineWidth=Math.max(2,Math.min(9,rw('sc',s)*.5))/s;c.stroke(P.tun);c.restore()}   // tunele
@@ -5674,20 +6049,12 @@ function paintVec(cam,sh){   // cam – środek płótna; sh – o ile px ekranu
       if(P.cl){c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
+    const BO={pal,s,rwz,cwz,night,dm,rlw};
+    if(D.BR&&D.BR.length)try{drawBridges(c,D.BR,BO,'road')}catch(e){c.setLineDash([]);c.lineCap='round';errNote('mosty',e)}   // mosty i wiadukty (nad drogami niższego poziomu)
     if(LG)try{lnBody(c,LG,LV,pal,s,dm,night,lite||ecoOn)}catch(e){c.setLineDash([]);c.lineCap='round';lnFail(e)}   // wypełnienie, linie pasów, strzałki
-    if(P.rail||P.rsv){
-      if(s<.3){if(P.rail){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(P.rail)}}   // oddalenie: cienka ciągła linia
-      else if(s<.6){   // średnio: ciągła linia bez „podkładów” (stacje nie robią zebry), tory boczne bardzo cienkie i blade
-        if(P.rsv){c.strokeStyle=night?'#4d5873':'#c5c9d1';c.lineWidth=Math.max(1.2,rlw*.36)/s;c.stroke(P.rsv)}
-        if(P.rail){c.strokeStyle=night?'#8f9bb8':'#6b7380';c.lineWidth=Math.max(1.6,rlw*.6)/s;c.stroke(P.rail)}
-      }else{   // z bliska: smukła linia z poprzecznymi „podkładami” (jak na mapach kolejowych), tory boczne jeszcze delikatniejsze
-        if(P.rsv){c.strokeStyle=night?'#5a6683':'#b3b8c2';c.lineWidth=Math.max(.9,rlw*.22)/s;c.stroke(P.rsv);
-          c.strokeStyle=night?'#4f5a76':'#c0c4cc';c.lineWidth=rlw*.7/s;c.setLineDash([1.3/s,7/s]);c.lineCap='butt';c.stroke(P.rsv);c.setLineDash([]);c.lineCap='round'}
-        if(P.rail){c.strokeStyle=night?'#7f8bab':'#8c94a2';c.lineWidth=Math.max(1,rlw*.3)/s;c.stroke(P.rail);
-          c.strokeStyle=night?'#6e7a99':'#a0a7b3';c.lineWidth=rlw*1.05/s;c.setLineDash([1.5/s,5.5/s]);c.lineCap='butt';c.stroke(P.rail);c.setLineDash([]);c.lineCap='round'}
-      }
-    }
+    drawRailSet(c,P.rail,P.rsv,s,night,rlw);
     if(P.tram&&s>=.3){c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(P.tram)}
+    if(D.BR&&D.BR.length)try{drawBridges(c,D.BR,BO,'over');drawBridges(c,D.BR,BO,'rail')}catch(e){c.setLineDash([]);c.lineCap='round';errNote('mosty',e)}   // wiadukty nad torami zasłaniają tory; tory na mostach – ponad drogami
     if(D.flow){for(const f of D.flow){c.save();c.translate(f.x0,f.y0);c.scale(1,-1);c.globalAlpha=.92;c.drawImage(f.img,0,0,f.w,f.w);c.restore()}}
     c.restore();
     if(D.LB&&s>=.3){   // nazwy ulic: ważniejsze drogi pierwsze, bez nakładania się i bez powtórzeń tej samej nazwy tuż obok siebie
@@ -6499,6 +6866,34 @@ function updCarSnap(){
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
 const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
 let wallKey='',wallCol=null,bldCache=null,bldTick=0,wallH=[],shc=null,shx=null;
+const wallCC=new Map();
+const mixC=(h1,h2,t)=>{const a=parseInt(h1.slice(1,7),16),b=parseInt(h2.slice(1,7),16),f=(x,y)=>Math.round(x+(y-x)*t);return '#'+((1<<24)|(f(a>>16,b>>16)<<16)|(f((a>>8)&255,(b>>8)&255)<<8)|f(a&255,b&255)).toString(16).slice(1)};
+// kolor z OSM (60%) zmieszany z kolorem budynków na mapie (40%) – barwy zostają stonowane; te same odcienie jasności co dla zwykłych budynków
+function bldWallC(col,hb){
+  const k=(night?'n':'d')+col+hb;let w=wallCC.get(k);
+  if(!w){const base=mixC(night?PAL.night.bld:PAL.day.bld,col,.6);
+    w={roof:night?shadeC(base,1.35-.04*hb):shadeC(base,1.05-.03*hb),a:night?shadeC(base,.95-.04*hb):shadeC(base,.86-.04*hb),b:night?shadeC(base,.7-.03*hb):shadeC(base,.7-.04*hb),line:wallCol.line};
+    wallCC.set(k,w)}
+  return w;
+}
+// części budynków stojące na innych (render_min_height > 0): budynek-podpora ma być rysowany wcześniej niż część
+function pip(p,x,y){let c=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2){if((p[i+1]>y)!==(p[j+1]>y)&&x<(p[j]-p[i])*(y-p[i+1])/(p[j+1]-p[i+1])+p[i])c=!c}return c}
+function bldParts(D){
+  const P=[];
+  for(const b of D.B)if(b.m>0){
+    let best=null;
+    for(const s of D.B){if(s===b||(s.m||0)>=b.m||s.h<b.m-1.5)continue;if(pip(s.p,b.cx,b.cy)&&(!best||s.h>best.h))best=s}
+    if(best){b.sup=best;P.push(b)}
+  }
+  P.sort((a,b)=>a.m-b.m);D.parts=P;
+}
+function partsOrder(lst,D){
+  for(const b of D.parts){
+    const i=lst.findIndex(x=>x.b===b);if(i<0)continue;
+    const j=lst.findIndex(x=>x.b===b.sup);if(j<0||j<i)continue;
+    const it=lst.splice(i,1)[0];lst.splice(j,0,it);   // po usunięciu części podpora leży na j-1, więc część ląduje tuż za nią
+  }
+}
 // dalekie budynki wtapiają się w tło tak samo jak mapa pod mgłą: kolor każdej bryły mieszamy z kolorem tła wg krycia mgły na jej wysokości
 // (bez nakładania gradientu na cały ekran co klatkę – to było najdroższe w całym rysowaniu)
 const BFC=new Map();let bfBg=[0,0,0];
@@ -6514,7 +6909,7 @@ function drawBuildings3D(){
   const W=window.innerWidth,H=window.innerHeight;
   const ox=(vf.cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(vf.cam.lat-D.lat)*111195;
   const kk=111195,kxx=1;
-  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
+  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];wallCC.clear();const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
   const R=rad(curRot),sunDir=rad(-35);   // „słońce” z lewej-góry: ściany zwrócone na południowy zachód jaśniejsze
   const hs=Math.min(1.6,.9+tiltDeg/90);
   const fogOn=skyY>=0,fq=skyQ,fe=skyQ+skyL;
@@ -6530,6 +6925,8 @@ function drawBuildings3D(){
       lst.push({b,y:q.y,k:q.k});
     }
     lst.sort((a,b)=>a.y-b.y);
+    if(D.parts===undefined)bldParts(D);
+    if(D.parts.length)partsOrder(lst,D);
     bldCache={D,lst,rot:curRot,s};
   }
   const cap=Math.min(lst.length,520),start=lst.length-cap;   // przy nadmiarze pomijamy najdalsze
@@ -6546,17 +6943,18 @@ function drawBuildings3D(){
     for(let n=Math.max(start,lst.length-260);n<lst.length;n++){
       if(fogOn&&lst[n].y<fe)continue;   // w pasie mgły cieni nie rysujemy
       const b=lst[n].b,p=b.p,m=p.length/2,L=Math.min(b.h*hs/(tn*hs),b.h*3.2),ex=dirE*L,ny=dirN*L,G=[],Sd=[];let ok=true;
-      for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],0),c2=g(p[2*i]+ex,p[2*i+1]+ny,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
+      const Lm=b.m>0?Math.min(b.m/tn,b.m*3.2):0,bx=dirE*Lm,by=dirN*Lm;   // część wisząca rzuca cień dopiero od swojej podstawy
+      for(let i=0;i<m;i++){const a=g(p[2*i]+bx,p[2*i+1]+by,0),c2=g(p[2*i]+ex,p[2*i+1]+ny,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
       if(!ok)continue;
       for(let i=0;i<m;i++){const j=(i+1)%m;shx.beginPath();shx.moveTo(G[i].x,G[i].y);shx.lineTo(G[j].x,G[j].y);shx.lineTo(Sd[j].x,Sd[j].y);shx.lineTo(Sd[i].x,Sd[i].y);shx.closePath();shx.fill()}
     }
     mx.save();mx.globalAlpha=.2;mx.setTransform(1,0,0,1,0,0);mx.drawImage(shc,0,0);mx.restore();
   }
   for(let n=start;n<lst.length;n++){
-    const b=lst[n].b,p=b.p,m=p.length/2,H3=b.h*hs;
-    const hb=Math.min(6,Math.floor(b.h/14)),wc=wallH[hb]||(wallH[hb]={roof:night?shadeC(PAL.night.bld,1.35-.04*hb):shadeC(PAL.day.bld,1.05-.03*hb),a:night?shadeC(PAL.night.bld,.95-.04*hb):shadeC(PAL.day.bld,.86-.04*hb),b:night?shadeC(PAL.night.bld,.7-.03*hb):shadeC(PAL.day.bld,.7-.04*hb),line:wallCol.line});   // wyższe budynki są ciemniejsze
+    const b=lst[n].b,p=b.p,m=p.length/2,H3=b.h*hs,M3=(b.m||0)*hs;
+    const hb=Math.min(6,Math.floor(b.h/14)),wc=b.col?bldWallC(b.col,hb):wallH[hb]||(wallH[hb]={roof:night?shadeC(PAL.night.bld,1.35-.04*hb):shadeC(PAL.day.bld,1.05-.03*hb),a:night?shadeC(PAL.night.bld,.95-.04*hb):shadeC(PAL.day.bld,.86-.04*hb),b:night?shadeC(PAL.night.bld,.7-.03*hb):shadeC(PAL.day.bld,.7-.04*hb),line:wallCol.line});   // wyższe budynki są ciemniejsze
     const G=[],T=[];let ok=true;
-    for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],0),t=g(p[2*i],p[2*i+1],H3);if(!a||!t){ok=false;break}G.push(a);T.push(t)}
+    for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],M3),t=g(p[2*i],p[2*i+1],H3);if(!a||!t){ok=false;break}G.push(a);T.push(t)}
     if(!ok)continue;
     let wa=wc.a,wb=wc.b,wr=wc.roof,wl=wc.line;
     if(fogOn){
@@ -7826,8 +8224,8 @@ const lateOf=(tr,seg)=>tr.dly?Math.round(tr.dly.a[Math.max(0,Math.min(tr.st.leng
 let idbP=null;   // jedno połączenie z bazą na całą sesję (wcześniej każdy odczyt otwierał nowe)
 function idb(){if(idbP)return idbP;idbP=new Promise((ok,no)=>{const r=indexedDB.open('przejazdy',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{const d=r.result;d.onclose=d.onversionchange=()=>{idbP=null;try{d.close()}catch(e){}};ok(d)};r.onerror=()=>{idbP=null;no(r.error)}});return idbP}
 // raz na tydzień: usuń stare dane z pamięci urządzenia i zostaw najwyżej tyle najnowszych, ile wolno w danej grupie – pamięć nie rośnie bez końca
-// (kafelki mapy 30 dni / 1500, zapytania Overpass: znaki, przejazdy 14 dni / 600, pasy ruchu 14 dni / 600, dane mapy zapasowej 14 dni / 40)
-const IDB_LIMITS=[['tile|',30,1500],['op|',14,600],['ln|',14,600],['v2|',14,40]];
+// (kafelki mapy 30 dni / 1500, zapytania Overpass: znaki, przejazdy 14 dni / 600, pasy ruchu 14 dni / 600, dane mapy zapasowej 14 dni / 40, kafelki wysokości terenu rok / 300)
+const IDB_LIMITS=[['tile|',30,1500],['op|',14,600],['ln|',14,600],['v2|',14,40],['dem|',365,300]];
 async function idbPrune(){
   try{
     if(Date.now()-LSget('tilePrune',0)<7*864e5)return;
@@ -8325,7 +8723,7 @@ function bbRoute(){
 }
 function bbSnapshot(why){
   const now=Date.now(),cut=now-15*60000,r=route&&route.len>0?route:null;
-  const cfg={ver:($('ver')||{}).textContent||'',vbose,vmode,sigDens,laneOn,voice:$('voice').checked,camShow:$('camShow').checked,scale:+(+scaleCur||0).toFixed(3),
+  const cfg={ver:($('ver')||{}).textContent||'',vbose,vmode,sigDens,terr:terrK,laneOn,voice:$('voice').checked,camShow:$('camShow').checked,scale:+(+scaleCur||0).toFixed(3),
     tilt:(typeof tiltE==='function')?Math.round(tiltE()):null,online:navigator.onLine!==false,haveTTKey:!!ttKey,gtfs:!!gtfs,trains:trains.length,crossings:crossings.length,vec:!!vecData,
     signs:signs?{list:signs.list.length,lights:signs.lights.length,haz:signs.haz.length,cells:sgCells.size}:null,lanes:LANEW.size,screen:window.innerWidth+'x'+window.innerHeight,ua:navigator.userAgent};
   return {kind:'przejazd-zgloszenie',v:2,t:now,iso:new Date(now).toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,why:why||'',
@@ -8395,6 +8793,7 @@ $('dlroute').onclick=async()=>{
     if(cl.length>45){cl=cl.slice(0,45)}
     let ok=0;
     for(let k=0;k<tl.length;k+=6){await Promise.allSettled(tl.slice(k,k+6).map(([x,y])=>tileBuf(tpl,z,x,y).then(()=>ok++)));st('Mapa trasy: '+ok+' / '+tl.length+' kafelków'+cut)}
+    let dn=0;try{st('Wysokość terenu wzdłuż trasy…');dn=await demPrefetchRoute(R)}catch{}   // Wersja 151: profil wzniesień i strome zjazdy także bez internetu
     let so=0,lo=0;
     for(let k=0;k<cl.length;k++){
       const c=cl[k];st('Znaki i pasy: komórka '+(k+1)+' / '+cl.length+cut);
@@ -8402,7 +8801,7 @@ $('dlroute').onclick=async()=>{
       try{await lnLoadCell(c.ix,c.iy);lo++}catch{}
     }
     try{sgMerge(last?last.lat:0,last?last.lon:0)}catch{}
-    st(ok?('Gotowe: trasa zapisana offline – '+ok+' kafelków mapy, '+so+' komórek znaków, '+lo+' komórek pasów.'+cut):'Nie udało się pobrać mapy trasy.');
+    st(ok?('Gotowe: trasa zapisana offline – '+ok+' kafelków mapy, '+so+' komórek znaków, '+lo+' komórek pasów'+(dn?', '+dn+' kafelków wysokości':'')+'.'+cut):'Nie udało się pobrać mapy trasy.');
     bbEv('offline','pobrano trasę: '+ok+' kafelków');
   }catch(e){st('Błąd: '+e.message)}
   b.disabled=false;
