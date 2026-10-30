@@ -1291,6 +1291,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="laneCb" checked> Pasy ruchu na drogach i na trasie (dane z OpenStreetMap)</label>
   <select id="sigDens" class="sec"><option value="all">Znaki na mapie: wszystkie</option><option value="main">Znaki na mapie: światła i STOP</option><option value="route">Znaki na mapie: tylko na trasie</option><option value="off">Znaki na mapie: ukryte</option></select>
   <select id="terrSel" class="sec"><option value="soft">Rzeźba terenu: delikatna</option><option value="strong">Rzeźba terenu: wyraźna</option><option value="off">Rzeźba terenu: wyłączona</option></select>
+  <select id="det3Sel" class="sec"><option value="full">Szczegóły 3D: pełne (dachy, okna, drzewa)</option><option value="basic">Szczegóły 3D: podstawowe (dachy)</option><option value="off">Szczegóły 3D: same bryły</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="logon"> Zapisuj log jazdy</label>
   <button id="share" class="sec">Udostępnij przyjazd</button>
   <button id="sharePos" class="sec">Udostępnij moją pozycję</button>
@@ -1410,7 +1411,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 151</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 152</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -3486,7 +3487,7 @@ function snapGrid(D){
   const g=new Map(),CS=40;
   for(const ra of D.RS||[])for(let i=0;i+3<ra.length;i+=2){
     const x1=ra[i],y1=ra[i+1],x2=ra[i+2],y2=ra[i+3],ax=Math.floor(Math.min(x1,x2)/CS),bx=Math.floor(Math.max(x1,x2)/CS),ay=Math.floor(Math.min(y1,y2)/CS),by=Math.floor(Math.max(y1,y2)/CS);
-    for(let a=ax;a<=bx;a++)for(let b=ay;b<=by;b++){const k=a+','+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(x1,y1,x2,y2);(l.v||(l.v=[])).push(ra.lv||0)}   // l.v: poziom odcinka (0 = na ziemi, 1 = most/wiadukt)
+    for(let a=ax;a<=bx;a++)for(let b=ay;b<=by;b++){const k=a+','+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(x1,y1,x2,y2);(l.v||(l.v=[])).push(ra.lv||0);(l.c||(l.c=[])).push(ra.k||'rs')}   // l.v: poziom odcinka (0 = na ziemi, 1 = most/wiadukt), l.c: klasa drogi
   }
   return D.grid=g;
 }
@@ -3643,7 +3644,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens','terrSel']);
+  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens','terrSel','det3Sel']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
   mv('snd',['vsel','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
@@ -4816,7 +4817,7 @@ function sgParse(j){
       if(t.highway==='traffic_signals'){lights.push({id:n.id,lat:n.lat,lon:n.lon,kind:'lights'});continue}
       if(t.highway==='speed_camera'||/^(maxspeed|average_speed|speed_camera)$/.test(t.enforcement||'')){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'camera',avg:t.enforcement==='average_speed',ms:t.maxspeed?parseMax(t.maxspeed):null});continue}
       if(t.traffic_calming){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'bump'});continue}
-      if(t.highway==='crossing'){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'crossing'});continue}
+      if(t.highway==='crossing'){haz.push({id:n.id,lat:n.lat,lon:n.lon,kind:'crossing',cr:t.crossing||''});continue}
       for(const [w,i] of ws){
         const g=w.geometry,last=g.length-1;if(last<1)continue;
         if(i>0&&i<last){                       // znak w środku drogi
@@ -4842,7 +4843,7 @@ function sgMerge(lat,lon){
   const nearL=h=>{const by=Math.floor(h.lat/.0004),bx=Math.floor(h.lon/.0006);
     for(let u=-1;u<=1;u++)for(let w=-1;w<=1;w++){const a=B.get((by+u)+'|'+(bx+w));if(a&&a.some(l=>Math.abs(l.lat-h.lat)<.00018&&Math.abs(l.lon-h.lon)<.00028))return true}return false};
   const hz=haz.filter(h=>h.kind!=='crossing'||!nearL(h));
-  signs={lat,lon,list,lights,haz:hz,all:list.concat(lights,hz),v:++sgVer};
+  signs={lat,lon,list,lights,haz:hz,all:list.concat(lights,hz),zeb:haz.filter(h=>h.kind==='crossing'),v:++sgVer};
 }
 async function sgFetchCell(c){   // jedna komórka znaków i świateł: z sieci albo (bez internetu) z pamięci urządzenia
     const y0=c.iy*SG_CELL.y,x0=c.ix*SG_CELL.x,bb='('+y0.toFixed(5)+','+x0.toFixed(5)+','+(y0+SG_CELL.y).toFixed(5)+','+(x0+SG_CELL.x).toFixed(5)+')';
@@ -5310,9 +5311,107 @@ function bldCol(v){
   let m=/^#([0-9a-f]{3})$/.exec(v);if(m)return '#'+m[1].split('').map(x=>x+x).join('');
   m=/^#([0-9a-f]{6})$/.exec(v);return m?'#'+m[1]:null;
 }
+// ---- Wersja 152: szczegóły budynków 3D (dachy spadziste) i drzewa ----
+// stabilny „los” z dwóch liczb całkowitych: ta sama wartość po każdym wczytaniu mapy (okna, dachy i drzewa nie zmieniają się przy przesunięciu środka mapy)
+const hh=(a,b)=>{let h=(Math.imul(a|0,374761393)+Math.imul(b|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296};
+// dach spadzisty małego, prawie prostokątnego domu: OSM nie podaje tu kształtu dachu, więc zgadujemy go z obrysu (jak robią to inne mapy 3D przy domach bez tagu roof:shape)
+// pts – obrys w metrach (x,y,x,y…), h – wysokość, est – wysokość oszacowana (wtedy h to okap, a dach rośnie ponad nią), hv – stały ułamek [0,1) budynku, A – pole obrysu (m²)
+// zwraca {v:[4 narożniki], vi:[ich numery w obrysie], s:0|1 (która para krótkich boków), rh:wysokość kalenicy nad okapem, k:'g'|'h'|'p', r:[x0,y0,x1,y1] końce kalenicy, c:odcień 0-4}
+function bRoof(pts,h,est,hv,A){
+  const m=pts.length>>1;
+  if(m<4||m>12||A<40||A>360||h>12.5||(!est&&h<4.6))return null;
+  const q=[],qi=[];
+  for(let i=0;i<m;i++){const x=pts[2*i],y=pts[2*i+1],n=q.length;if(n&&Math.hypot(x-q[n-2],y-q[n-1])<.3)continue;q.push(x,y);qi.push(i)}
+  if(q.length>=8&&Math.hypot(q[0]-q[q.length-2],q[1]-q[q.length-1])<.3){q.length-=2;qi.length-=1}
+  const n=q.length>>1,v=[],vi=[];
+  for(let i=0;i<n;i++){   // zostają tylko narożniki: punkty prawie na prostej (< ok. 4°) pomijamy
+    const a=(i+n-1)%n,c=(i+1)%n,ux=q[2*i]-q[2*a],uy=q[2*i+1]-q[2*a+1],wx=q[2*c]-q[2*i],wy=q[2*c+1]-q[2*i+1];
+    if(Math.abs(ux*wy-uy*wx)<.07*Math.hypot(ux,uy)*Math.hypot(wx,wy)&&ux*wx+uy*wy>0)continue;
+    v.push(q[2*i],q[2*i+1]);vi.push(qi[i]);
+  }
+  if(v.length!==8)return null;
+  const L=[0,1,2,3].map(i=>Math.hypot(v[2*((i+1)&3)]-v[2*i],v[2*((i+1)&3)+1]-v[2*i+1]));
+  let sg=0;
+  for(let i=0;i<4;i++){   // wypukły czworokąt o kątach ok. 90° (±20°)
+    const a=(i+3)&3,c=(i+1)&3,ux=v[2*i]-v[2*a],uy=v[2*i+1]-v[2*a+1],wx=v[2*c]-v[2*i],wy=v[2*c+1]-v[2*i+1],cr=ux*wy-uy*wx;
+    if(Math.abs(ux*wx+uy*wy)>.36*Math.hypot(ux,uy)*Math.hypot(wx,wy))return null;
+    if(!sg)sg=Math.sign(cr);else if(Math.sign(cr)!==sg)return null;
+  }
+  if(Math.abs(L[0]-L[2])>.3*Math.max(L[0],L[2])||Math.abs(L[1]-L[3])>.3*Math.max(L[1],L[3]))return null;
+  const s=(L[0]+L[2])<=(L[1]+L[3])?0:1,Ws=(L[s]+L[s+2])/2,Ll=(L[(s+1)&3]+L[(s+3)&3])/2;
+  if(Ws<3.4||Ws>15)return null;
+  const rh=Math.min(4.6,Math.max(1.3,.34*Ws*(.88+.24*((hv*13)%1))));
+  const r=(hv*7.7)%1;let k=Ll<Ws*1.2?'p':(r<.4?'h':'g');
+  if(k==='h'&&Ll-Ws<1)k='p';
+  const a0x=(v[2*s]+v[2*((s+1)&3)])/2,a0y=(v[2*s+1]+v[2*((s+1)&3)+1])/2,a1x=(v[2*((s+2)&3)]+v[2*((s+3)&3)])/2,a1y=(v[2*((s+2)&3)+1]+v[2*((s+3)&3)+1])/2;
+  let R;
+  if(k==='g')R=[a0x,a0y,a1x,a1y];
+  else{const dx=a1x-a0x,dy=a1y-a0y,Lr=Math.hypot(dx,dy)||1,t=k==='p'?.5:Math.min(.5,(Ws/2)/Lr);R=[a0x+dx*t,a0y+dy*t,a1x-dx*t,a1y-dy*t]}
+  // normalne (jednostkowe, skierowane na zewnątrz) czterech ścian dachu: dwie połacie wzdłuż kalenicy i dwa końce (szczyt albo skos)
+  const cxm=(v[0]+v[2]+v[4]+v[6])/4,cym=(v[1]+v[3]+v[5]+v[7])/4,V=i=>[v[2*(i&3)],v[2*(i&3)+1],0],P0=[R[0],R[1],rh],P1=[R[2],R[3],rh];
+  const nrm=f=>{
+    const a=f[0],b=f[1],c=f[2],ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],wx=c[0]-a[0],wy=c[1]-a[1],wz=c[2]-a[2];
+    let nx=uy*wz-uz*wy,ny=uz*wx-ux*wz,nz=ux*wy-uy*wx;const l=Math.hypot(nx,ny,nz)||1;nx/=l;ny/=l;nz/=l;
+    let gx=0,gy=0,gz=0;for(const q of f){gx+=q[0];gy+=q[1];gz+=q[2]}gx/=f.length;gy/=f.length;gz/=f.length;
+    if(nx*(gx-cxm)+ny*(gy-cym)+nz*(gz-rh*.3)<0){nx=-nx;ny=-ny;nz=-nz}
+    return [nx,ny,nz];
+  };
+  const nf=[nrm([V(s+1),V(s+2),P1,P0]),nrm([V(s+3),V(s),P0,P1]),nrm([V(s),V(s+1),P0]),nrm([V(s+2),V(s+3),P1])];
+  return {v,vi,s,rh,k,r:R,c:Math.floor(((hv*31)%1)*5),nf};
+}
+// drzewa w lasach, parkach i na cmentarzach: OSM nie ma pojedynczych drzew w tych kafelkach, więc rozsiewamy je w obrysie lasu/parku (siatka stała w układzie Mercatora – te same drzewa po każdym wczytaniu),
+// z pominięciem dróg (pas zależny od klasy drogi), torów, budynków i wody
+const TREE_CFG={wood:{st:8.5,keep:.88},park:{st:21,keep:.5},cem:{st:19,keep:.55}},TREE_CAP=9000,TREE_R=560;
+function* treeScatter(TF,cx,cy,cl,lat0,RS,XR,B,WR){
+  const X=[],Y=[],T=[],Z=[],seen=new Set(),clg=Math.cos(rad(Math.round(lat0))),R=TREE_R,CS=24;
+  let dl=performance.now()+6;
+  const OG=new Map(),reg=(x0,y0,x1,y1,o)=>{for(let u=Math.floor(x0/CS);u<=Math.floor(x1/CS);u++)for(let w=Math.floor(y0/CS);w<=Math.floor(y1/CS);w++){const k=u+','+w;let l=OG.get(k);if(!l)OG.set(k,l=[]);l.push(o)}};
+  const seg=(a,ex)=>{for(let i=0;i+3<a.length;i+=2){const x1=a[i],y1=a[i+1],x2=a[i+2],y2=a[i+3];
+    if(Math.max(x1,x2)<-R-ex||Math.min(x1,x2)>R+ex||Math.max(y1,y2)<-R-ex||Math.min(y1,y2)>R+ex)continue;
+    reg(Math.min(x1,x2)-ex,Math.min(y1,y2)-ex,Math.max(x1,x2)+ex,Math.max(y1,y2)+ex,[x1,y1,x2,y2,ex])}};
+  for(const ra of RS)seg(ra,(VC[ra.k]?VC[ra.k].m:6)*1.2+3);
+  for(const a of XR)seg(a,6);
+  for(const b of B){const p=b.p;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(let i=0;i<p.length;i+=2){if(p[i]<x0)x0=p[i];if(p[i]>x1)x1=p[i];if(p[i+1]<y0)y0=p[i+1];if(p[i+1]>y1)y1=p[i+1]}reg(x0-1,y0-1,x1+1,y1+1,[x0-1,y0-1,x1+1,y1+1,p])}
+  const blocked=(x,y)=>{
+    const l=OG.get(Math.floor(x/CS)+','+Math.floor(y/CS));
+    if(l)for(const o of l){
+      if(o.length===5&&typeof o[4]==='number'){const dx=o[2]-o[0],dy=o[3]-o[1],L2=dx*dx+dy*dy;let t=L2>.01?((x-o[0])*dx+(y-o[1])*dy)/L2:0;t=t<0?0:t>1?1:t;const ex=o[4];if((o[0]+dx*t-x)**2+(o[1]+dy*t-y)**2<ex*ex)return true}
+      else if(x>=o[0]&&x<=o[2]&&y>=o[1]&&y<=o[3]&&pip(o[4],x,y))return true;
+    }
+    for(const w of WR)if(x>=w.bb[0]&&x<=w.bb[2]&&y>=w.bb[1]&&y<=w.bb[3]&&pip(w.a,x,y))return true;
+    return false;
+  };
+  for(const f of TF){
+    const cfg=TREE_CFG[f.k],sm=cfg.st/clg,E=[];let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    for(const a of f.r)for(let i=0;i<a.length;i+=2){const j=(i+2)%a.length,ax=a[i],ay=a[i+1],bx=a[j],by=a[j+1];
+      if(ax<x0)x0=ax;if(ax>x1)x1=ax;if(ay<y0)y0=ay;if(ay>y1)y1=ay;
+      if(ay===by||(ay>R&&by>R)||(ay<-R&&by<-R))continue;E.push(ax,ay,bx,by)}
+    if(x1<-R||x0>R||y1<-R||y0>R||!E.length)continue;
+    const g0=Math.floor((Math.max(y0,-R)/cl+cy)/sm),g1=Math.floor((Math.min(y1,R)/cl+cy)/sm);
+    for(let gy=g0;gy<=g1;gy++){
+      const yc=((gy+.5)*sm-cy)*cl,xs=[];
+      for(let i=0;i<E.length;i+=4){const ay=E[i+1],by=E[i+3];if((ay<=yc)!==(by<=yc))xs.push(E[i]+(yc-ay)*(E[i+2]-E[i])/(by-ay))}
+      if(xs.length<2)continue;xs.sort((a,b)=>a-b);
+      for(let q=0;q+1<xs.length;q+=2){
+        const xa=Math.max(xs[q],-R),xb=Math.min(xs[q+1],R);if(xb<=xa)continue;
+        const ga=Math.ceil((xa/cl+cx)/sm-.5),gb=Math.floor((xb/cl+cx)/sm-.5);
+        for(let gx=ga;gx<=gb;gx++){
+          if(hh(gx*3+1,gy*5+2)>=cfg.keep)continue;
+          const key=gx+'|'+gy;if(seen.has(key))continue;
+          const px=((gx+.5+(hh(gx,gy)-.5)*.85)*sm-cx)*cl,py=((gy+.5+(hh(gx+7919,gy+104729)-.5)*.85)*sm-cy)*cl;
+          if(px*px+py*py>R*R||blocked(px,py))continue;
+          seen.add(key);X.push(px);Y.push(py);T.push(f.k==='wood'&&hh(gx+31,gy+57)<.32?1:0);Z.push(Math.floor(hh(gx+101,gy+211)*255));
+          if(X.length>=TREE_CAP)return {n:X.length,x:Float32Array.from(X),y:Float32Array.from(Y),t:Uint8Array.from(T),z:Uint8Array.from(Z)};
+        }
+      }
+      if(performance.now()>dl){yield;dl=performance.now()+6}
+    }
+  }
+  return {n:X.length,x:Float32Array.from(X),y:Float32Array.from(Y),t:Uint8Array.from(T),z:Uint8Array.from(Z)};
+}
 function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko tereny, wody, drogi główne i tory – bez ulic, budynków, nazw ulic i wykrywania przejazdów)
   const W=40075016.686,cl=Math.cos(rad(lat0)),cx=lon0/360*W,cy=W/(2*Math.PI)*Math.log(Math.tan(Math.PI/4+rad(lat0)/2));
-  const P={},LB=[],B=[],RS=[],XR=[],XD=[],PL=[],WN=[],WB=[],bb=[1e12,1e12,-1e12,-1e12],ST={n:0,est:0,part:0,col:0,hid:0,br:0,over:0},BF=[];
+  const P={},LB=[],B=[],RS=[],XR=[],XD=[],PL=[],WN=[],WB=[],TF=[],WR=[],bb=[1e12,1e12,-1e12,-1e12],ST={n:0,est:0,part:0,col:0,hid:0,br:0,over:0,roof:0,tr:0,trMs:0},BF=[];
   const gp=k=>P[k]||(P[k]=new Path2D());
   let nfc=0,sliceEnd=performance.now()+7;
   for(const t of tiles){
@@ -5320,7 +5419,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
     {const x0=(ox-cx)*cl,x1=(ox+T-cx)*cl,y0=(oy-T-cy)*cl,y1=(oy-cy)*cl;bb[0]=Math.min(bb[0],x0);bb[1]=Math.min(bb[1],y0);bb[2]=Math.max(bb[2],x1);bb[3]=Math.max(bb[3],y1)}   // obszar pokryty kafelkami (m od środka)
     for(const f of t.feats){
       if(!(++nfc&63)&&performance.now()>sliceEnd){yield;sliceEnd=performance.now()+7}
-      const pr=f.p,k=T/f.e;let cls=null,fill=false,cut=wide?1e9:3000;
+      const pr=f.p,k=T/f.e;let cls=null,fill=false,cut=wide?1e9:3000,tfk=null;
       switch(f.l){
         case 'transportation':
           if(f.t!==2)continue;
@@ -5335,11 +5434,12 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
           break;
         case 'waterway':if(f.t===2&&(pr.class==='river'||pr.class==='canal'))cls='wline';break;
         case 'water':if(f.t===3){cls='water';fill=true;cut=1e9;
-          for(const rg of f.r){if(rg.length<8)continue;let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;for(let i=0;i+1<rg.length;i+=2){const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}if(x1-x0>40||y1-y0>40)WB.push([x0,y0,x1,y1])}}break;   // obrysy zbiorników: nazwę wody pokazujemy, gdy mieści się w zbiorniku
+          for(const rg of f.r){if(rg.length<8)continue;let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;const wa=[];for(let i=0;i+1<rg.length;i+=2){const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;wa.push(x,y);if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}if(x1-x0>40||y1-y0>40)WB.push([x0,y0,x1,y1]);
+            if(!wide&&x1>-TREE_R-20&&x0<TREE_R+20&&y1>-TREE_R-20&&y0<TREE_R+20)WR.push({a:wa,bb:[x0,y0,x1,y1]})}}break;   // obrysy zbiorników: nazwę wody pokazujemy, gdy mieści się w zbiorniku
         case 'park':if(f.t===3){cls='park';fill=true;cut=1e9}break;
         case 'building':if(f.t===3&&!wide){cls='bld';fill=true;cut=1100}break;
-        case 'landcover':if(f.t===3&&MV_LC[pr.class]){cls=MV_LC[pr.class];fill=true;cut=1e9}break;
-        case 'landuse':if(f.t===3&&MV_LU[pr.class]){cls=MV_LU[pr.class];fill=true;cut=1e9}break;
+        case 'landcover':if(f.t===3&&MV_LC[pr.class]){cls=MV_LC[pr.class];fill=true;cut=1e9;if(!wide)tfk=pr.class==='wood'?'wood':(pr.class==='grass'&&(pr.subclass==='park'||pr.subclass==='garden'))?'park':null}break;
+        case 'landuse':if(f.t===3&&MV_LU[pr.class]){cls=MV_LU[pr.class];fill=true;cut=1e9;if(!wide&&pr.class==='cemetery')tfk='cem'}break;
         case 'place':
           if(f.t===1&&pr.name&&MV_PL[pr.class]&&f.r.length){const rg=f.r[0];PL.push({x:(ox+rg[0]*k-cx)*cl,y:(oy-rg[1]*k-cy)*cl,n:String(pr.name),c:MV_PL[pr.class],r:pr.rank>0?pr.rank:99})}
           continue;
@@ -5386,9 +5486,10 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
             if((ax===bx&&(ax<=0||ax>=E))||(ay===by&&(ay<=0||ay>=E))){pen=false;continue}
             if(!pen){pe.moveTo((ox+ax*k-cx)*cl,(oy-ay*k-cy)*cl);pen=true}
             pe.lineTo((ox+bx*k-cx)*cl,(oy-by*k-cy)*cl)}}
-        if(ra&&ra.length>=4){if(brg){ra.lv=1;brg.ras.push(ra)}RS.push(ra)}
+        if(ra&&ra.length>=4){ra.k=cls;if(brg){ra.lv=1;brg.ras.push(ra)}RS.push(ra)}
       }
       if(brg)BF.push(brg);
+      if(tfk){const rs=[];for(const rg of f.r){if(rg.length<6)continue;const a=[];for(let i=0;i+1<rg.length;i+=2)a.push((ox+rg[i]*k-cx)*cl,(oy-rg[i+1]*k-cy)*cl);rs.push(a)}if(rs.length)TF.push({k:tfk,r:rs})}
       if(cls==='bld'&&B.length<2600){   // bryły 3D: obrysy budynków z wysokością; części wiszące (render_min_height) też; budynek z częściami (hide_3d) rysują same części
         if(pr.hide_3d&&pr.hide_3d!=='false')ST.hid++;
         else{
@@ -5401,13 +5502,15 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
             const pts=[];let sx=0,sy=0;
             for(let i=0;i+1<rg.length;i+=2){const x=(ox+rg[i]*k-cx)*cl,y=(oy-rg[i+1]*k-cy)*cl;pts.push(x,y);sx+=x;sy+=y}
             const m=pts.length/2,mx_=sx/m,my_=sy/m;if(mx_*mx_+my_*my_>520*520)continue;
-            let h=rh,est=false;
+            let h=rh,est=false,A=0;
+            for(let i=0;i<pts.length;i+=2){const j=(i+2)%pts.length;A+=pts[i]*pts[j+1]-pts[j]*pts[i+1]}
             if(!(h>0)){   // brak wysokości w OSM: z powierzchni obrysu (pola w m², bo punkty są już w metrach)
-              let A=0;for(let i=0;i<pts.length;i+=2){const j=(i+2)%pts.length;A+=pts[i]*pts[j+1]-pts[j]*pts[i+1]}
               h=mh>0?mh+3:bldEst(Math.abs(A)/2,((Math.round(mx_*3+my_*5)%97)+97)%97/97);est=true;
             }
             if(mh>0&&h<mh+.5)continue;
-            B.push({p:pts,h:Math.min(h,160),m:Math.min(mh,150),cx:mx_,cy:my_,est,col:bc});
+            const bo={p:pts,h:Math.min(h,160),m:Math.min(mh,150),cx:mx_,cy:my_,est,col:bc,o:A>0?1:-1,hv:hh(Math.round((mx_/cl+cx)*2),Math.round((my_/cl+cy)*2))};
+            if(!(mh>0)){const rf=bRoof(pts,bo.h,est,bo.hv,Math.abs(A)/2);if(rf){bo.rf=rf;bo.e=est?bo.h:bo.h-rf.rh;ST.roof++}}
+            B.push(bo);
             ST.n++;if(est)ST.est++;if(mh>0)ST.part++;if(bc)ST.col++;
           }
         }
@@ -5449,7 +5552,9 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
     }
   }
   ST.br=BR.length;
-  return {lat:lat0,lon:lon0,P,LB,B,RS,SP:[],XC,PL:uniq(PL),WN:WN2,bb,ST,BR};
+  let TR=null;
+  if(!wide&&TF.length&&!window.__noTrees){const t0=performance.now();try{TR=yield* treeScatter(TF,cx,cy,cl,lat0,RS,XR,B,WR)}catch(e){TR=null;errNote('drzewa',e)}ST.tr=TR?TR.n:0;ST.trMs=Math.round(performance.now()-t0)}
+  return {lat:lat0,lon:lon0,P,LB,B,RS,SP:[],XC,PL:uniq(PL),WN:WN2,bb,ST,BR,TR};
 }
 async function ofmUrl(force){
   let c=null;try{c=JSON.parse(localStorage.getItem('ofm')||'null');if(!force&&c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
@@ -5885,6 +5990,10 @@ async function demPrefetchRoute(R){   // trasa offline: kafelki wysokości wzdł
   for(let k=0;k<list.length;k+=4)await Promise.allSettled(list.slice(k,k+4).map(([x,y])=>demTile(z,x,y).then(()=>ok++)));
   return ok;
 }
+// ---- Wersja 152: stan szczegółów 3D (ustawienie „Szczegóły 3D”, poziom rysowania, statystyki) ----
+var d3K=(()=>{try{return localStorage.getItem('d3k')||'full'}catch{return 'full'}})();   // full | basic | off
+var d3Auto=2,d3Ema=0,d3Slow=0,d3Fast=0,d3Wait=20000,d3Up=0,d3Hist=[],d3Last=0,d3St={win:0,tr:0,roof:0,gh:0,n:0},zebN=0;
+const d3Lvl=()=>Math.min(d3K==='off'?0:d3K==='basic'?1:2,d3Auto);
 // ---- diagnostyka danych 3D (Ustawienia → Diagnostyka, tylko właściciel) ----
 var d3Acc={tiles:new Set(),n:0,est:0,col:0,part:0,hid:0,br:0,over:0,last:null};   // suma z obszarów odwiedzonych w tej sesji (obszar ≈ 1 km)
 setInterval(()=>{try{const D=vecData;if(!D||!D.ST||D===d3Acc.last)return;d3Acc.last=D;const k=D.lat.toFixed(2)+'|'+D.lon.toFixed(2);if(d3Acc.tiles.has(k))return;d3Acc.tiles.add(k);for(const q of ['n','est','col','part','hid','br','over'])d3Acc[q]+=D.ST[q]||0}catch{}},4000);
@@ -5897,7 +6006,9 @@ function d3Text(){
     L.push('Budynki: '+S.n+' (wysokość z danych '+(S.n-S.est)+' = '+pc(S.n-S.est,S.n)+' · szacowana z obrysu '+S.est+' · z kolorem '+S.col+' · części budynków '+S.part+' · ukryte '+S.hid+')');
     L.push('Ocena wysokości budynków: '+d3Rate(S.n,S.est));
     L.push('Mosty i wiadukty: '+S.br+' (nad drogą lub torami: '+S.over+')');
+    L.push('Szczegóły: dachy spadziste '+S.roof+' z '+S.n+' budynków (kształt zgadywany z obrysu) · drzewa '+S.tr+(S.trMs?' ('+S.trMs+' ms)':'')+' · pasy dla pieszych w zasięgu '+zebN);
   }
+  L.push('Szczegóły 3D: '+({full:'pełne',basic:'podstawowe',off:'same bryły'}[d3K]||d3K)+' · poziom teraz '+d3Lvl()+' z 2 · rysowanie budynków '+d3Last.toFixed(1).replace('.',',')+' ms (średnio '+d3Ema.toFixed(1).replace('.',',')+' ms)'+(d3Hist.length?' · zmiany: '+d3Hist.join(', '):'')+' · w klatce: okien '+d3St.win+', dachów '+d3St.roof+', drzew '+d3St.tr);
   if(d3Acc.tiles.size>1)L.push('Cała jazda ('+d3Acc.tiles.size+' obszarów): budynków '+d3Acc.n+', wysokość z danych '+pc(d3Acc.n-d3Acc.est,d3Acc.n)+', mostów '+d3Acc.br+' – ocena: '+d3Rate(d3Acc.n,d3Acc.est));
   const M=demSt.mos;
   L.push('Rzeźba terenu: '+(terrK==='off'?'wyłączona':terrK==='strong'?'wyraźna':'delikatna')+(M?' · mozaika '+M.n+'/9 kafelków z'+M.z+' ('+M.mpp.toFixed(1).replace('.',',')+' m/px, '+demSt.mosMs+' ms) · narysowana '+demSt.drawn+'×':terrK==='off'?'':' · brak danych'+(demSt.err?' ('+d3Err(demSt.err)+')':demSt.busy?' (pobieranie…)':'')));
@@ -6903,83 +7014,322 @@ function bfog(c,f){   // c: 'rgb(r,g,b)' albo 'rgba(r,g,b,a)'; f=1 – bez zmian
   v=m.length>3?'rgba('+m[0]+','+m[1]+','+m[2]+','+(m[3]*q/12).toFixed(3)+')':'rgb('+[0,1,2].map(i=>Math.round(bfBg[i]+(m[i]-bfBg[i])*q/12)).join(',')+')';
   if(BFC.size>800)BFC.clear();BFC.set(key,v);return v;
 }
+// ---- Wersja 152: szczegóły 3D – dachy spadziste, okna, cień przy ścianach, drzewa; poziomy szczegółów ----
+// ustawienie „Szczegóły 3D” (pełne / podstawowe / same bryły) oraz automatyczne obniżanie poziomu, gdy rysowanie budynków jest wolne (a przy bardzo wolnym działa jeszcze „Uprościłem mapę”)
+$('det3Sel').value=d3K;$('det3Sel').onchange=()=>{d3K=$('det3Sel').value;try{localStorage.setItem('d3k',d3K)}catch{}d3Auto=2;d3Ema=0;d3Slow=0;d3Fast=0;bldCache=null};
+function d3Adapt(ms){
+  d3Last=ms;if(window.__d3NoAdapt)return;
+  const now=performance.now(),thr=window.__d3Thr||9;d3Ema=d3Ema?d3Ema*.88+ms*.12:ms;
+  if(d3Auto>0&&d3Ema>(d3Auto>=2?thr:thr*1.45)){
+    if(!d3Slow)d3Slow=now;
+    else if(now-d3Slow>1500){d3Auto--;d3Slow=0;d3Fast=0;d3Ema=0;d3Wait=now-d3Up<45000?Math.min(d3Wait*2,240000):20000;d3Hist.push(Math.round(now/1000)+' s: poziom '+d3Auto);if(d3Hist.length>12)d3Hist.shift();bldCache=null}
+  }else d3Slow=0;
+  if(d3Auto<2&&d3Ema&&d3Ema<thr*(d3Auto===1?.38:.28)){
+    if(!d3Fast)d3Fast=now;
+    else if(now-d3Fast>d3Wait){d3Auto++;d3Fast=0;d3Ema=0;d3Up=now;d3Hist.push(Math.round(now/1000)+' s: poziom '+d3Auto);if(d3Hist.length>12)d3Hist.shift();bldCache=null}
+  }else d3Fast=0;
+}
+// kolory dachów (dachówka, łupek): [jasny, ciemny]; mieszane z kolorem budynków mapy, żeby barwy zostały stonowane
+const RCOL=[['#bd6c52','#8f4a36'],['#ad624c','#843f2e'],['#928078','#6d5b54'],['#82746f','#5a4d4a'],['#bb8559','#8f5f3c']],RLV=6,roofCC=new Map();
+function roofShade(tint,t){   // t: jasność ściany dachu 0..1
+  const q=Math.max(0,Math.min(RLV-1,Math.round(t*(RLV-1)))),k=(night?'n':'d')+tint+'|'+q;let c=roofCC.get(k);
+  if(!c){const f=q/(RLV-1),base=mixC(night?PAL.night.bld:PAL.day.bld,mixC(RCOL[tint][1],RCOL[tint][0],f),night?.6:.7);c=night?shadeC(base,.55+.5*f):shadeC(base,.84+.2*f);roofCC.set(k,c)}
+  return c;
+}
+const rgbMix=(a,b,t)=>{const x=a.match(/[\d.]+/g),y=b.match(/[\d.]+/g);return 'rgb('+[0,1,2].map(i=>Math.round(+x[i]+(+y[i]-x[i])*t)).join(',')+')'};
+const TCOL=new Map();
+function trCol(t,vi){
+  const k=(night?'n':'d')+t+vi;let c=TCOL.get(k);
+  if(!c){const f=.86+.06*vi,B=night?(t?['#17382e','#23554a']:['#1b3d2f','#2c6044']):(t?['#467856','#62946f']:['#5d8f57','#86ba6f']);
+    c={d:shadeC(B[0],f),l:shadeC(B[1],f),t:night?'#2a2b31':'#6a5645'};TCOL.set(k,c)}
+  return c;
+}
+function treeGrid(TR){const G=new Map(),C=48;for(let i=0;i<TR.n;i++){const k=Math.floor(TR.x[i]/C)+','+Math.floor(TR.y[i]/C);let l=G.get(k);if(!l)G.set(k,l=[]);l.push(i)}return G}
+const GH_T=['turn','fork','roundabout','rotary','off ramp','on ramp','end of road','merge'],GH_A=.26;   // rodzaje manewrów, przed którymi zasłaniające budynki blakną; GH_A: krycie „ducha”
+const pipS=(P,x,y)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){if((P[i].y>y)!==(P[j].y>y)&&x<(P[j].x-P[i].x)*(y-P[i].y)/(P[j].y-P[i].y)+P[i].x)c=!c}return c};
+const TR_CAP=420,TR_FAR=2800;   // TR_CAP drzew z bliska (pień, korona, cień), dalsze TR_FAR jako same korony (jedno wypełnienie na rodzaj drzew)
+// okna: dla każdej widocznej ściany rzędy okien (piętra co ok. 3 m, okno co ok. 3,3 m); w nocy część okien świeci. Zwraca liczbę narysowanych okien
+const WQ1=[],WQ2=[];
+function drawWindows(Gi,Gj,Ti,Tj,Lw,Hw,seed,alpha,lit){
+  const wl=Math.hypot(Gj.x-Gi.x,Gj.y-Gi.y),hl=Math.hypot(Ti.x-Gi.x,Ti.y-Gi.y);
+  if(Lw<3.4||wl<12||hl<9)return 0;
+  // przy oddaleniu okna są „grubsze” niż w rzeczywistości (jeden rząd = kilka pięter), żeby nie powstawał szum: wiersz ma co najmniej ok. 5 px
+  const nf=Math.max(1,Math.min(16,Math.round(Hw/3.1),Math.floor(hl/5.4))),nc=Math.max(1,Math.min(26,Math.round(Lw/3.3),Math.floor(wl/7)));
+  const ax=[],ay=[],dx=[],dy=[];
+  for(let c=0;c<nc;c++)for(const u of [(c+.24)/nc,(c+.76)/nc]){
+    const x0=Gi.x+(Gj.x-Gi.x)*u,y0=Gi.y+(Gj.y-Gi.y)*u,x1=Ti.x+(Tj.x-Ti.x)*u,y1=Ti.y+(Tj.y-Ti.y)*u;ax.push(x0);ay.push(y0);dx.push(x1-x0);dy.push(y1-y0);
+  }
+  WQ1.length=0;WQ2.length=0;let n=0;
+  for(let f=0;f<nf;f++){
+    const v0=(f+.3)/nf,v1=(f+.76)/nf;
+    for(let c=0;c<nc;c++){
+      const a=2*c,b=2*c+1,q=lit&&hh(seed+f*31+c*7,f*13+c)<.4?WQ1:WQ2;
+      q.push(ax[a]+dx[a]*v0,ay[a]+dy[a]*v0,ax[b]+dx[b]*v0,ay[b]+dy[b]*v0,ax[b]+dx[b]*v1,ay[b]+dy[b]*v1,ax[a]+dx[a]*v1,ay[a]+dy[a]*v1);n++;
+    }
+  }
+  const fill=(Q,col)=>{if(!Q.length)return;mx.beginPath();for(let i=0;i<Q.length;i+=8){mx.moveTo(Q[i],Q[i+1]);mx.lineTo(Q[i+2],Q[i+3]);mx.lineTo(Q[i+4],Q[i+5]);mx.lineTo(Q[i+6],Q[i+7]);mx.closePath()}mx.fillStyle=col;mx.globalAlpha=alpha;mx.fill()};
+  if(lit){fill(WQ2,'rgba(6,10,20,.4)');fill(WQ1,'rgba(255,212,122,.95)')}
+  else fill(WQ2,night?'rgba(6,10,20,.4)':'rgba(40,58,86,.36)');
+  mx.globalAlpha=1;
+  return n;
+}
 function drawBuildings3D(){
   if(ecoOn||lite||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
-  const D=vecData,pal=PAL[night?'night':'day'],S=$('rot').clientWidth,s=vf.s;
+  const t0=performance.now();
+  try{bld3Draw()}finally{d3Adapt(performance.now()-t0)}
+}
+function bld3Draw(){
+  const D=vecData,pal=PAL[night?'night':'day'],s=vf.s,dl=d3Lvl();
   const W=window.innerWidth,H=window.innerHeight;
-  const ox=(vf.cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(vf.cam.lat-D.lat)*111195;
-  const kk=111195,kxx=1;
-  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];wallCC.clear();const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
-  const R=rad(curRot),sunDir=rad(-35);   // „słońce” z lewej-góry: ściany zwrócone na południowy zachód jaśniejsze
+  const cl=Math.cos(rad(D.lat)),ox=(vf.cam.lon-D.lon)*111195*cl,oy=(vf.cam.lat-D.lat)*111195;
+  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];wallCC.clear();roofCC.clear();TCOL.clear();const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
+  const sunDir=rad(-35);   // bez Słońca (noc, zmierzch): stałe „światło” z lewej-góry
   const hs=Math.min(1.6,.9+tiltDeg/90);
   const fogOn=skyY>=0,fq=skyQ,fe=skyQ+skyL;
   if(fogOn){const bg=themePal(PAL[night?'night':'day']).bg;if(/^#[0-9a-f]{6}$/i.test(bg))bfBg=hx3(bg)}
-  let lst;
-  if(bldCache&&bldCache.D===D&&(bldTick++%5)&&Math.abs(bldCache.rot-curRot)<2&&Math.abs(bldCache.s-s)<.05*s)lst=bldCache.lst;   // kolejność rysowania liczymy co kilka klatek
+  // Słońce: kierunek (wschód, północ, góra) – ściany i dachy są oświetlone tak samo, jak wynika z rzucanych cieni
+  const sp=sunPos(D.lat,D.lon,Date.now()),real=!night&&sp.el>2&&dl>=1;
+  let sx=.655,sy=-.459,sz=.6,sh=1;
+  if(real){const e=rad(sp.el),a=rad(sp.az);sh=Math.cos(e);sx=sh*Math.sin(a);sy=sh*Math.cos(a);sz=Math.sin(e)}
+  let lst,far=null;
+  if(bldCache&&bldCache.D===D&&bldCache.dl===dl&&(bldTick++%5)&&Math.abs(bldCache.rot-curRot)<2&&Math.abs(bldCache.s-s)<.05*s){lst=bldCache.lst;far=bldCache.far}   // kolejność rysowania liczymy co kilka klatek
   else{
     lst=[];const cull=lnCull(D);
     for(const b of D.B){
       if(cull&&cull.has(b))continue;
-      const q=proj(D.lat+b.cy/111195,D.lon+b.cx/(111195*Math.cos(rad(D.lat))));
+      const q=proj(D.lat+b.cy/111195,D.lon+b.cx/(111195*cl));
       if(!q||q.x<-160||q.x>W+160||q.y<-220||q.y>H+160)continue;
       lst.push({b,y:q.y,k:q.k});
+    }
+    if(dl>=2&&D.TR&&D.TR.n){   // drzewa wokół kamery: te same co w mapie (las, park, cmentarz), najbliższe TR_CAP
+      const TR=D.TR,GR=D.TG||(D.TG=treeGrid(TR)),Rt=Math.min(380,120+260/s),C=48,trl=[];
+      for(let u=Math.floor((ox-Rt)/C);u<=Math.floor((ox+Rt)/C);u++)for(let v=Math.floor((oy-Rt)/C);v<=Math.floor((oy+Rt)/C);v++){
+        const l=GR.get(u+','+v);if(!l)continue;
+        for(const i of l){
+          const ex=TR.x[i]-ox,ey=TR.y[i]-oy,d2=ex*ex+ey*ey;if(d2>Rt*Rt)continue;
+          const q=proj(D.lat+TR.y[i]/111195,D.lon+TR.x[i]/(111195*cl));if(!q||q.x<-60||q.x>W+60||q.y<-140||q.y>H+60)continue;
+          trl.push({r:i,y:q.y,k:q.k,d:d2});
+        }
+      }
+      if(trl.length>TR_CAP){trl.sort((a,b)=>a.d-b.d);far=trl.slice(TR_CAP,TR_CAP+TR_FAR);trl.length=TR_CAP}
+      for(const t of trl)lst.push(t);
     }
     lst.sort((a,b)=>a.y-b.y);
     if(D.parts===undefined)bldParts(D);
     if(D.parts.length)partsOrder(lst,D);
-    bldCache={D,lst,rot:curRot,s};
+    bldCache={D,lst,far,rot:curRot,s,dl};
   }
-  const cap=Math.min(lst.length,520),start=lst.length-cap;   // przy nadmiarze pomijamy najdalsze
-  const cl=Math.cos(rad(D.lat));
+  const cap=Math.min(lst.length,520+(dl>=2?TR_CAP:0)),start=lst.length-cap;   // przy nadmiarze pomijamy najdalsze
   const g=(x,y,h)=>proj(D.lat+y/111195,D.lon+x/(111195*cl),h);
+  let nearFrom=lst.length;{let c=0;for(let n=lst.length-1;n>=start;n--)if(lst[n].b){if(++c>150)break;nearFrom=n}}   // okna tylko w ok. 150 najbliższych budynkach
   mx.lineJoin='round';
   if(fogOn){mx.save();mx.beginPath();mx.rect(0,fq,W,H-fq);mx.clip()}   // nad horyzontem nie ma mapy, więc i budynków
-  // cienie budynków wg położenia Słońca (rysowane do osobnej warstwy i nakładane półprzezroczyście)
-  const sp=sunPos(D.lat,D.lon,Date.now());
+  // cienie budynków i drzew wg położenia Słońca (rysowane do osobnej warstwy i nakładane półprzezroczyście)
   if(!night&&sp.el>3&&scaleCur>=.9){
     if(!shc||shc.width!==mk.width||shc.height!==mk.height){shc=document.createElement('canvas');shc.width=mk.width;shc.height=mk.height;shx=shc.getContext('2d')}
     shx.setTransform(1,0,0,1,0,0);shx.clearRect(0,0,shc.width,shc.height);shx.setTransform(mk.width/W,0,0,mk.height/H,0,0);shx.fillStyle='#000';
     const dirE=Math.sin(rad(sp.az+180)),dirN=Math.cos(rad(sp.az+180)),tn=Math.tan(rad(Math.max(sp.el,6)));
     for(let n=Math.max(start,lst.length-260);n<lst.length;n++){
       if(fogOn&&lst[n].y<fe)continue;   // w pasie mgły cieni nie rysujemy
-      const b=lst[n].b,p=b.p,m=p.length/2,L=Math.min(b.h*hs/(tn*hs),b.h*3.2),ex=dirE*L,ny=dirN*L,G=[],Sd=[];let ok=true;
+      const b=lst[n].b;if(!b)continue;
+      const p=b.p,m=p.length/2,L=Math.min((b.h+(b.rf&&dl>=1?b.rf.rh*.6:0))*hs/(tn*hs),b.h*3.2),ex=dirE*L,ny=dirN*L,G=[],Sd=[];let ok=true;
       const Lm=b.m>0?Math.min(b.m/tn,b.m*3.2):0,bx=dirE*Lm,by=dirN*Lm;   // część wisząca rzuca cień dopiero od swojej podstawy
       for(let i=0;i<m;i++){const a=g(p[2*i]+bx,p[2*i+1]+by,0),c2=g(p[2*i]+ex,p[2*i+1]+ny,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
       if(!ok)continue;
       for(let i=0;i<m;i++){const j=(i+1)%m;shx.beginPath();shx.moveTo(G[i].x,G[i].y);shx.lineTo(G[j].x,G[j].y);shx.lineTo(Sd[j].x,Sd[j].y);shx.lineTo(Sd[i].x,Sd[i].y);shx.closePath();shx.fill()}
     }
+    if(dl>=2&&D.TR){   // cienie drzew: owalne plamy, dłuższe przy niskim Słońcu
+      shx.beginPath();let tn2=0;
+      for(let n=Math.max(start,lst.length-260);n<lst.length&&tn2<260;n++){
+        const it=lst[n];if(it.r===undefined||(fogOn&&it.y<fe))continue;
+        const TR=D.TR,i=it.r,z=TR.z[i]/255,Hm=TR.t[i]?9+7*z:6.5+6.5*z,Lt=Math.min(Hm*.55/tn,Hm*1.8),q=g(TR.x[i]+dirE*Lt*.55,TR.y[i]+dirN*Lt*.55,0);if(!q)continue;
+        const rp=(TR.t[i]?1.9+1.3*z:2.5+2.5*z)*s*q.k;shx.moveTo(q.x+rp,q.y);shx.ellipse(q.x,q.y,rp*(1+Lt*.05),rp*.62,0,0,6.2832);tn2++;
+      }
+      shx.fill();
+    }
     mx.save();mx.globalAlpha=.2;mx.setTransform(1,0,0,1,0,0);mx.drawImage(shc,0,0);mx.restore();
   }
+  // przed trudnym manewrem budynki zasłaniające jezdnię za skrzyżowaniem stają się półprzezroczyste (jak w „immersyjnej nawigacji” Google), żeby było widać, dokąd skręcamy
+  let GS=null;
+  if(dl>=1&&route&&route.steps&&nav&&nav.i>0&&!freeCam){
+    const st=route.steps[nav.i];
+    if(st&&GH_T.includes(st.type)&&nav.d>8&&nav.d<200){
+      const al=route.along||0,at=al+nav.d,a0=Math.max(al+8,at-28),a1=Math.min(route.len,at+80);GS=[];
+      for(let d=a0;d<=a1;d+=5){const q=routeAt(route,d),p=proj(q[0],q[1]);if(p)GS.push(p.x,p.y)}
+      if(!GS.length)GS=null;
+    }
+  }
+  let winB=2600,winN=0,roofN=0,trN=0,ghN=0;const lc0=mx.lineCap;
+  if(far&&far.length&&D.TR){   // dalsze drzewa: same korony, po jednym wypełnieniu na rodzaj (iglaste ciemniejsze)
+    const TR=D.TR;
+    for(let v=0;v<2;v++){
+      mx.beginPath();let c=0;
+      for(const it of far){
+        const i=it.r;if(TR.t[i]!==v||(fogOn&&skyA(it.y)>.35))continue;
+        const z=TR.z[i]/255,Hm=v?9+7*z:6.5+6.5*z,rp=Math.max(1.5,(v?1.9+1.3*z:2.5+2.5*z)*s*it.k),q=g(TR.x[i],TR.y[i],Hm*(v?.5:.55)*hs);if(!q)continue;
+        mx.moveTo(q.x+rp,q.y);mx.arc(q.x,q.y,rp,0,6.2832);c++;
+      }
+      if(c){const col=trCol(v,2);mx.fillStyle=rgbMix(col.d,col.l,.4);mx.fill();trN+=c}
+    }
+  }
   for(let n=start;n<lst.length;n++){
-    const b=lst[n].b,p=b.p,m=p.length/2,H3=b.h*hs,M3=(b.m||0)*hs;
+    const it=lst[n];
+    if(it.r!==undefined){   // drzewo
+      const TR=D.TR,i=it.r,z=TR.z[i]/255,ty=TR.t[i],base=g(TR.x[i],TR.y[i],0);if(!base)continue;
+      const Hm=(ty?9+7*z:6.5+6.5*z),rm=ty?1.9+1.3*z:2.5+2.5*z,Ht=Hm*(ty?.28:.4);
+      const al=fogOn?1-skyA(base.y):1;if(al<.12)continue;
+      const rp=rm*s*base.k;if(rp<1.2)continue;
+      const col=trCol(ty,Math.floor(z*4.99)),c=g(TR.x[i],TR.y[i],(ty?Ht+(Hm-Ht)*.5:Ht+rm*.9)*hs);if(!c)continue;
+      if(al<.98)mx.globalAlpha=al;
+      mx.strokeStyle=col.t;mx.lineWidth=Math.max(1,rp*.3);mx.lineCap='butt';mx.beginPath();mx.moveTo(base.x,base.y);mx.lineTo(c.x,c.y+(ty?0:rp*.2));mx.stroke();
+      if(ty){   // iglak: stożek z jasną lewą i ciemną prawą połową
+        const ap=g(TR.x[i],TR.y[i],Hm*hs),bc=g(TR.x[i],TR.y[i],Ht*hs);if(ap&&bc){const hw=rp*.95;
+          mx.beginPath();mx.moveTo(ap.x,ap.y);mx.lineTo(bc.x-hw,bc.y);mx.lineTo(bc.x,bc.y+hw*.18);mx.closePath();mx.fillStyle=col.l;mx.fill();
+          mx.beginPath();mx.moveTo(ap.x,ap.y);mx.lineTo(bc.x,bc.y+hw*.18);mx.lineTo(bc.x+hw,bc.y);mx.closePath();mx.fillStyle=col.d;mx.fill()}
+      }else{
+        mx.beginPath();mx.arc(c.x,c.y,rp,0,6.2832);mx.fillStyle=col.d;mx.fill();
+        mx.beginPath();mx.arc(c.x-rp*.22,c.y-rp*.26,rp*.68,0,6.2832);mx.fillStyle=col.l;mx.fill();
+      }
+      if(al<.98)mx.globalAlpha=1;
+      trN++;
+      continue;
+    }
+    const b=it.b,p=b.p,m=p.length/2,rf=dl>=1?b.rf:null,E=rf?b.e:b.h,H3=E*hs,M3=(b.m||0)*hs;
     const hb=Math.min(6,Math.floor(b.h/14)),wc=b.col?bldWallC(b.col,hb):wallH[hb]||(wallH[hb]={roof:night?shadeC(PAL.night.bld,1.35-.04*hb):shadeC(PAL.day.bld,1.05-.03*hb),a:night?shadeC(PAL.night.bld,.95-.04*hb):shadeC(PAL.day.bld,.86-.04*hb),b:night?shadeC(PAL.night.bld,.7-.03*hb):shadeC(PAL.day.bld,.7-.04*hb),line:wallCol.line});   // wyższe budynki są ciemniejsze
-    const G=[],T=[];let ok=true;
-    for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],M3),t=g(p[2*i],p[2*i+1],H3);if(!a||!t){ok=false;break}G.push(a);T.push(t)}
+    const G=[],T=[];let ok=true,yt=1e9,yb=-1e9,sa=0;
+    for(let i=0;i<m;i++){const a=g(p[2*i],p[2*i+1],M3),t=g(p[2*i],p[2*i+1],H3);if(!a||!t){ok=false;break}G.push(a);T.push(t);if(a.y>yb)yb=a.y;if(t.y<yt)yt=t.y}
     if(!ok)continue;
-    let wa=wc.a,wb=wc.b,wr=wc.roof,wl=wc.line;
+    let r0=null,r1=null;
+    if(rf){const Hr=(E+rf.rh)*hs;r0=g(rf.r[0],rf.r[1],Hr);r1=g(rf.r[2],rf.r[3],Hr);if(r0&&r1){if(r0.y<yt)yt=r0.y;if(r1.y<yt)yt=r1.y}else r0=r1=null}
+    let fogF=null,fa=1,wl=wc.line;
     if(fogOn){
-      let yt=1e9,yb=-1e9;for(let i=0;i<m;i++){if(T[i].y<yt)yt=T[i].y;if(G[i].y>yb)yb=G[i].y}
       if(skyA(yb)>=.97)continue;   // cała bryła tonie w pełnej mgle
       if(skyA(yt)>.02){   // bryła sięga pasa mgły: ku górze jej kolory wtapiają się w tło, tak jak mapa pod mgłą
-        const ye=Math.min(yb,fe),ym=yt+(ye-yt)*.5,f0=1-skyA(yt),f1=1-skyA(ym),f2=1-skyA(ye);
-        if(ye-yt>14&&f2-f0>.12){const gr=c=>{const q=mx.createLinearGradient(0,yt,0,ye);q.addColorStop(0,bfog(c,f0));q.addColorStop(.5,bfog(c,f1));q.addColorStop(1,bfog(c,f2));return q};wa=gr(wa);wb=gr(wb);wr=gr(wr)}   // wysoka bryła: płynne przejście (gradient tylko tam, gdzie widać różnicę – to oszczędza czas rysowania)
-        else{wa=bfog(wa,f1);wb=bfog(wb,f1);wr=bfog(wr,f1)}   // niska bryła: jeden odcień
-        wl=bfog(wl,f1);
+        const ye=Math.min(yb,fe),ym=yt+(ye-yt)*.5,f0=1-skyA(yt),f1=1-skyA(ym),f2=1-skyA(ye),gr=ye-yt>14&&f2-f0>.12,memo={};   // wysoka bryła: płynne przejście (gradient tylko tam, gdzie widać różnicę – to oszczędza czas rysowania)
+        fogF=c=>{let v=memo[c];if(v)return v;if(gr){v=mx.createLinearGradient(0,yt,0,ye);v.addColorStop(0,bfog(c,f0));v.addColorStop(.5,bfog(c,f1));v.addColorStop(1,bfog(c,f2))}else v=bfog(c,f1);return memo[c]=v};
+        wl=bfog(wl,f1);fa=f1;
       }
     }
+    const FC=c=>fogF?fogF(c):c;
+    for(let i=0;i<m;i++){const j=(i+1)%m;sa+=G[i].x*G[j].y-G[j].x*G[i].y}
+    const so=sa>0?1:-1;
+    // ściany zwrócone do kamery (dla budynku wklęsłego – od najdalszej, żeby bliższe zasłaniały dalsze)
+    const WS=[];
     for(let i=0;i<m;i++){
-      const j=(i+1)%m,dx=p[2*j]-p[2*i],dy=p[2*j+1]-p[2*i+1];
-      // ściana widoczna, gdy jej dolna krawędź leży „bliżej” kamery niż górna (rzut dachu leży wyżej na ekranie)
-      const cross=(G[j].x-G[i].x)*(T[i].y-G[i].y)-(G[j].y-G[i].y)*(T[i].x-G[i].x);
-      const nx=dy,ny=-dx,L=Math.hypot(nx,ny)||1,lit=(nx*Math.cos(sunDir)+ny*Math.sin(sunDir))/L;
-      if(Math.abs(cross)<.01)continue;
-      mx.beginPath();mx.moveTo(G[i].x,G[i].y);mx.lineTo(G[j].x,G[j].y);mx.lineTo(T[j].x,T[j].y);mx.lineTo(T[i].x,T[i].y);mx.closePath();
-      mx.fillStyle=lit>0?wa:wb;mx.fill();mx.strokeStyle=wl;mx.lineWidth=.8;mx.stroke();
+      const j=(i+1)%m,cross=(G[j].x-G[i].x)*(T[i].y-G[i].y)-(G[j].y-G[i].y)*(T[i].x-G[i].x);
+      if(Math.abs(cross)<.01||cross*so<=0)continue;
+      WS.push(i);
     }
-    mx.beginPath();mx.moveTo(T[0].x,T[0].y);for(let i=1;i<m;i++)mx.lineTo(T[i].x,T[i].y);mx.closePath();
-    mx.fillStyle=wr;mx.fill();mx.strokeStyle=wl;mx.lineWidth=1;mx.stroke();
+    if(m>4&&WS.length>1)WS.sort((a,c)=>(G[a].y+G[(a+1)%m].y)-(G[c].y+G[(c+1)%m].y));
+    const shd=real?(wc.sh||(wc.sh=[0,1,2,3,4].map(k=>rgbMix(wc.b,wc.a,k/4)))):null;
+    let tg=1;
+    if(GS&&b.h-(b.m||0)>=6){   // czy bryła budynku (dach albo widoczna ściana) zakrywa któryś punkt trasy za manewrem
+      let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(let i=0;i<m;i++){const a=G[i],t=T[i];if(a.x<x0)x0=a.x;if(a.x>x1)x1=a.x;if(t.x<x0)x0=t.x;if(t.x>x1)x1=t.x;if(a.y<y0)y0=a.y;if(a.y>y1)y1=a.y;if(t.y<y0)y0=t.y;if(t.y>y1)y1=t.y}
+      for(let k=0;k<GS.length&&tg===1;k+=2){
+        const px=GS[k],py=GS[k+1];if(px<x0||px>x1||py<y0||py>y1)continue;
+        if(pipS(T,px,py)){tg=GH_A;break}
+        for(const i of WS){const j=(i+1)%m;if(pipS([G[i],G[j],T[j],T[i]],px,py)){tg=GH_A;break}}
+      }
+    }
+    if(b.ga===undefined)b.ga=1;
+    if(b.ga!==tg){b.ga+=(tg-b.ga)*.18;if(Math.abs(tg-b.ga)<.02)b.ga=tg}
+    const gh=b.ga<.985;
+    if(gh){mx.globalAlpha=b.ga;ghN++}
+    const win=dl>=2&&n>=nearFrom&&winB>0&&!gh&&!(b.m>0&&b.h-b.m<4);
+    const wa=FC(wc.a),wb=FC(wc.b);
+    for(const i of WS){
+      const j=(i+1)%m,dx=p[2*j]-p[2*i],dy=p[2*j+1]-p[2*i+1],Lw=Math.hypot(dx,dy)||1;
+      let col,lit=0;
+      if(real){const d=b.o*(dy*sx-dx*sy)/Lw,t=.5+.5*Math.max(-1,Math.min(1,d/Math.max(.45,sh)));col=FC(shd[Math.round(t*4)]);lit=t}
+      else{const nx=dy,ny=-dx;lit=(nx*Math.cos(sunDir)+ny*Math.sin(sunDir))/Lw;col=lit>0?wa:wb}
+      mx.beginPath();mx.moveTo(G[i].x,G[i].y);mx.lineTo(G[j].x,G[j].y);mx.lineTo(T[j].x,T[j].y);mx.lineTo(T[i].x,T[i].y);mx.closePath();
+      mx.fillStyle=col;mx.fill();mx.strokeStyle=wl;mx.lineWidth=.8;mx.stroke();
+      if(dl>=1&&!gh){   // cień przy ziemi (jak „ambient occlusion” w innych mapach 3D): ciemniejszy pas u dołu ściany
+        const hl=Math.hypot(T[i].x-G[i].x,T[i].y-G[i].y);
+        if(hl>9){const f=Math.min(.22,2.6/Math.max(1,E-(b.m||0))),ax=G[i].x+(T[i].x-G[i].x)*f,ay=G[i].y+(T[i].y-G[i].y)*f,bx=G[j].x+(T[j].x-G[j].x)*f,by=G[j].y+(T[j].y-G[j].y)*f;
+          mx.beginPath();mx.moveTo(G[i].x,G[i].y);mx.lineTo(G[j].x,G[j].y);mx.lineTo(bx,by);mx.lineTo(ax,ay);mx.closePath();mx.fillStyle=night?'rgba(0,0,0,.22)':'rgba(30,25,15,.11)';mx.globalAlpha=fa;mx.fill();mx.globalAlpha=1}
+      }
+      if(win){
+        const Hw=(E-(b.m||0)),k2=winB>0&&(fogOn?fa>.3:true);
+        if(k2){const nw=drawWindows(G[i],G[j],T[i],T[j],Lw,Hw,Math.round(b.hv*4096)+i*977,fa,night);winB-=nw;winN+=nw}
+      }
+    }
+    if(rf&&r0){   // dach spadzisty: do czterech połaci widocznych od strony kamery
+      const V=rf.vi.map(k=>T[k]),s0=rf.s,A=V[(s0+1)&3],B2=V[(s0+2)&3],C2=V[(s0+3)&3],D0=V[s0];
+      const faces=[[A,B2,r1,r0],[C2,D0,r0,r1],[D0,A,r0],[B2,C2,r1]];
+      for(let q=0;q<4;q++){
+        const F=faces[q],nF=F.length;let S=0;
+        for(let i=0;i<nF;i++){const j=(i+1)%nF;S+=F[i].x*F[j].y-F[j].x*F[i].y}
+        if(Math.abs(S)<.2||(S>0?1:-1)!==so)continue;
+        const nv=rf.nf[q];let col;
+        if(q>=2&&rf.k==='g'){   // szczyt ściany szczytowej: kolor ściany
+          const d=nv[0]*sx+nv[1]*sy;col=real?FC(shd[Math.round((.5+.5*Math.max(-1,Math.min(1,d/Math.max(.45,sh))))*4)]):FC(d>0?wc.a:wc.b)}
+        else col=FC(roofShade(rf.c,.5+.5*Math.max(-1,Math.min(1,(nv[0]*sx+nv[1]*sy+nv[2]*sz)/.8))));
+        mx.beginPath();mx.moveTo(F[0].x,F[0].y);for(let i=1;i<nF;i++)mx.lineTo(F[i].x,F[i].y);mx.closePath();
+        mx.fillStyle=col;mx.fill();mx.strokeStyle=wl;mx.lineWidth=.8;mx.stroke();
+      }
+      roofN++;
+    }else{
+      mx.beginPath();mx.moveTo(T[0].x,T[0].y);for(let i=1;i<m;i++)mx.lineTo(T[i].x,T[i].y);mx.closePath();
+      mx.fillStyle=FC(wc.roof);mx.fill();mx.strokeStyle=wl;mx.lineWidth=1;mx.stroke();
+    }
+    if(gh)mx.globalAlpha=1;
   }
+  d3St.win=winN;d3St.roof=roofN;d3St.tr=trN;d3St.gh=ghN;d3St.n++;mx.lineCap=lc0;
   if(fogOn)mx.restore();
+}
+
+// ---- Wersja 152: pasy dla pieszych („zebra”) ----
+// przejścia z OpenStreetMap (highway=crossing) rysujemy jako jasne pasy w poprzek jezdni – tak jak je oznaczają Google i Apple; kierunek i szerokość bierzemy z najbliższej drogi na mapie
+var zebAt={v:-1,D:null,lat:0,lon:0,L:[]};
+function zebRoad(D,sg){   // najbliższy odcinek drogi (do 9 m): położenie, kierunek i klasa; wynik zapamiętany przy znaku
+  if(sg.zD===D)return sg.zr;
+  sg.zD=D;sg.zr=null;
+  const g=snapGrid(D),CS=40,cl=Math.cos(rad(D.lat)),X=(sg.lon-D.lon)*111195*cl,Y=(sg.lat-D.lat)*111195,cu=Math.floor(X/CS),cv=Math.floor(Y/CS);
+  let best=9;
+  for(let u=cu-1;u<=cu+1;u++)for(let v=cv-1;v<=cv+1;v++){
+    const l=g.get(u+','+v);if(!l)continue;
+    for(let j=0;j<l.length;j+=4){
+      if(l.v&&l.v[j>>2])continue;   // na moście pasów nie rysujemy
+      const k=l.c?l.c[j>>2]:'rs';if(k==='mw')continue;
+      const dx=l[j+2]-l[j],dy=l[j+3]-l[j+1],L2=dx*dx+dy*dy;if(L2<.01)continue;
+      let t=((X-l[j])*dx+(Y-l[j+1])*dy)/L2;t=t<0?0:t>1?1:t;
+      const px=l[j]+dx*t,py=l[j+1]+dy*t,d=Math.hypot(px-X,py-Y);
+      if(d<best){best=d;sg.zr={x:px,y:py,a:Math.atan2(dy,dx),k}}
+    }
+  }
+  return sg.zr;
+}
+function drawZebras(){
+  const D=vecData;
+  if(!(vec&&vf&&D&&D.RS&&D.RS.length&&signs&&scaleCur>=.8&&!window.ecoOn)){zebN=0;return}
+  const Z=signs.zeb||signs.haz;if(!Z||!Z.length){zebN=0;return}
+  const cam=vf.cam,cl=Math.cos(rad(D.lat));
+  if(zebAt.v!==signs.v||zebAt.D!==D||dist(zebAt.lat,zebAt.lon,cam.lat,cam.lon)>50){
+    const Rv=Math.min(320,120+260/scaleCur),L=[];
+    for(const sg of Z){if(sg.kind!=='crossing'||sg.cr==='unmarked')continue;const dy=(sg.lat-cam.lat)*111195,dx=(sg.lon-cam.lon)*111195*cl;if(dx*dx+dy*dy<Rv*Rv)L.push(sg)}
+    zebAt={v:signs.v,D,lat:cam.lat,lon:cam.lon,L:L.slice(0,90)};
+  }
+  const W=window.innerWidth,H=window.innerHeight,s=scaleCur;let n=0;
+  mx.beginPath();
+  for(const sg of zebAt.L){
+    const r=zebRoad(D,sg);if(!r)continue;
+    const c=proj(D.lat+r.y/111195,D.lon+r.x/(111195*cl));if(!c||c.x<-150||c.x>W+150||c.y<-150||c.y>H+150)continue;
+    const Wm=Math.max(5,rw(r.k,s)/s),nb=Math.max(4,Math.min(12,Math.round(Wm/2.3))),bw=Wm/nb*.5,Lb=Math.max(2.6,Math.min(4.2,Wm*.2)),ux=Math.cos(r.a),uy=Math.sin(r.a),px=-uy,py=ux;
+    let ok=true;const Q=[];
+    for(let i=0;i<nb&&ok;i++){
+      const o=-Wm/2+(i+.5)*(Wm/nb),xs=[-1,1,1,-1],ys=[-1,-1,1,1];
+      for(let q=0;q<4;q++){
+        const a=xs[q]*Lb/2,b=o+ys[q]*bw/2,p=proj(D.lat+(r.y+uy*a+py*b)/111195,D.lon+(r.x+ux*a+px*b)/(111195*cl));
+        if(!p){ok=false;break}Q.push(p.x,p.y);
+      }
+    }
+    if(!ok)continue;
+    for(let i=0;i<Q.length;i+=8){mx.moveTo(Q[i],Q[i+1]);mx.lineTo(Q[i+2],Q[i+3]);mx.lineTo(Q[i+4],Q[i+5]);mx.lineTo(Q[i+6],Q[i+7]);mx.closePath()}
+    n++;
+  }
+  zebN=n;
+  if(n){mx.fillStyle=night?'rgba(226,232,250,.62)':themeK==='hc'?'rgba(0,0,0,.55)':'rgba(96,104,122,.58)';mx.fill()}
 }
 
 const xU=k=>Math.max(15,Math.min(30,17*k));
@@ -7049,6 +7399,7 @@ function drawMarkers(){
   if(vec)drawVec();const P=proj;
   drawRadar();
   updCarSnap();carShadow();
+  try{drawZebras()}catch(e){errNote('pasy dla pieszych',e)}
   drawBuildings3D();
   drawHeat();
   drawAlts();drawRouteTop();drawTurnArrow();drawLaneArrow();drawJunction();
@@ -8723,7 +9074,7 @@ function bbRoute(){
 }
 function bbSnapshot(why){
   const now=Date.now(),cut=now-15*60000,r=route&&route.len>0?route:null;
-  const cfg={ver:($('ver')||{}).textContent||'',vbose,vmode,sigDens,terr:terrK,laneOn,voice:$('voice').checked,camShow:$('camShow').checked,scale:+(+scaleCur||0).toFixed(3),
+  const cfg={ver:($('ver')||{}).textContent||'',vbose,vmode,sigDens,terr:terrK,d3:d3K,laneOn,voice:$('voice').checked,camShow:$('camShow').checked,scale:+(+scaleCur||0).toFixed(3),
     tilt:(typeof tiltE==='function')?Math.round(tiltE()):null,online:navigator.onLine!==false,haveTTKey:!!ttKey,gtfs:!!gtfs,trains:trains.length,crossings:crossings.length,vec:!!vecData,
     signs:signs?{list:signs.list.length,lights:signs.lights.length,haz:signs.haz.length,cells:sgCells.size}:null,lanes:LANEW.size,screen:window.innerWidth+'x'+window.innerHeight,ua:navigator.userAgent};
   return {kind:'przejazd-zgloszenie',v:2,t:now,iso:new Date(now).toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,why:why||'',
