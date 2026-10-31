@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 159</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 160</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1768,10 +1768,15 @@ function annOnce(kind,lat,lon,stage){
     if(a.k===kind&&a.st===stage&&Math.abs(a.lat-lat)<.0006&&Math.abs(a.lon-lon)<.0009&&dist(a.lat,a.lon,lat,lon)<45)return false}
   annLog.push({k:kind,lat,lon,st:stage,t:now});return true;
 }
+var lastSafeSay=0,chatUntil=0;
 function say(key,text,vib,short){if(window.preview)return;const now=Date.now();if(spoken[key]&&now-spoken[key]<20000)return;spoken[key]=now;
   const cat=/^[tmxep]\d/.test(key)?'Train':/^(n\d|lane|rerout|faster|detour|nodetour)/.test(key)?'Nav':'Road';
   if(vcOff[cat])return;
   if(vmode==='hazard'&&cat!=='Train'&&!HAZ_KEYS.test(key))return;   // tryb „tylko pociągi i zagrożenia”
+  // nagrody i wyzwania (tylko dodatek): nie mówimy ich tuż po ostrzeżeniu ani wskazówce, a ostrzeżenie przerywa taki komunikat – kolejka mowy opóźniłaby je o kilka sekund (ok. 80 m przy 80 km/h)
+  const chat=/^(ach|ch)\d/.test(key);
+  if(chat){if(now-lastSafeSay<12000)return;chatUntil=now+4000}
+  else{lastSafeSay=now;if(now<chatUntil){chatUntil=0;try{window.speechSynthesis.cancel()}catch{}}}
   {const sl=clipSlot(key);if(sl&&clips[sl]&&$('voice').checked&&!voiceMuted){if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}if(playClip(sl,catVol(cat)))return}}
   beep(cat);if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
   speak(vbose==='short'&&short?short:text,catVol(cat))}
@@ -2242,15 +2247,28 @@ function makeRoute(coords,dur){
   return {pts,cum,len:cum[pts.length-1],dur,idx:0,along:0,off:0,offN:0,lastRr:0,memo:new Map()};
 }
 // rzut punktu na odcinki trasy i0..i1: numer odcinka, odległość od trasy, droga wzdłuż trasy
-function projRoute(R,lat,lon,i0,i1){
-  const P=R.pts,cl=Math.cos(rad(lat));let best=1e18,bi=i0,bt=0;
+function projRoute(R,lat,lon,i0,i1,hd){   // hd (opcjonalnie): kierunek jazdy w stopniach – odcinki biegnące w przeciwną stronę dostają karę 30 m (nawrotka tą samą ulicą)
+  const P=R.pts,cl=Math.cos(rad(lat)),hr=hd==null?null:rad(hd);let best=1e18,bq=1e18,bi=i0,bt=0;
   for(let i=i0;i<=i1;i++){
     const x1=(P[i][1]-lon)*111195*cl,y1=(P[i][0]-lat)*111195,x2=(P[i+1][1]-lon)*111195*cl,y2=(P[i+1][0]-lat)*111195;
     const dx=x2-x1,dy=y2-y1,L2=dx*dx+dy*dy;let t=L2>0?-(x1*dx+y1*dy)/L2:0;t=t<0?0:t>1?1:t;
     const px=x1+dx*t,py=y1+dy*t,q=px*px+py*py;
-    if(q<best){best=q;bi=i;bt=t}
+    let c=q;if(hr!==null&&L2>4&&(dx*Math.sin(hr)+dy*Math.cos(hr))<-.7*Math.sqrt(L2))c+=900;   // cos kąta < −0,7, czyli różnica kierunków > ok. 135° (wygładzony kierunek w ciasnym zakręcie bywa myląco „pośredni”)
+    if(c<best){best=c;bq=q;bi=i;bt=t}
   }
-  return {i:bi,off:Math.sqrt(best),along:R.cum[bi]+bt*(R.cum[bi+1]-R.cum[bi])};
+  return {i:bi,off:Math.sqrt(bq),along:R.cum[bi]+bt*(R.cum[bi+1]-R.cum[bi])};
+}
+// rzut pozycji na trasę z ciągłością: trasa potrafi wracać tą samą ulicą albo przechodzić tuż obok samej siebie (pętla przy starcie, nawrotka), a wygrywał wtedy późniejszy odcinek
+// i wskazówki „skacza” do dalszych skrętów. Najpierw okno od −25 m do „możliwego dojazdu od ostatniego odczytu” (fwd) od dotychczasowego miejsca; dopiero gdy auto jest od niego dalej niż 30 m – dotychczasowe szukanie
+function projNear(R,lat,lon,n,fwd,hd){
+  const a0=R.along||0;
+  const idxAt=d=>{let lo=0,hi=R.pts.length-1;d=Math.max(0,Math.min(d,R.len));while(hi-lo>1){const m=(lo+hi)>>1;if(R.cum[m]<=d)lo=m;else hi=m}return lo};
+  const j0=Math.min(n,idxAt(a0-25)),j1=Math.max(j0,Math.min(n,idxAt(a0+(fwd||300))));
+  let r=projRoute(R,lat,lon,j0,j1,hd);
+  if(r.off<=30)return r;
+  r=projRoute(R,lat,lon,Math.max(0,R.idx-3),Math.min(n,R.idx+400));
+  if(r.off>120)r=projRoute(R,lat,lon,0,n);
+  return r;
 }
 function routeAt(R,d){
   let lo=0,hi=R.pts.length-1;d=Math.max(0,Math.min(d,R.len));
@@ -2401,6 +2419,8 @@ function navUpdate(){
   if(!route||!route.steps||route.steps.length<2)return;
   const st=route.steps;let i=1;
   while(i<st.length-1&&st[i].off<route.along-8)i++;
+  if(route.navI>i&&route.along>st[route.navI-1].off-40)i=route.navI;   // krok nie wraca przez szum GPS tuż za punktem manewru (postój na światłach przy zakręcie)
+  route.navI=i;
   const d=Math.max(0,st[i].off-route.along),cur=navStep(st[i],d>40);
   if(st[i].type==='arrive'&&i<st.length-1){cur.txt='Przystanek po drodze'}
   nav={txt:cur.txt,icon:navIcon(cur.ic),dist:fmtD(d),d,i,then:i+1<st.length?'Potem: '+(st[i+1].type==='arrive'&&i+1<st.length-1?'przystanek po drodze':navStep(st[i+1],true).txt):''};
@@ -2563,8 +2583,8 @@ function routeUpdate(p){
   if(!route||demo||route.pts.length<2||!(route.len>0))return;
   if(viaList.length&&dist(p.lat,p.lon,viaList[0].lat,viaList[0].lon)<60){viaList.shift();viaPt=viaList[0]||null}   // przystanek osiągnięty – dalsze przeliczenia już bez niego
   const n=route.pts.length-2;
-  let r=projRoute(route,p.lat,p.lon,Math.max(0,route.idx-3),Math.min(n,route.idx+400));
-  if(r.off>120)r=projRoute(route,p.lat,p.lon,0,n);
+  const tn=Date.now(),dt=Math.max(.5,Math.min(30,(tn-(route.alT||tn-2000))/1000));route.alT=tn;   // czas od poprzedniego rzutu: ile najwyżej mogliśmy przejechać
+  const r=projNear(route,p.lat,p.lon,n,60+(Math.max(p.speed||0,10)+8)*dt*1.5,(p.speed>3&&p.heading!=null)?p.heading:null);
   route.idx=r.i;route.along=r.along;route.off=r.off;navUpdate();routeSignsUpdate();
   if(route.poiAt!=null&&route.len-route.along>8000&&route.along-route.poiAt>25000)loadPoi(route);
   const lim=r.along+6000,seg=[r.off<40?routeAt(route,r.along):[p.lat,p.lon]];   // linia zaczyna się na trasie (a nie w zaszumionej pozycji GPS), chyba że jesteśmy wyraźnie obok  // rysujemy tylko najbliższe ~6 km
