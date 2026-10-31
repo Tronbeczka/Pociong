@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 158</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 159</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -4920,7 +4920,7 @@ const SIG_ICON={
  bump:'<svg viewBox="0 0 32 32"><polygon points="16,3 30,28 2,28" fill="#ffd600" stroke="#d93025" stroke-width="3" stroke-linejoin="round"/><path d="M8 24q4-8 8 0t8 0" fill="none" stroke="#222" stroke-width="2.4"/></svg>',
  crossing:'<svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="5" fill="#1a73e8"/><path d="M7 25l3-14h3l3 14M19 25l3-14h3" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="11.5" cy="7.2" r="2" fill="#fff"/></svg>'};
 const SG_CELL={y:.02,x:.03};   // komórki ok. 2,2 × 2 km: znaki i światła pobieramy wokół auta i wzdłuż trasy, a nie tylko w małym kółku
-var sgCells=new Map(),sgBad=new Map(),sgFails=0,sgVer=0;
+var sgCells=new Map(),sgBad=new Map(),sgFails=0,sgVer=0,sgNoted=0;
 function sgParse(j){
   const byNode=new Map(),list=[],lights=[],haz=[];
     for(const w of j.elements)if(w.type==='way'&&w.nodes&&w.geometry)w.nodes.forEach((id,i)=>{let a=byNode.get(id);if(!a)byNode.set(id,a=[]);a.push([w,i])});
@@ -4972,7 +4972,8 @@ async function loadSigns(lat,lon){   // pobiera jedną, najbliższą brakującą
     await sgFetchCell(c);sgFails=0;
     if(sgCells.size>70)for(const [k] of [...sgCells]){const [iy,ix]=k.split('|').map(Number);if(dist(lat,lon,(iy+.5)*SG_CELL.y,(ix+.5)*SG_CELL.x)>25000)sgCells.delete(k)}
     sgMerge(lat,lon);signsNext=Date.now()+800;
-  }catch(e){sgFails++;sgBad.set(c.k,Date.now()+Math.min(300000,20000*sgFails));signsNext=Date.now()+Math.min(60000,5000*sgFails)}
+  }catch(e){sgFails++;sgBad.set(c.k,Date.now()+Math.min(300000,20000*sgFails));signsNext=Date.now()+Math.min(60000,5000*sgFails);
+    sgNoFetch()}
   finally{signsBusy=false}
 }
 function chime(kind){   // dwie miękkie, ciche nutki
@@ -4991,6 +4992,9 @@ function chime(kind){   // dwie miękkie, ciche nutki
 var rSigns=[];
 var rSignIds=new Set(),sgViewL=[],sgViewAt={v:-1,lat:0,lon:0},sigDens=(()=>{try{return localStorage.getItem('sigDens')||'all'}catch{return 'all'}})();
 // co pokazać na mapie: wszystko / tylko światła i STOP / tylko na trasie / nic (wypadki i roboty drogowe na trasie zawsze)
+function sgNoFetch(){   // trzy nieudane próby bez żadnych danych: mówimy o tym, zamiast pokazywać pustą mapę (raz)
+  if(sgFails===3&&!sgNoted&&!sgCells.size&&sigDens!=='off'){sgNoted=1;try{note('Brak znaków i świateł na mapie','Serwer danych nie odpowiada – ponawiam w tle')}catch{}}
+}
 function sigShow(k){return k==='accident'||k==='works'||(sigDens==='all'||sigDens==='route'?true:sigDens==='main'?(k==='lights'||k==='stop'):false)}
 function routeSignsUpdate(){
   rSigns=[];rSignIds=new Set();
@@ -5329,7 +5333,8 @@ function fetchOverpass(q,ms){
     urls.forEach((u,i)=>{
       fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),signal:ctl[i].signal})
         .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
-        .then(j=>{ctl.forEach((c,k)=>{if(k!==i)c.abort()});ok(j)})
+        .then(j=>{if(!j||!Array.isArray(j.elements)||(j.remark&&/runtime error|timed out|out of memory/i.test(j.remark)))throw new Error('overpass: '+(j&&j.remark||'bad'));   // przeciążony serwer odpowiada kodem 200 i uwagą o przekroczonym czasie (zwykle z pustym lub niepełnym wynikiem) – to nie jest odpowiedź, tylko błąd: bierzemy ją od innego serwera albo z pamięci urządzenia
+          ctl.forEach((c,k)=>{if(k!==i)c.abort()});ok(j)})
         .catch(e=>{err=e.message;if(++fails===urls.length)no(new Error(err))});
     });
   });
