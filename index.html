@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 156</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 157</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1827,6 +1827,22 @@ function norm(t){
 }
 setInterval(loadTrains,5000);
 
+// przejazd wyraźnie za autem (zatrzask): przy jeździe poniżej ok. 5 km/h i szumie GPS sam kąt do przejazdu nie wystarcza – liczy się, że przejazd już był za nami
+const xBN=new Map();   // id przejazdu → liczba kolejnych odczytów „wyraźnie za autem” (od 2 zatrzask trzyma się do chwili, gdy przejazd znów jest wyraźnie przed autem albo dalej niż 600 m)
+function xAheadOf(p,c,d){
+  const rel=p.heading!=null?angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading):null;
+  let n=xBN.get(c.id)||0;
+  if(d>600)n=0;
+  else if(rel!=null){
+    if(rel>120&&d>=10)n=Math.min(n+1,9);
+    else if(rel<45&&d>=25)n=0;
+    else if(n<2)n=0;
+  }
+  if(n)xBN.set(c.id,n);else xBN.delete(c.id);
+  if(rel==null)return d<150;   // kierunek nieznany – tylko najbliższa okolica
+  if(p.speed>1.5)return rel<45;
+  return d<150&&n<2&&(d<20||rel<90);   // powoli: przed autem (półpłaszczyzna), a w promieniu 20 m, gdzie kąt jest przypadkowy, decyduje zatrzask
+}
 function evaluate(p){
   bbSample(p);logSample(p);tripTick(p);achTick(p);fuelTick(p);evCheck(p);camTick(p);fatigue(p);earlyTrainWarn(p);limitAhead(p);zoneCheck(p);gradeCheck(p);
   follow(p);
@@ -1846,9 +1862,7 @@ function evaluate(p){
   let ahead=[];
   crossings.forEach(c=>{
     const d=dist(p.lat,p.lon,c.lat,c.lon);
-    const moving=p.speed>1.5&&p.heading!=null;
-    const isAhead=moving?angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading)<45:d<150;
-    if(isAhead&&d<Math.max(warnDist,1200))ahead.push({c,d});
+    if(xAheadOf(p,c,d)&&d<Math.max(warnDist,1200))ahead.push({c,d});
   });
   const wide=(route&&!demo&&route.off<100)||(p.speed>1.5&&p.heading!=null);   // zasięg sprawdzania: z trasą lub w ruchu – przed nami, w postoju bez trasy – tylko najbliższa okolica
   if(route&&!demo&&route.off<100){ // z trasą: liczą się tylko przejazdy leżące na trasie przed nami
