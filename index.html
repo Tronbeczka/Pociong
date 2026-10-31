@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 157</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 158</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1828,6 +1828,7 @@ function norm(t){
 setInterval(loadTrains,5000);
 
 // przejazd wyraźnie za autem (zatrzask): przy jeździe poniżej ok. 5 km/h i szumie GPS sam kąt do przejazdu nie wystarcza – liczy się, że przejazd już był za nami
+let xNearId=null;   // przejazd, który baner już pokazuje jako bliski (histereza zasięgu)
 const xBN=new Map();   // id przejazdu → liczba kolejnych odczytów „wyraźnie za autem” (od 2 zatrzask trzyma się do chwili, gdy przejazd znów jest wyraźnie przed autem albo dalej niż 600 m)
 function xAheadOf(p,c,d){
   const rel=p.heading!=null?angDiff(bear(p.lat,p.lon,c.lat,c.lon),p.heading):null;
@@ -1873,7 +1874,7 @@ function evaluate(p){
   ahead.sort((a,b)=>a.d-b.d);
   aheadList=ahead.slice(0,6);
   {const n2=ahead[1];$('then').style.display=n2?'flex':'none';if(n2)$('then').textContent='Potem '+fmtD(n2.d)}
-  if(!ahead.length){window._nearX=null;setDist('');$('then').style.display='none';
+  if(!ahead.length){window._nearX=null;xNearId=null;setDist('');$('then').style.display='none';
     if(arrivedAt&&!route&&Date.now()-arrivedAt<12000)setBanner('ok','Dojechaliśmy',arrivedSub);
     else if(!xReady(p)){if(route&&nav)setBanner('ok','Trasa','');   // na trasie baner pokazuje wskazówki zakrętów, a o brakującym pobraniu informuje pasek informacji
       else if(xErr&&Date.now()-xErr<180000)setBanner('warn','Brak danych o przejazdach','Nie udało się ich pobrać – ponawiam');else setBanner('ok','Sprawdzam przejazdy…','Pobieram dane o przejazdach kolejowych')}   // nie wiemy jeszcze, czy w okolicy są przejazdy – nie mówimy „droga wolna”
@@ -1934,14 +1935,15 @@ function evaluate(p){
     const m=Math.round(maybe.a.d/10)*10, td=Math.round(maybe.td/10)*10;
     setBanner(maybe.td<800?'bad':'warn','Pociąg w pobliżu',`Pociąg ok. ${td} m od przejazdu (kierunek nieznany)`);
     say('m'+maybe.a.c.id,`Proszę uważać, w pobliżu przejazdu kolejowego może być pociąg. Przejazd za ${m} metrów.`,[250,120,250],'W pobliżu przejazdu może być pociąg');
-  }else if(near.d<warnDist){
+  }else if(near.d<warnDist+(xNearId===near.c.id?60:0)){   // histereza: raz zapowiedziany przejazd nie „odskakuje” do „w oddali” przy drżeniu pozycji na granicy zasięgu
+    xNearId=near.c.id;
     let tn;   // informacja o pociągach przy najbliższym przejeździe
     if(gtfs&&!gKey&&!feedUrl){const nx=xNextInfo(near.c);tn=nx==null?' · rozkład się wczytuje':nx.m==null?' · brak pociągów pasażerskich w najbliższych 3 godzinach'+dataNote(nx,1):' · najbliższy pociąg '+(nx.m<1?'za chwilę':'za ok. '+(nx.m<60?nx.m+' min':Math.floor(nx.m/60)+' h '+(nx.m%60)+' min'))+dataNote(nx,1)}
     else tn=nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu';
     setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',((crossRisk(near.c)>=3&&!near.c.nb?'Wymaga szczególnej uwagi':'')+tn+feedNote).replace(/^\s*·\s*/,'').replace(/^./,ch=>ch.toUpperCase()));
     {const stg=near.d>150?'far':'near';   // zwykła zapowiedź przejazdu: raz z wyprzedzeniem i raz tuż przed nim (ostrzeżenia o pociągu powtarzają się osobno)
       if(annOnce('x',near.c.lat,near.c.lon,stg))say('x'+near.c.id+stg,stg==='near'?(near.c.nb?'Przejazd kolejowy bez zapór.':'Przejazd kolejowy.'):(near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`)+(crossRisk(near.c)>=3&&!near.c.nb?' Ten przejazd wymaga szczególnej uwagi.':''),near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy')}
-  }else setBanner('ok','Przejazd w oddali',`za ${n} m`);
+  }else{xNearId=null;setBanner('ok','Przejazd w oddali',`za ${n} m`)}
 }
 // czas do pociągu w komunikacie: bez udawania dokładności do sekundy
 const fmtTE=s=>s<8?'za chwilę':s<90?'za ok. '+Math.round(s/5)*5+' s':'za ok. '+String(Math.round(s/30)/2).replace('.',',')+' min';
@@ -6179,36 +6181,62 @@ function drawRailSet(c,Rr,Rs,s,night,rlw){
       }
     }
 }
-// mosty i wiadukty (Wersja 151): od najniższego poziomu – cień, ciemna obwódka, jasny brzeg i jezdnia (albo tory); wyższy poziom zasłania niższy
+// mosty i wiadukty (Wersja 151; 158: płaskie końce obwódki zamiast „pigułek”, tramwaj na moście drogowym bez własnej obwódki): od najniższego poziomu – cień, ciemna obwódka, jasny brzeg i jezdnia (albo tory); wyższy poziom zasłania niższy
 // only: 'road' = jezdnie (przed pasami ruchu), 'over' = jezdnie nad torami (poprawka po narysowaniu torów), 'rail' = tory na obiektach
+function brCo(b,BR){   // czy tramwaj jedzie po moście drogowym (wtedy nie dostaje własnego cienia ani obwódki – jezdnia już je ma); wynik zapamiętany w obiekcie
+  if(b.co!==undefined)return b.co;
+  let co=false;const a=b.ras&&b.ras[0];
+  if(a&&a.length>=4){
+    const n=a.length>>1,mx=n===2?(a[0]+a[2])/2:a[2*(n>>1)],my=n===2?(a[1]+a[3])/2:a[2*(n>>1)+1];   // punkt ze środka osi
+    for(const r of BR){
+      if(r===b||r.cls==='rail'||r.cls==='rsv'||r.cls==='tram'||!r.ras)continue;
+      for(const q of r.ras){
+        for(let i=0;i+3<q.length;i+=2){
+          const x1=q[i],y1=q[i+1],dx=q[i+2]-x1,dy=q[i+3]-y1,L2=dx*dx+dy*dy;let t=L2>0?((mx-x1)*dx+(my-y1)*dy)/L2:0;t=t<0?0:t>1?1:t;
+          if(Math.hypot(x1+dx*t-mx,y1+dy*t-my)<9){co=true;break}
+        }
+        if(co)break;
+      }
+      if(co)break;
+    }
+  }
+  b.co=co;return co;
+}
 function drawBridges(c,BR,o,only){
   const {pal,s,rwz,cwz,night,dm,rlw}=o,isR=b=>b.cls==='rail'||b.cls==='rsv'||b.cls==='tram';
   const list=BR.filter(b=>only==='rail'?isR(b):(!isR(b)&&(only!=='over'||b.over)&&!(b.cls==='sv'&&s<.3)&&!(b.cls==='rs'&&s<.14)));
   if(!list.length)return;
-  const far=s<.3,shw=night?'rgba(0,0,0,.45)':'rgba(70,58,35,.24)',cs=far?pal.casing:(night?'#06080d':'#7d786b'),ed=night?'rgba(170,185,225,.22)':'rgba(255,255,255,.6)';   // far: z oddali most rysujemy jak zwykłą drogę (ciemna obwódka robiła z krótkich mostów szare plamy)
-  const wOf=b=>isR(b)?Math.max(3,rlw*1.9):rwz(b.cls);
+  const far=s<.3,shw=night?'rgba(0,0,0,.45)':'rgba(70,58,35,.24)',cs=far?pal.casing:(night?'#080b12':'#8a8577'),ed=night?'rgba(170,185,225,.22)':'rgba(255,255,255,.6)';   // far: z oddali most rysujemy jak zwykłą drogę (ciemna obwódka robiła z krótkich mostów szare plamy)
+  const wOf=b=>isR(b)?Math.max(3,rlw*1.9):rwz(b.cls),trOn=b=>b.cls==='tram'&&brCo(b,BR);   // trOn: tramwaj na moście drogowym – rysujemy tylko szyny
   for(let i=0;i<list.length;){
     let j=i;while(j<list.length&&list[j].L===list[i].L)j++;
-    const grp=list.slice(i,j);i=j;
-    if(s>=.3){c.save();c.translate(3.2/s,-3.2/s);c.strokeStyle=shw;for(const b of grp){c.lineWidth=(wOf(b)+cwz+3)/s;c.stroke(b.pa)}c.restore()}   // cień obiektu
-    for(const b of grp){c.strokeStyle=cs;c.lineWidth=(wOf(b)+cwz+(far?0:s>=.5?3.2:1.6)+(dm?1.2:0))/s;c.stroke(b.pa)}   // obwódka
-    if(s>=.5)for(const b of grp){c.strokeStyle=ed;c.lineWidth=(wOf(b)+1.6)/s;c.stroke(b.pa)}   // jasny brzeg (krawężnik / balustrada)
+    const grp=list.slice(i,j),own=grp.filter(b=>!trOn(b)&&!(far&&isR(b)));i=j;   // z oddali tory na obiektach to zwykłe tory – bez ciemnych klocków obwódki i podłoża
+    c.lineCap='butt';   // obwódka, cień i brzeg kończą się równo z jezdnią – bez zaokrąglonych końców, które robiły z mostów „pigułki”
+    if(s>=.3){c.save();c.translate(3.2/s,-3.2/s);c.strokeStyle=shw;for(const b of own){c.lineWidth=(wOf(b)+cwz+3)/s;c.stroke(b.pa)}c.restore()}   // cień obiektu
+    for(const b of own){c.strokeStyle=cs;c.lineWidth=(wOf(b)+cwz+(far?0:s>=.5?2.2:1.2)+(dm?1.2:0))/s;c.stroke(b.pa)}   // obwódka
+    if(s>=.5)for(const b of own){c.strokeStyle=ed;c.lineWidth=(wOf(b)+1.4)/s;c.stroke(b.pa)}   // jasny brzeg (krawężnik / balustrada)
     for(const b of grp){
+      c.lineCap='butt';   // drawRailSet kończy się ustawieniem zaokrąglonych końców
       if(isR(b)){
+        if(far){if(b.cls!=='tram')drawRailSet(c,b.cls==='rail'?b.pa:null,b.cls==='rsv'?b.pa:null,s,night,rlw);continue}
+        if(trOn(b)){if(s>=.3){c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(b.pa)}continue}
         c.strokeStyle=night?'#262e44':'#cfccc2';c.lineWidth=wOf(b)/s;c.stroke(b.pa);   // podłoże toru na obiekcie
         if(b.cls==='tram'){if(s>=.3){c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(b.pa)}}
         else drawRailSet(c,b.cls==='rail'?b.pa:null,b.cls==='rsv'?b.pa:null,s,night,rlw);
         continue;
       }
       const w=rwz(b.cls);
+      c.lineCap='round';   // wypełnienie jezdni z zaokrąglonym końcem – zakrętów między osobnymi odcinkami mostu nie przecina szpara
       c.strokeStyle=pal[b.cls];c.lineWidth=w/s;c.stroke(b.pa);
+      c.lineCap='butt';
       if(b.cls==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(b.pa)}
       if(b.pb&&s>=(dm?.5:.7)){
         if(b.pbk==='cm'){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(b.pb)}
-        else{c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):(night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)');c.lineWidth=Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash([9/s,11/s]);c.lineCap='butt';c.stroke(b.pb);c.setLineDash([]);c.lineCap='round'}
+        else{c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):(night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)');c.lineWidth=Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash([9/s,11/s]);c.stroke(b.pb);c.setLineDash([])}
       }
     }
   }
+  c.lineCap='round';
 }
 const TERR=['resi','ind','farm','grass','wood','wet','sand','inst','sport','cem','rland'];   // kolejność rysowania terenów (od spodu)
 function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekranu (wschód, północ) leży przed kamerą (widok 3D); sp – skala malowania (domyślnie bieżąca; przy oddalaniu mniejsza, z wyprzedzeniem)
@@ -7285,9 +7313,10 @@ let wallKey='',wallCol=null,bldCache=null,bldTick=0,wallH=[],shc=null,shx=null;
 const wallCC=new Map();
 const mixC=(h1,h2,t)=>{const a=parseInt(h1.slice(1,7),16),b=parseInt(h2.slice(1,7),16),f=(x,y)=>Math.round(x+(y-x)*t);return '#'+((1<<24)|(f(a>>16,b>>16)<<16)|(f((a>>8)&255,(b>>8)&255)<<8)|f(a&255,b&255)).toString(16).slice(1)};
 // kolor z OSM (60%) zmieszany z kolorem budynków na mapie (40%) – barwy zostają stonowane; te same odcienie jasności co dla zwykłych budynków
+const dkHex=(h,f)=>{const n=parseInt(h.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return '#'+((1<<24)|(c(n>>16)<<16)|(c((n>>8)&255)<<8)|c(n&255)).toString(16).slice(1)};
 function bldWallC(col,hb){
   const k=(night?'n':'d')+col+hb;let w=wallCC.get(k);
-  if(!w){const base=mixC(night?PAL.night.bld:PAL.day.bld,col,.6);
+  if(!w){const base=night?mixC(PAL.night.bld,dkHex(col,.5),.55):mixC(PAL.day.bld,col,.6);   // noc: jasny kolor z OSM przyciemniony – inaczej takie budynki „świeciły” na tle ciemnej mapy
     w={roof:night?shadeC(base,1.35-.04*hb):shadeC(base,1.05-.03*hb),a:night?shadeC(base,.95-.04*hb):shadeC(base,.86-.04*hb),b:night?shadeC(base,.7-.03*hb):shadeC(base,.7-.04*hb),line:wallCol.line};
     wallCC.set(k,w)}
   return w;
@@ -7378,6 +7407,26 @@ function drawWindows(Gi,Gj,Ti,Tj,Lw,Hw,seed,alpha,lit){
   mx.globalAlpha=1;
   return n;
 }
+// punkty, których nie wolno zasłonić dachem: auto, kilka punktów przed nim wg kierunku jazdy i trasa ok. 150 m przed autem (współrzędne w metrach od środka danych)
+function bldKeepPts(D,cl){
+  if(!vf)return null;
+  const car=vf.car||vf.cam;if(!car||!isFinite(car.lat)||!isFinite(car.lon))return null;
+  const P=[],X=lon=>(lon-D.lon)*111195*cl,Y=lat=>(lat-D.lat)*111195;
+  P.push(X(car.lon),Y(car.lat));
+  if(route&&route.pts&&route.pts.length>1&&route.off<100&&isFinite(route.along)){
+    for(let d=-12;d<=150;d+=7){const q=routeAt(route,route.along+d);P.push(X(q[1]),Y(q[0]))}
+  }else if(fix&&Math.hypot(fix.ve,fix.vn)>1.5){   // bez trasy: kilka punktów przed autem w kierunku jazdy
+    const v=Math.hypot(fix.ve,fix.vn),ue=fix.ve/v,un=fix.vn/v;
+    for(const d of [8,18,30])P.push(X(car.lon)+ue*d,Y(car.lat)+un*d);
+  }
+  return P;
+}
+function bldOver(b,P){   // czy któryś punkt leży wewnątrz obrysu budynku (najpierw tani test prostokąta)
+  let bb=b.bb;
+  if(!bb){bb=[1e9,1e9,-1e9,-1e9];for(let i=0;i<b.p.length;i+=2){const x=b.p[i],y=b.p[i+1];if(x<bb[0])bb[0]=x;if(x>bb[2])bb[2]=x;if(y<bb[1])bb[1]=y;if(y>bb[3])bb[3]=y}b.bb=bb}
+  for(let i=0;i<P.length;i+=2){const x=P[i],y=P[i+1];if(x>=bb[0]&&x<=bb[2]&&y>=bb[1]&&y<=bb[3]&&pip(b.p,x,y))return true}
+  return false;
+}
 function drawBuildings3D(){
   if(ecoOn||lite||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
   const t0=performance.now();
@@ -7399,9 +7448,10 @@ function bld3Draw(){
   let lst,far=null;
   if(bldCache&&bldCache.D===D&&bldCache.dl===dl&&(bldTick++%5)&&Math.abs(bldCache.rot-curRot)<2&&Math.abs(bldCache.s-s)<.05*s){lst=bldCache.lst;far=bldCache.far}   // kolejność rysowania liczymy co kilka klatek
   else{
-    lst=[];const cull=lnCull(D);
+    lst=[];const cull=lnCull(D),KP=bldKeepPts(D,cl);
     for(const b of D.B){
       if(cull&&cull.has(b))continue;
+      if(KP&&!(b.m>0)&&bldOver(b,KP))continue;   // budynek, pod którym jest auto albo trasa tuż przed nim (hala dworca nad torami i ulicą, garaż), zostaje płaski – dach nie zasłania auta ani drogi
       const q=proj(D.lat+b.cy/111195,D.lon+b.cx/(111195*cl));
       if(!q||q.x<-160||q.x>W+160||q.y<-220||q.y>H+160)continue;
       lst.push({b,y:q.y,k:q.k});
