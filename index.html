@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 160</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 161</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1426,6 +1426,8 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
 <script async src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+// zapytanie z limitem czasu: zawieszone połączenie (słaby zasięg) kończy się błędem zamiast blokować np. przeliczanie trasy, kafelki czy odświeżanie pogody „w nieskończoność”
+function fetchT(url,opt,ms){const ac=new AbortController();setTimeout(()=>ac.abort(),ms||20000);return fetch(url,Object.assign({},opt,{signal:ac.signal}))}
 // ---- dziennik błędów aplikacji: ostatnie błędy na tym urządzeniu (Ustawienia → Diagnostyka → „Błędy aplikacji”), żeby dało się je skopiować i zgłosić ----
 var errLog=[],errSaveT=0;
 try{errLog=JSON.parse(localStorage.getItem('errlog')||'[]');if(!Array.isArray(errLog))errLog=[]}catch(e){errLog=[]}
@@ -1809,7 +1811,7 @@ async function loadCrossings(lat,lon){
 async function loadTrains(){
   if(demo||!feedUrl||gKey||gtfs)return;
   try{
-    const r=await fetch(feedUrl);const j=await r.json();
+    const r=await fetchT(feedUrl);const j=await r.json();
     const arr=Array.isArray(j)?j:(j.trains||j.data||j.items||[]);
     trains=arr.map(norm).filter(Boolean);feedAt=Date.now();
   }catch(e){trains=[]}
@@ -1984,7 +1986,7 @@ function onPos(g){window.gpsErr=false;
   const acc=c.accuracy||0;
   // odrzuć słaby odczyt (>60 m) i nierealny skok (>70 m/s = 250 km/h), chyba że trwa to już kilka sekund
   if(gpsOk){const dt=Math.max(.2,(t-gpsOk.t)/1000),jump=dist(gpsOk.lat,gpsOk.lon,c.latitude,c.longitude);
-    if((acc>60||jump/dt>70)&&dt<6)return}
+    if(((acc>60||jump/dt>70)&&dt<6)||(acc>150&&dt<60))return}   // słaby odczyt (>60 m) i skok >70 m/s odrzucamy przez 6 s; odczyt „z sieci komórkowej” (>150 m) – przez minutę od ostatniego dobrego (po przerwie w GPS taki pierwszy odczyt przerzucał pozycję na trasie o setki metrów)
   let heading=(c.heading!=null&&!isNaN(c.heading))?c.heading:null, speed=(c.speed!=null&&!isNaN(c.speed))?c.speed:null;
   if(gpsOk&&(heading==null||speed==null)){const dt=Math.max(.2,(t-gpsOk.t)/1000),d=dist(gpsOk.lat,gpsOk.lon,c.latitude,c.longitude);
     // prędkość z przemieszczenia; przy postoju (szum GPS < 1,5× dokładność) zakładamy 0
@@ -2244,7 +2246,7 @@ const rLine=L.polyline([],{color:'#1a73e8',weight:10,opacity:1,lineCap:'round',l
 function makeRoute(coords,dur){
   const pts=coords.map(c=>[c[1],c[0]]),cum=new Float64Array(pts.length);
   for(let i=1;i<pts.length;i++)cum[i]=cum[i-1]+dist(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]);
-  return {pts,cum,len:cum[pts.length-1],dur,idx:0,along:0,off:0,offN:0,lastRr:0,memo:new Map()};
+  return {pts,cum,len:cum[pts.length-1],dur,idx:0,along:0,off:0,offN:0,lastRr:0,rrFail:0,memo:new Map()};
 }
 // rzut punktu na odcinki trasy i0..i1: numer odcinka, odległość od trasy, droga wzdłuż trasy
 function projRoute(R,lat,lon,i0,i1,hd){   // hd (opcjonalnie): kierunek jazdy w stopniach – odcinki biegnące w przeciwną stronę dostają karę 30 m (nawrotka tą samą ulicą)
@@ -2417,6 +2419,7 @@ function navUpdate(){
   if(!route)lnRender(null);
   if(rerouting&&route){lnRender(null);nav={txt:'Przeliczam trasę…',icon:navIcon('round'),dist:'',d:0,i:-1,then:'Zjechałeś z trasy – szukam najszybszej drogi'};return}
   if(!route||!route.steps||route.steps.length<2)return;
+  if(route.off>150&&route.offN>=2){lnRender(null);nav={txt:'Poza trasą',icon:navIcon('round'),dist:route.off>=1000?(route.off/1000).toFixed(1)+' km':Math.round(route.off/10)*10+' m',d:route.off,i:-1,then:'Wróć na wyznaczoną trasę albo poczekaj na nową'};return}   // zjechaliśmy daleko, a nowej trasy nie ma (brak sieci): nie podajemy skrętów dla odległego punktu trasy
   const st=route.steps;let i=1;
   while(i<st.length-1&&st[i].off<route.along-8)i++;
   if(route.navI>i&&route.along>st[route.navI-1].off-40)i=route.navI;   // krok nie wraca przez szum GPS tuż za punktem manewru (postój na światłach przy zakręcie)
@@ -2515,7 +2518,7 @@ async function loadWeather(R){
   try{
     const fr=[0,.17,.33,.5,.66,.83,1],pts=fr.map(f=>routeAt(R,R.len*f));R.wx=[];
     const url='https://api.open-meteo.com/v1/forecast?latitude='+pts.map(q=>q[0].toFixed(3)).join(',')+'&longitude='+pts.map(q=>q[1].toFixed(3)).join(',')+'&hourly=temperature_2m,precipitation,weather_code,visibility&forecast_days=2&timezone=auto';
-    const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
+    const r=await fetchT(url);if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json(),arr=Array.isArray(j)?j:[j];
     let worst=null,end=null;
     arr.forEach((w,k)=>{
@@ -2625,7 +2628,7 @@ function routeUpdate(p){
     say('reroute','Szukam nowej trasy',[80]);navUpdate();
     fetchRoute(p,endPt,(p.speed||0)>2?lastH:null).then(x=>{
       if(route===old){setRoute(x.geometry.coordinates,x.duration,x.steps,x.jam,x.delay,x.inc);route.lastRr=Date.now();say('rerouted','Nowa trasa jest gotowa',[60])}
-    }).catch(()=>{}).finally(()=>{rerouting=false;if(route)navUpdate()});
+    }).catch(()=>{if(route===old&&++old.rrFail===3)try{note('Nie mogę przeliczyć trasy','Brak połączenia z serwerem tras – ponawiam; wróć na wyznaczoną trasę')}catch{}}).finally(()=>{rerouting=false;if(route)navUpdate()});
   }
 }
 // --- TomTom: trasa z ruchem na żywo (korki, alternatywy, najszybsza wg aktualnego czasu przejazdu) ---
@@ -2666,7 +2669,7 @@ async function fetchTT(a,b,hdg){
   if(hdg!=null)u+='&vehicleHeading='+Math.round((hdg+360)%360);
   if(depTime)u+='&departAt='+encodeURIComponent(depTime.toISOString().replace(/\.\d+Z$/,'+00:00'));
   if(opts.mw)u+='&avoid=motorways';if(opts.toll)u+='&avoid=tollRoads';if(opts.fer)u+='&avoid=ferries';
-  const r=await fetch(u);if(!r.ok)throw new Error('TomTom HTTP '+r.status);
+  const r=await fetchT(u);if(!r.ok)throw new Error('TomTom HTTP '+r.status);
   const j=await r.json(),all=(j.routes||[]).map(ttRoute).filter(x=>x.geometry.coordinates.length>1&&x.duration>0);
   if(!all.length)throw new Error('TomTom: brak trasy');
   all.sort((x,y)=>x.duration-y.duration);
@@ -2708,11 +2711,11 @@ async function fetchRouteOsrm(a,b,hdg){
   const url=base+'/route/v1/driving/'+pts.map(q=>q.lon+','+q.lat).join(';')+'?overview=full&geometries=geojson&alternatives=false&steps=true'+(ex?'&exclude='+ex:'');
   let j=null;
   if(hdg!=null){   // kierunek jazdy: serwer nie każe zawracać w miejscu
-    try{const r0=await fetch(url+'&bearings='+Math.round((hdg+360)%360)+',70'+';'.repeat(pts.length-1));if(r0.ok){const j0=await r0.json();if(j0.code==='Ok'&&j0.routes&&j0.routes[0])j=j0}}catch(e){}
+    try{const r0=await fetchT(url+'&bearings='+Math.round((hdg+360)%360)+',70'+';'.repeat(pts.length-1));if(r0.ok){const j0=await r0.json();if(j0.code==='Ok'&&j0.routes&&j0.routes[0])j=j0}}catch(e){}
   }
   if(!j){
-    let r=await fetch(url);
-    if(!r.ok&&ex){r=await fetch(url.replace(/&exclude=[^&]*/,''))}   // serwer nie obsługuje wykluczeń – trasa bez nich
+    let r=await fetchT(url);
+    if(!r.ok&&ex){r=await fetchT(url.replace(/&exclude=[^&]*/,''))}   // serwer nie obsługuje wykluczeń – trasa bez nich
     if(!r.ok)throw new Error('serwer tras: HTTP '+r.status);
     j=await r.json();
   }
@@ -2758,7 +2761,7 @@ renderChips();
 let sugTok=0,sugTimer=null;
 async function geocode(q){
   const b=last?{lat:last.lat,lon:last.lon}:{lat:52.0,lon:19.4};
-  const r=await fetch('https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=6&lat='+b.lat+'&lon='+b.lon);
+  const r=await fetchT('https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=6&lat='+b.lat+'&lon='+b.lon);
   if(!r.ok)throw new Error('HTTP '+r.status);
   const j=await r.json();
   return (j.features||[]).map(f=>{const p=f.properties||{};
@@ -4469,7 +4472,7 @@ async function wxHere(){
   if(wxNow&&Date.now()-wxNow.at<600000&&dist(wxNow.lat,wxNow.lon,c.lat,c.lon)<15000)return;
   wxBusy=true;
   try{
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+c.lat.toFixed(3)+'&longitude='+c.lon.toFixed(3)+'&current=temperature_2m,precipitation,weather_code&timezone=auto');
+    const r=await fetchT('https://api.open-meteo.com/v1/forecast?latitude='+c.lat.toFixed(3)+'&longitude='+c.lon.toFixed(3)+'&current=temperature_2m,precipitation,weather_code&timezone=auto');
     if(!r.ok)throw 0;const j=(await r.json()).current;
     const kd=wxKind(j.weather_code,j.precipitation,j.temperature_2m,null);
     wxNow={lat:c.lat,lon:c.lon,at:Date.now(),kd:kd[0],code:j.weather_code,t:Math.round(j.temperature_2m)};
@@ -4776,7 +4779,7 @@ async function radUpdate(){
   radBusy=true;
   try{
     if(!radData||Date.now()-radAt>300000){
-      const r=await fetch('https://api.rainviewer.com/public/weather-maps.json');if(!r.ok)throw new Error('HTTP '+r.status);
+      const r=await fetchT('https://api.rainviewer.com/public/weather-maps.json');if(!r.ok)throw new Error('HTTP '+r.status);
       const j=await r.json(),p=j.radar&&j.radar.past&&j.radar.past[j.radar.past.length-1];if(!p)throw new Error('brak danych');
       radData={host:j.host||'https://tilecache.rainviewer.com',path:p.path,time:p.time};radAt=Date.now();
     }
@@ -5704,11 +5707,11 @@ async function ofmUrl(force){
   let c=null;try{c=JSON.parse(localStorage.getItem('ofm')||'null');if(!force&&c&&Date.now()-c.t<12*36e5)return c.u}catch(e){}
   if(force)c=null;   // zapamiętany adres przestał działać (np. wycofana wersja kafelków) – pobieramy nowy
   if(c&&c.u){   // starszy adres działa dalej – używamy go od razu, a nowy pobieramy w tle
-    if(!ofmUrl.bg){ofmUrl.bg=1;fetch('https://tiles.openfreemap.org/planet').then(r=>r.json()).then(j=>{if(j&&j.tiles&&j.tiles[0])localStorage.setItem('ofm',JSON.stringify({t:Date.now(),u:j.tiles[0]}))}).catch(()=>{}).finally(()=>{ofmUrl.bg=0})}
+    if(!ofmUrl.bg){ofmUrl.bg=1;fetchT('https://tiles.openfreemap.org/planet',null,10000).then(r=>r.json()).then(j=>{if(j&&j.tiles&&j.tiles[0])localStorage.setItem('ofm',JSON.stringify({t:Date.now(),u:j.tiles[0]}))}).catch(()=>{}).finally(()=>{ofmUrl.bg=0})}
     return c.u;
   }
   try{
-    const r=await fetch('https://tiles.openfreemap.org/planet');if(!r.ok)throw new Error('HTTP '+r.status);
+    const r=await fetchT('https://tiles.openfreemap.org/planet',null,10000);if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json(),u=j.tiles&&j.tiles[0];if(!u)throw new Error('brak adresu kafelków');
     try{localStorage.setItem('ofm',JSON.stringify({t:Date.now(),u}))}catch(e){}
     return u;
@@ -5721,7 +5724,7 @@ async function tileBuf(tpl,z,x,y){
   try{c=await idbGet(key)}catch(e){}
   if(c&&c.buf&&Date.now()-c.t<30*864e5)return c.buf;
   try{
-    const r=await fetch(tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y));if(!r.ok){const er=new Error('HTTP '+r.status);er.status=r.status;throw er}
+    const r=await fetchT(tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y),null,15000);if(!r.ok){const er=new Error('HTTP '+r.status);er.status=r.status;throw er}
     const buf=await r.arrayBuffer();idbSet(key,{t:Date.now(),buf}).catch(()=>{});   // zapis do pamięci urządzenia w tle – kafelek jest od razu gotowy do użycia
     return buf;
   }catch(e){if(c&&c.buf)return c.buf;throw e}
@@ -6041,7 +6044,7 @@ async function demSample(pts,z){   // wysokości w punktach: kafelki leżące na
 async function demElevOM(pts){   // zapas: Open-Meteo Elevation API (do 100 punktów w zapytaniu)
   const out=new Float32Array(pts.length).fill(NaN);
   for(let i=0;i<pts.length;i+=100){
-    const part=pts.slice(i,i+100),r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+part.map(q=>q[0].toFixed(4)).join(',')+'&longitude='+part.map(q=>q[1].toFixed(4)).join(','));
+    const part=pts.slice(i,i+100),r=await fetchT('https://api.open-meteo.com/v1/elevation?latitude='+part.map(q=>q[0].toFixed(4)).join(',')+'&longitude='+part.map(q=>q[1].toFixed(4)).join(','));
     if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);
     const j=await r.json();(j.elevation||[]).forEach((v,k)=>{if(typeof v==='number')out[i+k]=v});
   }
@@ -9272,7 +9275,7 @@ function unprojPt(x,y){   // odwrotność proj(): z punktu na ekranie do szeroko
   return {lat:la,lon:lo};
 }
 async function revGeo(lat,lon){
-  const r=await fetch('https://photon.komoot.io/reverse?lon='+lon.toFixed(6)+'&lat='+lat.toFixed(6));if(!r.ok)throw new Error('HTTP '+r.status);
+  const r=await fetchT('https://photon.komoot.io/reverse?lon='+lon.toFixed(6)+'&lat='+lat.toFixed(6));if(!r.ok)throw new Error('HTTP '+r.status);
   const j=await r.json(),f=(j.features||[])[0];if(!f)return '';
   const p=f.properties||{},street=p.street||'',city=p.city||p.town||p.village||p.county||'';
   let t=p.name||street;
