@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 161</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 162</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2496,7 +2496,7 @@ function limDefault(p){
   const now=performance.now();if(now-limDefAt<500)return limDefV;limDefAt=now;limDefV=null;
   const x=(p.lon-D.lon)*111195*Math.cos(rad(D.lat)),y=(p.lat-D.lat)*111195,P=D.P;let k=null;
   try{c.save();c.setTransform(1,0,0,1,0,0);
-    for(const kk of ['mw','pr','sc','tr','rs']){c.lineWidth=(VC[kk].m+4);if(P[kk]&&c.isPointInStroke(P[kk],x,y)){k=kk;break}}
+    for(const kk of ['mw','mwl','pr','sc','tr','rs']){c.lineWidth=(VC[kk].m+4);if(P[kk]&&c.isPointInStroke(P[kk],x,y)){k=kk==='mwl'?'mw':kk;break}}
     c.restore()}catch(e){}
   if(!k)return null;
   if(k==='mw'){limDefV=120;return limDefV}
@@ -3525,8 +3525,8 @@ function drawJunction(){
   const pal=themePal(PAL[night?'night':'day']);
   c.setTransform(1,0,0,1,0,0);c.fillStyle=pal.bg;c.fillRect(0,0,240,240);
   c.save();c.translate(120,150);c.rotate(-brg);c.scale(1.5,-1.5);c.translate(-mx_,-my);c.lineCap='round';c.lineJoin='round';
-  for(const k of ['sv','rs','tr','sc','pr','mw'])if(P[k]){c.strokeStyle=pal.casing;c.lineWidth=(VC[k].m+2)*1.05;c.stroke(P[k])}
-  for(const k of ['sv','rs','tr','sc','pr','mw'])if(P[k]){c.strokeStyle=pal[k];c.lineWidth=VC[k].m*.95;c.stroke(P[k])}
+  for(const k of ['sv','rs','tr','sc','pr','mwl','mw'])if(P[k]){c.strokeStyle=pal.casing;c.lineWidth=(VC[k].m+2)*1.05;c.stroke(P[k])}
+  for(const k of ['sv','rs','tr','sc','pr','mwl','mw'])if(P[k]){c.strokeStyle=pal[k==='mwl'?'mw':k];c.lineWidth=VC[k].m*.95;c.stroke(P[k])}
   c.strokeStyle='#1a73e8';c.lineWidth=5;c.beginPath();let first=true;
   for(let d=Math.max(0,route.along-30);d<=Math.min(route.len,at+90);d+=6){const q=routeAt(route,d);const x=(q[1]-O.lon)*kx,y=(q[0]-O.lat)*111195;first?c.moveTo(x,y):c.lineTo(x,y);first=false}
   c.stroke();c.restore();
@@ -5236,7 +5236,7 @@ function updInfo(p){
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
 let vecErr='', vec=true, vecData=null, vecBusy=false, vecNext=0, fix=null, corr={e:0,n:0}, scaleCur=.5, scaleTgt=.5, vf=null, provCam=null;   // provCam: ostatnia znana pozycja – mapa pokazuje się od razu, jeszcze przed pierwszym odczytem GPS
-const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mw:{w:19,m:14}};   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
+const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mwl:{w:12,m:8},mw:{w:19,m:14}};   // mwl: łączniki autostrad (zjazdy, wjazdy) – jeden pas, węższe niż sama autostrada (Wersja 162)   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
 const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4)*dmK;   // z bliska drogi są szerokie na tyle, by auto mieściło się na pasie
 const PAL={
  day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623',rcase:'#173f8f',rhalo:'#ffffff',rcaseD:'#0a1226'},
@@ -5417,7 +5417,7 @@ function mvtDecode(buf){
   }
   return out;
 }
-const BRCLS={mw:1,pr:1,sc:1,tr:1,rs:1,sv:1,rail:1,rsv:1,tram:1};   // klasy rysowane jako mosty/wiadukty
+const BRCLS={mw:1,mwl:1,pr:1,sc:1,tr:1,rs:1,sv:1,rail:1,rsv:1,tram:1};   // klasy rysowane jako mosty/wiadukty
 const MV_ROAD={motorway:'mw',trunk:'mw',primary:'pr',secondary:'sc',tertiary:'tr',minor:'rs',service:'sv'};
 // tereny: pokrycie (las, łąka, pole, mokradło, piasek) i użytkowanie (zabudowa, przemysł, szkoły, boiska, cmentarze, tereny kolejowe)
 const MV_LC={wood:'wood',grass:'grass',farmland:'farm',wetland:'wet',sand:'sand'};
@@ -5570,7 +5570,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
         case 'transportation':
           if(f.t!==2)continue;
           if(pr.brunnel==='tunnel'){   // tunel: tylko blada, kreskowana linia (ciągłość drogi), bez udziału w wykrywaniu przejazdów i w przyciąganiu do dróg
-            if(!wide&&((pr.class==='rail'&&!pr.service&&pr.subclass!=='subway'&&pr.subclass!=='funicular')||pr.class==='motorway'||pr.class==='trunk'||pr.class==='primary'||pr.class==='secondary'||pr.class==='tertiary'))cls='tun';
+            if(wide?(pr.class==='motorway'||pr.class==='trunk'||pr.class==='primary'):((pr.class==='rail'&&!pr.service&&pr.subclass!=='subway'&&pr.subclass!=='funicular')||pr.class==='motorway'||pr.class==='trunk'||pr.class==='primary'||pr.class==='secondary'||pr.class==='tertiary'))cls='tun';   // z oddali (Wersja 162) tylko drogi główne: autostrada znikająca w tunelu nie urywa się w pustym miejscu
             break;
           }
           if(pr.class==='transit'&&(pr.subclass==='tram'||pr.subclass==='light_rail'))cls='tram';   // tramwaje: cienka, jasna kreska (bez „podkładów”)
@@ -5611,9 +5611,10 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
       // rysujemy wprost do ścieżek klas (bez osobnego Path2D na każdy obiekt i bez closePath – to był najdroższy fragment budowy mapy)
       const isTr=f.l==='transportation',one=cls==='rs'&&isTr&&(pr.oneway==1||pr.oneway===true);   // jednokierunkowe ulice osiedlowe = jeden pas
       // most/wiadukt (brunnel=bridge): osobne ścieżki, rysowane później, od najniższego poziomu (layer), z cieniem i obwódką
-      const brg=(!wide&&isTr&&pr.brunnel==='bridge'&&BRCLS[cls])?{cls,L:Math.max(1,Math.min(4,Math.round(+pr.layer)||1)),pa:new Path2D(),pb:null,pbk:'',pc:null,ras:[],over:false}:null;
-      const pa=brg?brg.pa:gp(cls);let pb=null;   // pb: oś jezdni (przerywana na drogach dwukierunkowych, ciągła na autostradach)
-      if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr')){pb=brg?(brg.pb=new Path2D()):gp('cl');if(brg)brg.pbk='cl'}else if(cls==='mw'){pb=brg?(brg.pb=new Path2D()):gp('cm');if(brg)brg.pbk='cm'}}
+      const lk=isTr&&cls==='mw'&&(pr.ramp==1||pr.ramp==='1'),cw=lk?'mwl':cls;   // lk: łącznik (zjazd/wjazd) – węższy, bez osi środkowej
+      const brg=(!wide&&isTr&&pr.brunnel==='bridge'&&BRCLS[cls])?{cls:cw,L:Math.max(1,Math.min(4,Math.round(+pr.layer)||1)),pa:new Path2D(),pb:null,pbk:'',pc:null,ras:[],over:false}:null;
+      const pa=brg?brg.pa:gp(cw);let pb=null;   // pb: oś jezdni (przerywana na drogach dwukierunkowych, ciągła na autostradach)
+      if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr')){pb=brg?(brg.pb=new Path2D()):gp('cl');if(brg)brg.pbk='cl'}else if(cls==='mw'&&!lk){pb=brg?(brg.pb=new Path2D()):gp('cm');if(brg)brg.pbk='cm'}}
       const rbr=!!brg&&(cls==='rail'||cls==='rsv'||cls==='tram');   // oś mostu kolejowego i tramwajowego służy tylko do wycinania trasy spod obiektu (Wersja 156); nie trafia do RS – po torach nie jeździmy
       const pc=one?(brg?(brg.pc=new Path2D()):gp('one1')):null,pe=(fill&&!wide&&(cls==='water'||cls==='park'))?gp(cls+'E'):null;   // pe: obrys bez odcinków leżących na brzegu kafelka (to cięcie geometrii, nie brzeg wody – inaczej na wodzie widać „szwy”)
       for(const rg of f.r){
@@ -6255,7 +6256,7 @@ function drawBridges(c,BR,o,only){
       }
       const w=rwz(b.cls);
       c.lineCap='round';   // wypełnienie jezdni z zaokrąglonym końcem – zakrętów między osobnymi odcinkami mostu nie przecina szpara
-      c.strokeStyle=pal[b.cls];c.lineWidth=w/s;c.stroke(b.pa);
+      c.strokeStyle=pal[b.cls==='mwl'?'mw':b.cls];c.lineWidth=w/s;c.stroke(b.pa);
       c.lineCap='butt';
       if(b.cls==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(b.pa)}
       if(b.pb&&s>=(dm?.5:.7)){
@@ -6275,7 +6276,7 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
   const dm=dmA>.02;   // widok kierowcy: szersze drogi, cień jezdni, chodniki, wyraźne pasy, nocą poświata latarni
   const terr=Q=>{for(const k of TERR)if(Q[k]&&pal[k]){c.fillStyle=pal[k];c.fill(Q[k])}};
   // przy oddaleniu minimalna szerokość małych ulic maleje, a najmniejsze znikają – zamiast białych plam zostaje czytelna siatka
-  const zq=Math.max(0,Math.min(1,(s-.1)/.4)),ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mw:.56},rwz=k=>Math.max(1.6,rw(k,s)*(ZF[k]+(1-ZF[k])*zq)),cwz=2.4+1.6*zq;
+  const zq=Math.max(0,Math.min(1,(s-.1)/.4)),ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mwl:.5,mw:.56},rwz=k=>Math.max(1.6,rw(k,s)*(ZF[k]+(1-ZF[k])*zq)),cwz=2.4+1.6*zq;
   const rlw=Math.max(2.2,Math.min(6,1.6+s*7)),Wd=(s<.45&&wideD)?wideD:null;
   if(Wd){   // oddalenie: tło z kafelków z-12 / z-10 (tereny, drogi główne, wody, tory) wokół kamery – także tam, gdzie szczegółowa mapa jeszcze się nie wczytała
     const Q=Wd.P,wx=(cam.lon-Wd.lon)*111195*Math.cos(rad(Wd.lat)),wy=(cam.lat-Wd.lat)*111195;
@@ -6285,9 +6286,10 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
     try{demDraw(c,Wd.lat,Wd.lon,s,night)}catch(e){errNote('rzeźba',e)}   // rzeźba terenu (cieniowanie) pod wodą, drogami i budynkami
     if(Q.water){c.fillStyle=pal.water;c.fill(Q.water)}
     if(Q.wline){c.strokeStyle=pal.water;c.lineWidth=4/s;c.stroke(Q.wline)}
-    const wo=['sc','pr','mw'];
-    for(const k of wo)if(Q[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:pal.csSc;c.lineWidth=(rwz(k)+cwz)/s;c.stroke(Q[k])}
-    for(const k of wo)if(Q[k]){c.strokeStyle=pal[k];c.lineWidth=rwz(k)/s;c.stroke(Q[k])}
+    if(Q.tun){c.save();c.setLineDash([7/s,6/s]);c.lineCap='butt';c.strokeStyle=pal.tun;c.lineWidth=Math.max(2,Math.min(7,rwz('pr')*.5))/s;c.stroke(Q.tun);c.restore()}   // tunele: blada kreskowana linia ciągłości
+    const wo=['sc','pr','mwl','mw'];
+    for(const k of wo)if(Q[k]){c.strokeStyle=k==='mw'||k==='mwl'?pal.csMw:k==='pr'?pal.csPr:pal.csSc;c.lineWidth=(rwz(k)+cwz)/s;c.stroke(Q[k])}
+    for(const k of wo)if(Q[k]){c.strokeStyle=pal[k==='mwl'?'mw':k];c.lineWidth=rwz(k)/s;c.stroke(Q[k])}
     if(Q.rail){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(Q.rail)}
     c.restore();
   }
@@ -6295,7 +6297,7 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
     const D=vecData,P=D.P,ox=(cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(cam.lat-D.lat)*111195;
     c.save();c.translate(S/2,S/2);c.scale(s,-s);c.translate(-ox,-oy);
     c.lineCap='round';c.lineJoin='round';
-    const order=['sv','rs','tr','sc','pr','mw'].filter(k=>!(k==='sv'&&s<.3)&&!(k==='rs'&&s<.14));
+    const order=['sv','rs','tr','sc','pr','mwl','mw'].filter(k=>!(k==='sv'&&s<.3)&&!(k==='rs'&&s<.14));
     let LV=[],LG=null;try{LV=lnVis(D,s,ox,oy,S);LG=LV.length?lnGroups(LV,s):null}catch(e){LV=[];LG=null;lnFail(e)}   // drogi z kilkoma pasami (dane OSM)
     if(Wd&&D.bb){c.fillStyle=pal.bg;c.fillRect(D.bb[0],D.bb[1],D.bb[2]-D.bb[0],D.bb[3]-D.bb[1])}   // szczegółowy obszar rysujemy od czystego tła (bez „duchów” z uproszczonych kafelków)
     terr(P);
@@ -6309,7 +6311,7 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
       c.fillStyle=pal.bld;c.fill(P.bld);if(s>=.6){c.strokeStyle=pal.bldEdge;c.lineWidth=1/s;c.stroke(P.bld)}}
     if(dm&&s>=.7){
       const shw=night?'rgba(0,0,0,.30)':'rgba(70,58,35,.16)',wk=night?'rgba(130,145,190,.16)':'rgba(255,255,255,.7)',gl='rgba(255,208,150,.09)';
-      if(night)for(const k of ['tr','sc','pr','mw'])if(P[k]){c.strokeStyle=gl;c.lineWidth=(rwz(k)+cwz+18)/s;c.stroke(P[k])}   // poświata latarni przy głównych drogach
+      if(night)for(const k of ['tr','sc','pr','mwl','mw'])if(P[k]){c.strokeStyle=gl;c.lineWidth=(rwz(k)+cwz+18)/s;c.stroke(P[k])}   // poświata latarni przy głównych drogach
       if(LG&&night)try{lnStroke(c,LG,gl,cwz+18,s,g=>g.kc<=3)}catch(e){c.lineCap='round';lnFail(e)}
       if(s>=1.2)for(const k of ['rs','tr','sc'])if(P[k]){c.strokeStyle=wk;c.lineWidth=(rwz(k)+cwz+9)/s;c.stroke(P[k])}   // chodnik wzdłuż ulicy
       if(LG&&s>=1.2)try{lnStroke(c,LG,wk,cwz+9,s,g=>g.kc===0||g.kc>=3)}catch(e){c.lineCap='round';lnFail(e)}
@@ -6318,15 +6320,15 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
       if(LG)try{lnStroke(c,LG,shw,cwz+2,s)}catch(e){c.lineCap='round';lnFail(e)}
       c.restore();
     }
-    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rwz(k)+cwz+(dm?1.2:0))/s;c.stroke(P[k])}
+    for(const k of order)if(P[k]){c.strokeStyle=k==='mw'||k==='mwl'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rwz(k)+cwz+(dm?1.2:0))/s;c.stroke(P[k])}
     if(LG)try{lnStroke(c,LG,g=>g.kc===1?pal.csMw:g.kc===2?pal.csPr:g.kc===3?pal.csSc:pal.casing,cwz+(dm?1.2:0),s)}catch(e){c.lineCap='round';lnFail(e)}   // obrysy dróg z pasami: pod wypełnieniem ulic bocznych (ich wloty zostają otwarte)
     const lm=night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)',le=night?'rgba(215,225,255,.32)':'rgba(105,95,75,.30)';
-    for(const k of order)if(P[k]){c.strokeStyle=pal[k];c.lineWidth=rwz(k)/s;c.stroke(P[k])
+    for(const k of order)if(P[k]){c.strokeStyle=pal[k==='mwl'?'mw':k];c.lineWidth=rwz(k)/s;c.stroke(P[k])
       const w=rwz(k);
       if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
       if(w>=13&&k!=='sv'){   // linie krawędziowe: cienki pasek tuż przy brzegu jezdni
         c.strokeStyle=le;c.lineWidth=(w-3)/s;c.stroke(P[k]);
-        c.strokeStyle=k==='mw'?pal.mw:pal[k];c.lineWidth=(w-5)/s;c.stroke(P[k]);
+        c.strokeStyle=k==='mw'||k==='mwl'?pal.mw:pal[k];c.lineWidth=(w-5)/s;c.stroke(P[k]);
         if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
       }}
     if(s>=(dm?.5:.7)){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
@@ -6648,7 +6650,7 @@ window.addEventListener('resize',()=>{sizeMk();if(typeof sizeV==='function')size
 // Nie wycinamy: tras jadących po obiekcie (wzdłuż niego tuż przed albo za przecięciem, albo po obiekcie tego samego lub wyższego poziomu), skrzyżowań
 // przy samym końcu obiektu (boczna ulica przy przyczółku) i obiektów usługowych (sv).
 let ruC=null;
-const RU_ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mw:.56};
+const RU_ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mwl:.5,mw:.56};
 function routeUnder(R,D){
   const P=R.dp||R.pts;
   if(ruC&&ruC.D===D&&ruC.P===P&&ruC.n===P.length&&ruC.S===R.snapFor)return ruC.list;
@@ -7283,7 +7285,7 @@ function checkSingleLane(){
     c.save();c.setTransform(1,0,0,1,0,0);c.lineWidth=6;
     if((P.sv&&c.isPointInStroke(P.sv,x,y))||(P.one1&&c.isPointInStroke(P.one1,x,y))){
       c.lineWidth=7;on=true;
-      for(const k of ['pr','sc','tr','mw'])if(P[k]&&c.isPointInStroke(P[k],x,y)){on=false;break}   // na skrzyżowaniu z większą drogą – nie
+      for(const k of ['pr','sc','tr','mwl','mw'])if(P[k]&&c.isPointInStroke(P[k],x,y)){on=false;break}   // na skrzyżowaniu z większą drogą – nie
     }
     c.restore();
   }catch(e){}
@@ -7858,10 +7860,15 @@ function drawPlaces(){
     mx.font=(o.wn?'italic ':'')+(cls<=2?'700':'600')+' '+fs.toFixed(1)+'px '+FONT_UI;
     const tw=mx.measureText(p.n).width,hw=tw/2+6,hh=fs*.62+3;
     if(o.wn&&p.e*s<tw*.7)continue;   // jezioro za małe na tej mapie, żeby podpisać
-    if(placed.some(b=>Math.abs(b[0]-q.x)<b[2]+hw&&Math.abs(b[1]-q.y)<b[3]+hh))continue;
-    placed.push([q.x,q.y,hw,hh]);seen.add(p.n);
-    mx.globalAlpha=1-q.fa;mx.lineWidth=cls<=2?5:4;mx.strokeStyle=pal.halo;mx.strokeText(p.n,q.x,q.y);
-    mx.fillStyle=o.wn?pal.wnl:pal.plbl;mx.fillText(p.n,q.x,q.y);
+    // przyciski przy krawędziach (zoom, kompas, szukaj, prędkość) zasłaniały końcówki nazw: napis przesuwamy ze spod nich, a gdyby miał uciec za daleko od miejsca – pomijamy (Wersja 162)
+    const xR=W-62,xL=(q.y>H*.55)?90:10;let lx=q.x;
+    if(lx+hw-6>xR)lx=xR-hw+6;
+    if(lx-hw+6<xL)lx=xL+hw-6;
+    if(Math.abs(lx-q.x)>46)continue;
+    if(placed.some(b=>Math.abs(b[0]-lx)<b[2]+hw&&Math.abs(b[1]-q.y)<b[3]+hh))continue;
+    placed.push([lx,q.y,hw,hh]);seen.add(p.n);
+    mx.globalAlpha=1-q.fa;mx.lineWidth=cls<=2?5:4;mx.strokeStyle=pal.halo;mx.strokeText(p.n,lx,q.y);
+    mx.fillStyle=o.wn?pal.wnl:pal.plbl;mx.fillText(p.n,lx,q.y);
     if(++n>=16)break;
   }
   mx.restore();
