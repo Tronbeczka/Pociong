@@ -15,7 +15,7 @@ import osmium
 
 RAIL = {'rail', 'narrow_gauge', 'preserved'}
 HW_SKIP = {'footway', 'path', 'cycleway', 'steps', 'pedestrian', 'bridleway', 'construction', 'proposed', 'corridor', 'elevator'}
-KEEP = ('railway', 'crossing', 'crossing:barrier', 'crossing:light', 'crossing:bell', 'crossing:activation', 'crossing:supervision', 'crossing:on_demand', 'tracks')
+KEEP = ('railway', 'crossing', 'crossing:barrier', 'crossing:light', 'crossing:bell', 'crossing:activation', 'crossing:supervision', 'crossing:on_demand', 'supervised', 'tracks')
 
 
 def read_poly(path):
