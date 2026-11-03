@@ -1,0 +1,47 @@
+name: Baza przejazdów kolejowych (Polska, OSM)
+
+# Co tydzień liczy z OpenStreetMap wszystkie przejazdy kolejowo-drogowe w Polsce i zapisuje je w katalogu przejazdy/
+# (komórki 0,5° × 0,5°). Aplikacja pobiera je z GitHub Pages, gdy serwery Overpass nie odpowiadają.
+on:
+  schedule:
+    - cron: '23 2 * * 2'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/przejazdy_pl.py'
+      - '.github/workflows/przejazdy.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: przejazdy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Biblioteka pyosmium
+        run: pip install "osmium>=4.0"
+      - name: Wyciąg OSM dla Polski (Geofabrik)
+        run: |
+          curl -fsSL --retry 3 -o poland.osm.pbf https://download.geofabrik.de/europe/poland-latest.osm.pbf
+          curl -fsSL --retry 3 -o poland.poly https://download.geofabrik.de/europe/poland.poly
+          ls -la poland.osm.pbf poland.poly
+      - name: Liczenie przejazdów
+        run: python tools/przejazdy_pl.py poland.osm.pbf poland.poly przejazdy
+      - name: Zapis do repozytorium
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A przejazdy
+          if git diff --cached --quiet; then echo "bez zmian"; exit 0; fi
+          git commit -q -m "Baza przejazdów: $(python -c "import json;m=json.load(open('przejazdy/meta.json'));print(m['t'],m['n'],'przejazdów')")"
+          for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done
