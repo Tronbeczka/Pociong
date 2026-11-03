@@ -15,7 +15,7 @@ import osmium
 
 RAIL = {'rail', 'narrow_gauge', 'preserved'}
 HW_SKIP = {'footway', 'path', 'cycleway', 'steps', 'pedestrian', 'bridleway', 'construction', 'proposed', 'corridor', 'elevator'}
-KEEP = ('railway', 'crossing', 'crossing:barrier', 'crossing:light', 'crossing:bell', 'tracks')
+KEEP = ('railway', 'crossing', 'crossing:barrier', 'crossing:light', 'crossing:bell', 'crossing:activation', 'crossing:supervision', 'crossing:on_demand', 'tracks')
 
 
 def read_poly(path):
@@ -70,10 +70,17 @@ def main(pbf, poly, out):
     del rail
     # 3) współrzędne i tagi
     found = {}
+    kst, vst = {}, {}
     def add(n):
         if not n.location.valid():
             return
         tg = {k: n.tags[k] for k in KEEP if k in n.tags}
+        if n.tags.get('railway') == 'level_crossing':
+            for t in n.tags:
+                kst[t.k] = kst.get(t.k, 0) + 1
+                if t.k.startswith('crossing') or 'categ' in t.k or t.k.startswith('railway:'):
+                    kv = t.k + '=' + t.v[:30]
+                    vst[kv] = vst.get(kv, 0) + 1
         found[n.id] = [n.id, round(n.location.lat, 6), round(n.location.lon, 6), tg]
     for n in osmium.FileProcessor(pbf, osmium.osm.NODE).with_filter(osmium.filter.TagFilter(('railway', 'level_crossing'))):
         add(n)
@@ -110,7 +117,9 @@ def main(pbf, poly, out):
                 json.dump({'t': day, 'f': 1 if full else 0, 'e': [[e[0], e[1], e[2], e[3] or 0] for e in el]}, f, ensure_ascii=False, separators=(',', ':'))
             nfile += 1; nfull += full
     with open(os.path.join(out, 'meta.json'), 'w', encoding='utf-8') as f:
-        json.dump({'t': day, 'n': len(found), 'oznaczone': ntag, 'komorki': nfile, 'pelne': nfull, 'zrodlo': 'OpenStreetMap (ODbL), wyciąg Geofabrik'}, f, ensure_ascii=False)
+        json.dump({'t': day, 'n': len(found), 'oznaczone': ntag, 'komorki': nfile, 'pelne': nfull, 'zrodlo': 'OpenStreetMap (ODbL), wyciąg Geofabrik',
+                   'klucze': dict(sorted(kst.items(), key=lambda a: -a[1])[:40]),
+                   'wartosci': dict(sorted(vst.items(), key=lambda a: -a[1])[:60])}, f, ensure_ascii=False, indent=0)
     print('komórki:', nfile, 'pełne:', nfull, flush=True)
 
 
