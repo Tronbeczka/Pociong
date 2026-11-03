@@ -1415,7 +1415,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 163</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 164</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1792,8 +1792,36 @@ var xFails=0;
 var xOk=null;   // gdzie ostatnio udało się pobrać przejazdy (do czasu odpowiedzi nie mówimy „droga wolna”)
 var arrivedAt=0,arrivedSub='';   // chwila dojazdu do celu: baner „Dojechaliśmy” zostaje na ok. 12 s (ostrzeżenie o przejeździe ma zawsze pierwszeństwo)
 const xReady=p=>demo||!!(xOk&&dist(xOk.lat,xOk.lon,p.lat,p.lon)<3200);
+// Wersja 164: własna baza przejazdów dla Polski. Liczy ją co tydzień akcja GitHub z wyciągu OSM (tools/przejazdy_pl.py) i leży na GitHub Pages obok aplikacji,
+// w komórkach 0,5° × 0,5°. Dotąd jedynym źródłem były publiczne serwery Overpass – gdy wszystkie trzy były przeciążone albo ograniczały zapytania z naszego
+// adresu (w sieci komórkowej wielu użytkowników dzieli jeden adres), aplikacja pokazywała „brak danych o przejazdach”. Overpass zostaje jako źródło świeższe.
+const XS_BASE=(window.location.protocol==='https:'&&/\.github\.io$/.test(window.location.hostname))?new URL('przejazdy/',window.location.href).href:'https://tronbeczka.github.io/Pociong/przejazdy/';
+const xsIn=(lat,lon)=>lat>48.9&&lat<55.1&&lon>13.9&&lon<24.4;   // obszar wyciągu (Polska z okolicą)
+async function xsCell(k){
+  const u=(window.__xsBase||XS_BASE)+'c'+k+'.json';
+  try{
+    const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),8000);
+    let r;try{r=await fetch(u,{signal:ctl.signal})}finally{clearTimeout(to)}
+    if(r.status===404)return {e:[],f:0,none:1};   // komórki nie ma w bazie (np. poza Polską)
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const c=await r.json();if(!c||!Array.isArray(c.e))throw new Error('zły plik');
+    try{await idbSet('xs|'+k,{t:Date.now(),c})}catch{}
+    return c;
+  }catch{let m=null;try{m=await idbGet('xs|'+k)}catch{}if(m&&m.c)return m.c;return null}   // bez sieci: ostatnia zapisana kopia komórki
+}
+async function xStatic(lat,lon,R){
+  if(window.__noXStatic||!xsIn(lat,lon))return null;
+  R=R||4200;const dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),ks=new Set();
+  for(const a of [lat-dg,lat+dg])for(const o of [lon-dn,lon+dn])ks.add(Math.floor(a*2)+'_'+Math.floor(o*2));
+  const cs=await Promise.all([...ks].map(xsCell));
+  if(cs.some(c=>!c))return null;
+  const elements=[];let full=true,t='';
+  for(const c of cs){if(!c.f)full=false;if(c.t&&(!t||c.t<t))t=c.t;
+    for(const q of c.e)if(Math.abs(q[1]-lat)<dg&&dist(lat,lon,q[1],q[2])<R)elements.push({type:'node',id:q[0],lat:q[1],lon:q[2],tags:q[3]||{}})}
+  return {elements,full,t};
+}
 async function loadCrossings(lat,lon){
-  lastFetch={lat,lon};
+  const LF=lastFetch={lat,lon};
   // 1) węzły oznaczone railway=level_crossing, 2) węzły wspólne toru i drogi (przejazdy, których nikt nie opisał tagami)
   const q=`[out:json][timeout:25];way(around:4000,${lat},${lon})["railway"~"^(rail|narrow_gauge|preserved)$"]["service"!~"."][!"bridge"][!"tunnel"]->.r;node(w.r)->.rn;way(bn.rn)["highway"]["highway"!~"^(footway|path|cycleway|steps|pedestrian|bridleway|construction|proposed|corridor|elevator)$"][!"bridge"][!"tunnel"]->.h;node(w.h)->.hn;(node.rn.hn;node(around:4000,${lat},${lon})["railway"="level_crossing"];);out;`;
   const q0=`[out:json][timeout:20];node(around:4000,${lat},${lon})["railway"="level_crossing"];out;`;
@@ -1802,11 +1830,17 @@ async function loadCrossings(lat,lon){
     xDerSync();xUserSync();
     xLayer.clearLayers();
   };
-  let got=false;
-  try{apply(await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q0,12000));got=true}catch(e){}   // szybko: tylko oznaczone przejazdy
-  if(got)try{apply(await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q))}catch(e){}   // potem pełne: także przejazdy bez tagów (gdy szybkie zapytanie nie przeszło, pełne też by nie przeszło)
-  else{try{apply(await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q,1500));got=true}catch(e){}}   // sama pamięć urządzenia: bez sieci pokazujemy to, co zapisano
-  if(!got){lastFetch=null;xErr=Date.now();xFails++}
+  // Overpass i baza z GitHub Pages równolegle; wynik to suma obu (przy tym samym węźle wygrywa Overpass – świeższe tagi)
+  let got=false,ovJ=null,st=null;
+  const mix=()=>({elements:(ovJ?ovJ.elements:[]).concat(st?st.elements:[])});
+  const sP=xStatic(lat,lon).catch(()=>null).then(v=>{st=v;if(v&&v.full&&!got&&lastFetch===LF)apply(mix());window.xStat={at:Date.now(),n:v?v.elements.length:null,full:v?v.full:null,t:v?v.t:''};return v});   // pełna komórka: przejazdy od razu, bez czekania na Overpass
+  try{ovJ=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q0,12000);if(lastFetch===LF)apply(mix());got=true}catch(e){}   // szybko: tylko oznaczone przejazdy
+  if(got)try{ovJ=await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q);if(lastFetch===LF)apply(mix())}catch(e){}   // potem pełne: także przejazdy bez tagów (gdy szybkie zapytanie nie przeszło, pełne też by nie przeszło)
+  else{try{ovJ=await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q,1500);if(lastFetch===LF)apply(mix());got=true}catch(e){}}   // sama pamięć urządzenia: bez sieci pokazujemy to, co zapisano
+  await sP;
+  if(lastFetch!==LF&&lastFetch!==null)return;   // w międzyczasie zaczęło się pobieranie dla innego miejsca
+  if(st){apply(mix());if(st.full)got=true}
+  if(!got){lastFetch=null;xErr=Date.now();xFails++;if(st)xOk=null}   // komórka tylko częściowo w bazie (przy granicy): przejazdy pokazujemy, ale ostrzeżenie o niepełnych danych zostaje
 }
 async function loadTrains(){
   if(demo||!feedUrl||gKey||gtfs)return;
