@@ -1418,7 +1418,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 166</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 167</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7481,8 +7481,9 @@ function checkSingleLane(){
   if(slHits>=2)singleLane=true;else if(!on)singleLane=false;
   return singleLane;
 }
+var carGeo=null;   // Wersja 167: miejsce na ziemi, w którym jest narysowane auto (stąd wychodzi ślad)
 function updCarSnap(){
-  const el=$('carIcon');carSnap=null;
+  const el=$('carIcon');carSnap=null;carGeo=vf&&vf.cam?{lat:vf.cam.lat,lon:vf.cam.lon}:null;
   const setOff=(la,lo)=>{camOff.lat+=(la-camOff.lat)*.35;camOff.lon+=(lo-camOff.lon)*.35;if(Math.abs(camOff.lat)<1e-9&&Math.abs(camOff.lon)<1e-9&&!la&&!lo){camOff.lat=0;camOff.lon=0}};
   const zf=Math.max(.36,Math.min(1,scaleCur/.85)),Rr=rw('tr',scaleCur),Wc=Math.round(Math.max(30,Math.min(96*zf,vec&&route?Rr*.8:96*zf)));   // rozmiar auta dopasowany do szerokości drogi (tylko na trasie)
   const base='translate(-50%,-80%)';
@@ -7496,7 +7497,7 @@ function updCarSnap(){
   // mapa przesunięta ręcznie: to samo auto (ten sam model) jedzie po swoim miejscu na mapie. Kotwica ikony to ta sama wysokość (--cy), co w widoku kierowcy – inaczej po powrocie auto skakałoby.
   // W czasie powrotu kamery rozmiar ikony dochodzi do zwykłego (bez trasy ikona jest w trybie ręcznym mniejsza).
   const putFree=(lat,lon,yaw)=>{
-    const q=proj(lat,lon);if(!q)return false;
+    const q=proj(lat,lon);if(!q)return false;carGeo={lat,lon};
     const pr=el.offsetParent||document.body,rc=pr.getBoundingClientRect(),Wf=Math.round(Math.max(30,Math.min(96*zf,route?Rr*.8:70*zf))),Wi=Math.round(Wf+(Wc-Wf)*(panGlide&&!panGlide.fly?panGlide.k:0));
     el.style.width=Wi+'px';el.style.height=Math.round(Wi*.8)+'px';
     el.style.display=(q.x>-60&&q.x<window.innerWidth+60&&q.y>-60&&q.y<window.innerHeight+60)?'':'none';
@@ -7531,6 +7532,7 @@ function updCarSnap(){
   const q=proj(lat,lon),q0=proj(vf.cam.lat,vf.cam.lon);   // q0 = środek kamery (z przesunięciem camOff)
   if(!q||!q0){el.style.transform=base;return}
   setOff(camOff.lat+(lat-vf.cam.lat)*w,camOff.lon+(lon-vf.cam.lon)*w);   // kamera dąży do narysowanego auta – auto zostaje na środku ekranu
+  carGeo={lat:vf.cam.lat+(lat-vf.cam.lat)*w,lon:vf.cam.lon+(lon-vf.cam.lon)*w};
   el.style.transform='translate(calc(-50% + '+((q.x-q0.x)*w).toFixed(1)+'px),calc(-80% + '+((q.y-q0.y)*w).toFixed(1)+'px)) rotate('+laneYaw.toFixed(1)+'deg)';
 }
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
@@ -8009,11 +8011,11 @@ function drawMarkers(){
   drawRadar();
   updCarSnap();carShadow();
   try{drawZebras()}catch(e){errNote('pasy dla pieszych',e)}
+  try{drawTrail()}catch(e){errNote('ślad za autem',e)}   // Wersja 167: ślad leży na drodze – pod budynkami
   drawBuildings3D();
   drawHeat();
   const rcut=routeCutBegin();try{drawAlts();drawRouteTop()}finally{routeCutEnd(rcut)}altLabels();drawTurnArrow();drawLaneArrow();drawJunction();
   drawAreaSigns();drawRouteSigns();
-  drawTrail();
   drawPoi();drawEvents();drawCams();drawFriends();drawWx();drawSeasonFx();
   if(false){   // (dawny niebieski znacznik – teraz auto zostaje tym samym modelem) z kierunkiem, gdy mapa jest przesunięta
     const cp=vec?(vf&&vf.car):last,q=cp&&P(cp.lat,cp.lon);
@@ -8524,25 +8526,75 @@ showCar();
 // ================= v93: ślad, tablica, dziennik pociągów, trasy/GPX, mapa ulic, ranking, udostępnianie na żywo =================
 // ---- ślad za autem ----
 let trailKind=LSget('trail','none');if(!TRAILS[trailKind]||(LOCKS.trail[trailKind]&&!lkOk(LOCKS.trail[trailKind])))trailKind='none';
-const trailPts=[];
+const trailPts=[],TRAIL_LIFE=12000;   // punkty śladu (najstarsze pierwsze); ślad trwa ok. 12 s
 function fillTrailSel(){const S=$('trailSel');S.innerHTML='';for(const k in TRAILS){const L=LOCKS.trail[k],lk=L&&!lkOk(L),o=document.createElement('option');o.value=k;o.textContent=(lk?'🔒 ':'')+TRAILS[k]+(lk?' – '+L.d:'');S.appendChild(o)}S.value=trailKind}
 function setTrail(k){const L=LOCKS.trail[k];if(L&&!lkOk(L)){evToast('🔒 Ślad: '+TRAILS[k],L.d+' ('+lkProg(L)+')');fillTrailSel();return false}trailKind=k;LSput('trail',k);fillTrailSel();return true}
 $('trailSel').onchange=()=>setTrail($('trailSel').value);fillTrailSel();
 setInterval(()=>{
   if(trailKind==='none'||window.preview||!vf||!vf.car)return;
-  const c=vf.car,p=trailPts[trailPts.length-1];
-  if(!p||dist(p.lat,p.lon,c.lat,c.lon)>5){trailPts.push({lat:c.lat,lon:c.lon});if(trailPts.length>70)trailPts.shift()}
-},400);
+  const c=carGeo||vf.car,p=trailPts[trailPts.length-1],now=Date.now();
+  if(p&&dist(p.lat,p.lon,c.lat,c.lon)>400)trailPts.length=0;   // skok pozycji (np. powrót z podglądu): ślad od nowa
+  if(!p||dist(p.lat,p.lon,c.lat,c.lon)>3){trailPts.push({lat:c.lat,lon:c.lon,t:now});if(trailPts.length>90)trailPts.shift()}
+  while(trailPts.length&&now-trailPts[0].t>TRAIL_LIFE)trailPts.shift();
+},250);
+// Wersja 167: ślad za autem jako jedna gładka wstęga (wygładzona krzywa, zwężająca się ku końcowi, wychodząca spod auta) zamiast osobnych kresek z okrągłymi końcami –
+// bez ciemniejszych „koralików” na złączeniach, bez przerwy między autem a śladem i bez kosztownego rozmycia każdej kreski osobno. Ślad trwa ok. 12 s: po zatrzymaniu znika od końca.
+function trailPath(){   // punkty śladu na ekranie: od końca (ogon) do auta, wygładzone (Chaikin ×2), z grubością i położeniem 0..1 wzdłuż śladu
+  const P=[];
+  for(const t of trailPts){const q=proj(t.lat,t.lon);if(q)P.push({x:q.x,y:q.y,k:q.k})}
+  const hd=carGeo&&proj(carGeo.lat,carGeo.lon);if(hd){const l=P[P.length-1];if(!l||Math.hypot(hd.x-l.x,hd.y-l.y)>.5)P.push({x:hd.x,y:hd.y,k:hd.k})}
+  if(P.length<2)return null;
+  let Q=P;
+  for(let it=0;it<2;it++){const R=[Q[0]];for(let i=0;i<Q.length-1;i++){const a=Q[i],b=Q[i+1];R.push({x:a.x*.75+b.x*.25,y:a.y*.75+b.y*.25,k:a.k*.75+b.k*.25},{x:a.x*.25+b.x*.75,y:a.y*.25+b.y*.75,k:a.k*.25+b.k*.75})}R.push(Q[Q.length-1]);Q=R}
+  let L=0;Q[0].d=0;for(let i=1;i<Q.length;i++){L+=Math.hypot(Q[i].x-Q[i-1].x,Q[i].y-Q[i-1].y);Q[i].d=L}
+  if(L<4)return null;
+  for(const q of Q)q.f=q.d/L;
+  return {Q,L};
+}
+function trailRibbon(Q,wf){   // obrys wstęgi o grubości wf(q) (px) z zaokrąglonym czołem pod autem
+  const n=Q.length,Lft=[],Rgt=[];
+  for(let i=0;i<n;i++){
+    const a=Q[Math.max(0,i-1)],b=Q[Math.min(n-1,i+1)];let dx=b.x-a.x,dy=b.y-a.y;const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;
+    const w=wf(Q[i])/2;Lft.push([Q[i].x-dy*w,Q[i].y+dx*w]);Rgt.push([Q[i].x+dy*w,Q[i].y-dx*w]);
+  }
+  mx.beginPath();mx.moveTo(Lft[0][0],Lft[0][1]);for(let i=1;i<n;i++)mx.lineTo(Lft[i][0],Lft[i][1]);
+  const h=Q[n-1],p=Q[n-2],hw=wf(h)/2,an=Math.atan2(h.y-p.y,h.x-p.x);mx.arc(h.x,h.y,hw,an-Math.PI/2,an+Math.PI/2);
+  for(let i=n-1;i>=0;i--)mx.lineTo(Rgt[i][0],Rgt[i][1]);mx.closePath();
+}
 function drawTrail(){
-  if(trailKind==='none'||trailPts.length<2||!vf||window.preview)return;
-  const n=trailPts.length;mx.save();mx.lineCap='round';mx.lineJoin='round';
-  if(trailKind==='neon'||trailKind==='ice'){mx.shadowBlur=14;mx.shadowColor=trailKind==='neon'?'#00e5ff':'#bfe6ff'}
-  let prev=proj(trailPts[0].lat,trailPts[0].lon);
-  for(let i=1;i<n;i++){
-    const q=proj(trailPts[i].lat,trailPts[i].lon);if(!q||!prev){prev=q;continue}
-    const f=i/n,w=Math.max(2,Math.min(15,(3+8*f)*q.k));
-    mx.strokeStyle=trailKind==='neon'?'#00e5ff':trailKind==='fire'?'hsl('+(4+46*f)+',100%,'+(48+12*f)+'%)':trailKind==='ice'?'rgba(205,235,255,1)':'hsl('+((i*13+Date.now()/25)%360)+',90%,58%)';
-    mx.globalAlpha=.12+.78*f;mx.lineWidth=w;mx.beginPath();mx.moveTo(prev.x,prev.y);mx.lineTo(q.x,q.y);mx.stroke();prev=q;
+  if(trailKind==='none'||!vf||window.preview||trailPts.length<1)return;
+  const T=trailPath();if(!T)return;
+  const {Q}=T,n=Q.length,a=Q[0],h=Q[n-1],now=Date.now();
+  const el=$('carIcon'),cw=(el&&el.offsetWidth)||60,Wh=Math.max(5,Math.min(18,cw*.28));   // grubość przy aucie: ok. 30% szerokości auta
+  const ease=f=>f*f*(3-2*f),wf=q=>(1+(Wh-1)*ease(q.f))*Math.min(1.25,Math.max(.55,q.k));
+  const G=(st)=>{const g=mx.createLinearGradient(a.x,a.y,h.x,h.y);for(const [o,c] of st)g.addColorStop(o,c);return g};
+  mx.save();mx.lineJoin='round';mx.lineCap='round';
+  if(trailKind==='neon'){
+    mx.shadowColor='rgba(0,229,255,.9)';mx.shadowBlur=12;
+    trailRibbon(Q,q=>wf(q)*1.75);mx.fillStyle=G([[0,'rgba(0,229,255,0)'],[.5,'rgba(0,229,255,.15)'],[1,'rgba(0,229,255,.32)']]);mx.fill();
+    mx.shadowBlur=0;
+    trailRibbon(Q,wf);mx.fillStyle=G([[0,'rgba(0,200,255,0)'],[.35,'rgba(0,210,255,.55)'],[1,'rgba(40,235,255,.95)']]);mx.fill();
+    trailRibbon(Q,q=>wf(q)*.32);mx.fillStyle=G([[0,'rgba(255,255,255,0)'],[.45,'rgba(220,255,255,.55)'],[1,'rgba(255,255,255,.95)']]);mx.fill();
+  }else if(trailKind==='fire'){
+    const fl=q=>wf(q)*(1+.13*Math.sin(q.f*23-now/70)+.07*Math.sin(q.f*57+now/43));   // migotanie płomienia
+    trailRibbon(Q,q=>fl(q)*1.25);mx.fillStyle=G([[0,'rgba(120,20,0,0)'],[.4,'rgba(190,40,0,.35)'],[1,'rgba(255,90,0,.55)']]);mx.fill();
+    trailRibbon(Q,fl);mx.fillStyle=G([[0,'rgba(150,25,0,0)'],[.3,'rgba(220,50,0,.6)'],[.7,'rgba(255,130,0,.85)'],[1,'rgba(255,200,60,.95)']]);mx.fill();
+    trailRibbon(Q,q=>fl(q)*.38);mx.fillStyle=G([[0,'rgba(255,220,120,0)'],[.55,'rgba(255,235,150,.6)'],[1,'rgba(255,250,215,.95)']]);mx.fill();
+  }else if(trailKind==='ice'){
+    trailRibbon(Q,q=>wf(q)*1.6);mx.fillStyle=G([[0,'rgba(170,220,255,0)'],[1,'rgba(170,220,255,.3)']]);mx.fill();
+    trailRibbon(Q,wf);mx.fillStyle=G([[0,'rgba(200,235,255,0)'],[.4,'rgba(205,238,255,.6)'],[1,'rgba(230,248,255,.95)']]);mx.fill();
+    mx.strokeStyle=G([[0,'rgba(70,140,210,0)'],[1,'rgba(70,140,210,.6)']]);mx.lineWidth=1.3;mx.stroke();   // ciemniejszy brzeg – lód widać też na jasnej mapie
+    trailRibbon(Q,q=>wf(q)*.3);mx.fillStyle=G([[0,'rgba(255,255,255,0)'],[1,'rgba(255,255,255,.9)']]);mx.fill();
+    mx.fillStyle='#fff';   // iskierki szronu: stałe miejsca wzdłuż śladu, migoczą (trzy poziomy jasności – po jednym wypełnieniu)
+    const SP=[[],[],[]];
+    for(let i=3;i<n-2;i+=5){const q=Q[i],tw=.5+.5*Math.sin(now/160+i*1.7);if(tw<.35)continue;const r=(.8+1.4*tw)*Math.min(1.2,q.k),o=((i*37)%11-5)/5*wf(q)*.45,al=q.f*tw;
+      if(al>.12)SP[Math.min(2,Math.floor(al*3))].push(q.x+o,q.y-o*.4,r)}
+    SP.forEach((L,k)=>{if(!L.length)return;mx.globalAlpha=(k+1)*.3;mx.beginPath();for(let j=0;j<L.length;j+=3){mx.moveTo(L[j]+L[j+2],L[j+1]);mx.arc(L[j],L[j+1],L[j+2],0,6.2832)}mx.fill()});
+  }else{   // tęcza: barwy przesuwają się wzdłuż śladu
+    const sh=(now/18)%360,st=[];for(let k=0;k<=6;k++){const o=k/6;st.push([o,'hsla('+((sh+o*300)%360).toFixed(0)+',95%,58%,'+(o<.08?0:(.15+.8*o)).toFixed(2)+')'])}
+    trailRibbon(Q,q=>wf(q)*1.5);mx.fillStyle=G(st.map(([o,c])=>[o,c.replace(/,([\d.]+)\)$/,(m,v)=>','+(v*.3).toFixed(2)+')')]));mx.fill();
+    trailRibbon(Q,wf);mx.fillStyle=G(st);mx.fill();
+    trailRibbon(Q,q=>wf(q)*.22);mx.fillStyle=G([[0,'rgba(255,255,255,0)'],[1,'rgba(255,255,255,.45)']]);mx.fill();
   }
   mx.restore();
 }
