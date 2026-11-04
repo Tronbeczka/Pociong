@@ -221,6 +221,9 @@ body.night .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85
 #carIcon{position:absolute;left:50%;top:var(--cy,68%);width:96px;height:77px;transform:translate(-50%,-80%);z-index:500;pointer-events:none;filter:drop-shadow(0 5px 5px #0009)}
 #carIcon svg{width:100%;height:100%;display:block}
 #carIcon svg{transform-origin:50% 85%}
+#carIcon.top{transform-origin:50% 80%}
+#carIcon.top svg{display:none}
+#carIcon.top::after{content:'';position:absolute;left:50%;top:80%;width:62%;aspect-ratio:1/1;transform:translate(-50%,-50%);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5 19.5 20.5 12 16.6 4.5 20.5Z' fill='%231a73e8' stroke='%23fff' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
 #carIcon.mv svg{animation:carBob .8s ease-in-out infinite}
 #carIcon.brk .tl{fill:#ff3030;filter:drop-shadow(0 0 5px #f00)}
 #carIcon.pop svg{animation:carPop .6s cubic-bezier(.2,.9,.3,1.3)}
@@ -1415,7 +1418,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 165</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 166</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7485,7 +7488,11 @@ function updCarSnap(){
   const base='translate(-50%,-80%)';
   const onRt=!!(vec&&route&&vf&&vf.car&&!demo&&route.pts.length>1&&route.len>0);
   const free=!!(freeCam&&!window.preview&&vec&&vf&&vf.car);
-  const plain=()=>{if(zf<1&&vec){el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px'}else{el.style.width='';el.style.height=''}el.style.transform=''};
+  // Wersja 166: ikona auta to widok z tyłu – obrócona o więcej niż ok. 60° (mapa przesunięta albo obrócona, np. północą do góry przy jeździe na południe)
+  // wyglądała jak auto do góry nogami. Przy dużym kącie pokazujemy więc strzałkę kierunku widzianą z góry (z histerezą, żeby nie migała na granicy).
+  const topMode=a=>{const t=el.classList.contains('top'),on=t?Math.abs(a)>48:Math.abs(a)>62;if(on!==t)el.classList.toggle('top',on);return on};
+  const angN=a=>((a%360)+540)%360-180;
+  const plain=a=>{if(zf<1&&vec){el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px'}else{el.style.width='';el.style.height=''}el.style.transform='';topMode(a||0)};
   // mapa przesunięta ręcznie: to samo auto (ten sam model) jedzie po swoim miejscu na mapie. Kotwica ikony to ta sama wysokość (--cy), co w widoku kierowcy – inaczej po powrocie auto skakałoby.
   // W czasie powrotu kamery rozmiar ikony dochodzi do zwykłego (bez trasy ikona jest w trybie ręcznym mniejsza).
   const putFree=(lat,lon,yaw)=>{
@@ -7493,11 +7500,16 @@ function updCarSnap(){
     const pr=el.offsetParent||document.body,rc=pr.getBoundingClientRect(),Wf=Math.round(Math.max(30,Math.min(96*zf,route?Rr*.8:70*zf))),Wi=Math.round(Wf+(Wc-Wf)*(panGlide&&!panGlide.fly?panGlide.k:0));
     el.style.width=Wi+'px';el.style.height=Math.round(Wi*.8)+'px';
     el.style.display=(q.x>-60&&q.x<window.innerWidth+60&&q.y>-60&&q.y<window.innerHeight+60)?'':'none';
-    el.style.transform='translate(calc(-50% + '+(q.x-(rc.left+rc.width*.5)).toFixed(1)+'px),calc(-80% + '+(q.y-(rc.top+rc.height*cyCur)).toFixed(1)+'px)) rotate('+(lastH+curRot+yaw).toFixed(1)+'deg)';
+    const a=angN(lastH+curRot+yaw);topMode(a);
+    el.style.transform='translate(calc(-50% + '+(q.x-(rc.left+rc.width*.5)).toFixed(1)+'px),calc(-80% + '+(q.y-(rc.top+rc.height*cyCur)).toFixed(1)+'px)) rotate('+a.toFixed(1)+'deg)';
     return true;
   };
   if(window.preview||!onRt)setOff(0,0);
-  if(!onRt){if(!(free&&putFree(vf.car.lat,vf.car.lon,0)))plain();return}
+  if(!onRt){
+    if(free&&putFree(vf.car.lat,vf.car.lon,0))return;
+    // bez trasy, mapa obrócona ręcznie (albo jeszcze dochodzi do kierunku jazdy): auto pokazuje prawdziwy kierunek jazdy względem mapy
+    if(!free&&vec&&vf&&!window.preview&&!demo){const a=angN(lastH+curRot);plain(a);if(Math.abs(a)>2)el.style.transform='translate(-50%,-80%) rotate('+a.toFixed(1)+'deg)';return}
+    plain();return}
   if(freeCam&&!free){plain();return}   // podgląd trasy
   if(!free){el.style.width=Wc+'px';el.style.height=Math.round(Wc*.8)+'px'}
   const n=route.pts.length-2,m=projRoute(route,vf.car.lat,vf.car.lon,Math.max(0,route.idx-2),Math.min(n,route.idx+12));
