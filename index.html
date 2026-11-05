@@ -848,6 +848,7 @@ body.night #goRow{background:linear-gradient(to top,var(--u-surf) 72%,rgba(32,34
 body.night #info{background:rgba(32,36,44,.96);color:#c9d0db}
 body.night #info.warn{background:#3b2d10;color:#ffd98a;box-shadow:0 0 0 1px rgba(245,165,36,.45),0 3px 10px rgba(0,0,0,.4)}
 body.night #info.warn::before{background:#f5a524}
+#info{pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}   /* Wersja 168: dotknięcie paska pokazuje stan źródeł danych */
 
 /* --- pasek „co dalej na trasie” --- */
 #nextStrip span{display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 9px;font-size:.9rem;font-weight:600;color:#f1f4f8;background:rgba(22,26,34,.92);border-radius:999px;box-shadow:0 0 0 1px rgba(255,255,255,.1),0 3px 10px rgba(0,0,0,.3)}
@@ -1418,7 +1419,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 167</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 168</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1998,6 +1999,7 @@ function liveStatus(){   // krótki opis jakości danych o opóźnieniach (pusty
   const age=(nowT()*1000-liveTs)/60000;
   return age>8?'Opóźnienia pociągów sprzed '+fmtAge(age)+' – godziny mogą się różnić':'';
 }
+const netOff=()=>{try{return navigator.onLine===false}catch{return false}};
 const fmtAge=min=>min<90?Math.max(1,Math.round(min))+' min':String(Math.round(min/6)/10).replace('.',',')+' godz.';
 // dopisek o jakości danych: wg rozkładu (brak opóźnień z sieci) albo opóźnienia sprzed wielu minut
 function dataNote(R,short){
@@ -2076,6 +2078,7 @@ $('start').onclick=()=>{exitPreview(true);startGps(false)};
 // ---- geOps Realtime API (WebSocket) ----
 let gKey='', ws=null, gTraj={}, gBox=null, pingT=null;
 try{gKey=localStorage.getItem('gkey')||'';$('gkey').value=gKey}catch(e){}
+var ttReadyAt=0;   // Wersja 168: kiedy wczytano rozkład – do komunikatu „wczytuję opóźnienia…” tuż po starcie
 var ttKey='',flowAt=0,trChk=0;const TT_DEFAULT='ymHjGK410xEE9zLpmv1BScrzOZQjQD0o';
 try{ttKey=localStorage.getItem('ttkey')||TT_DEFAULT}catch(e){ttKey=TT_DEFAULT}
 $('ttkey').value=ttKey;
@@ -5337,22 +5340,31 @@ function updInfo(p){
   const nT=trains.filter(t=>dist(p.lat,p.lon,t.lat,t.lon)<10000).length;
   const src=demo?'demo':gKey?'':gtfs?'':feedUrl?'':'';
   const bad=(t)=>t&&/błąd|brak danych|HTTP/i.test(t);
-  let dq='';
+  let dq='',soft=false;   // soft: sama informacja (opóźnienia się wczytują), a nie ostrzeżenie
+  const off=netOff();
   if(!demo){
     if(!gtfs&&!gKey&&!feedUrl)dq='brak danych o pociągach – aplikacja nie ostrzeże';
     else if(gtfs&&!gKey&&!feedUrl){
       const age=liveTs?(nowT()*1000-liveTs)/60000:null;
       const sn=ttStaleNote();
       if(sn)dq=sn;
-      else if(!liveN)dq='tylko rozkład jazdy, bez opóźnień – godziny pociągów mogą się różnić';
+      else if(!liveN){
+        if(liveLoading()){dq='wczytuję opóźnienia pociągów…';soft=true}
+        else dq=off?'brak internetu – pociągi tylko wg rozkładu, godziny mogą się różnić':'brak danych o opóźnieniach – godziny pociągów mogą się różnić';
+      }
       else if(age!=null&&age>8)dq='opóźnienia pociągów sprzed '+fmtAge(age)+' – godziny mogą się różnić';
       else if(age!=null&&age<-2)dq='zegar urządzenia chyba się spóźnia – czasy pociągów mogą być przesunięte';
     }else if(feedUrl&&feedAt&&Date.now()-feedAt>60000)dq='dane o pociągach nieaktualne';
     if(!dq&&xErr&&Date.now()-xErr<180000&&!xReady(p)&&route&&nav)dq='nie udało się pobrać przejazdów kolejowych – ponawiam';   // bez trasy mówi o tym już baner
   }
-  $('info').classList.toggle('warn',!!dq);
-  const parts=[dq,src,vec&&vecErr?(OWNER?vecErr:'problem z wczytaniem mapy – ponawiam'):'',route&&ttKey&&bad(ttSt)?(OWNER?'ruch: '+ttSt:'brak danych o ruchu'):'',route&&ttKey&&bad(flSt)?(OWNER?flSt:'brak danych o korkach'):'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
+  $('info').classList.toggle('warn',!!dq&&!soft);
+  const parts=[dq,src,vec&&vecErr?(OWNER?vecErr:'problem z wczytaniem mapy – ponawiam'):'',route&&ttKey&&bad(ttSt)?(OWNER?'ruch: '+ttSt:'brak danych o ruchu'):'',route&&ttKey&&!off?flNote():'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
   $('info').textContent=parts.join(' · ');$('info').style.display=parts.length?'':'none';
+}
+// komunikat o korkach tylko przy trwałym braku danych (dwa nieudane próbkowania z rzędu), a nie przy jednym zająknięciu sieci; brak pokrycia dróg danymi to nie awaria
+function flNote(){
+  const R=route;if(!R||!ttKey||demo||(R.fsErr||0)<2)return '';
+  return OWNER?flSt:(R.fsAt?'dane o korkach nieaktualne':'brak danych o korkach');
 }
 
 // ---- Mapa wektorowa 2D (bez kafelków): drogi, tory i woda z OpenStreetMap rysowane na canvasie ----
@@ -5989,6 +6001,8 @@ function mergeJam(R){
 let flowSampBusy=false;
 async function sampleFlow(R){
   if(!ttKey||flowSampBusy)return;flowSampBusy=true;
+  // Wersja 168: po błędzie kolejne próby w coraz większych odstępach (10 s, 20 s … do 3 min); dawniej co 3 s bez końca
+  const fail=m=>{R.fsErr=(R.fsErr||0)+1;R.fsRetry=Date.now()+Math.min(180000,10000*Math.pow(2,Math.min(R.fsErr,5)-1))*(window.__flK||1);flSt=m;if(R.fsErr===2)try{window.bbEv&&window.bbEv('korki',m)}catch{}};
   try{
     const z=13,TS=512,n=Math.pow(2,z),i0=Math.max(0,R.idx-2),lim=R.along+60000;
     let i1=i0;while(i1<R.pts.length-1&&R.cum[i1]<=lim)i1++;
@@ -6008,7 +6022,7 @@ async function sampleFlow(R){
       })));
     }
     if(route!==R)return;
-    if(!data.size){flSt='kafelki niedostępne (klucz/domena?)';return}
+    if(!data.size){fail('kafelki niedostępne (klucz/domena?)');return}
     const fl=new Uint8Array(R.pts.length-1),RAD=3;
     for(let q=0;q<pos.length;q++){
       const [tx,ty,px,py]=pos[q],d=data.get(tx+'/'+ty);if(!d)continue;
@@ -6023,14 +6037,16 @@ async function sampleFlow(R){
     for(let i=1;i<fl.length-1;i++)if(fl[i]!==fl[i-1]&&fl[i-1]===fl[i+1])fl[i]=fl[i-1];     // usuń pojedyncze wartości odstające
     // pojedyncze braki danych (0) między znanymi odcinkami: dopełnij
     for(let i=1;i<fl.length-1;i++)if(!fl[i]){let a=i-1,b=i+1;while(b<fl.length&&!fl[b]&&b-i<40)b++;if(fl[a]&&b<fl.length&&fl[b]&&fl[a]===fl[b])for(let k=i;k<b;k++)fl[k]=fl[a]}
-    R.flow=fl;R.fsAt=Date.now();R.fsTo=R.cum[i1];mergeJam(R);flSt=fl.some(v=>v)?'natężenie OK':'brak danych o ruchu na trasie';
-  }catch(e){flSt='błąd: '+e.message}
+    R.flow=fl;R.fsAt=Date.now();R.fsErr=0;R.fsRetry=0;R.fsTo=R.cum[i1];mergeJam(R);flSt=fl.some(v=>v)?'natężenie OK':'bez natężenia ruchu na tej trasie (drogi bez danych)';
+  }catch(e){fail('błąd: '+e.message)}
   finally{flowSampBusy=false}
 }
 setInterval(()=>{
   const R=route;if(!ttKey||!R||demo||flowSampBusy)return;
+  if(R.fsRetry&&Date.now()<R.fsRetry)return;   // po błędzie: ponowienie dopiero po przerwie
   if(!R.fsAt||Date.now()-R.fsAt>180000||(R.fsTo<R.len&&R.fsTo-R.along<15000))sampleFlow(R);
 },3000);
+window.addEventListener('online',()=>{if(route)route.fsRetry=0});   // internet wrócił – korki od razu
 // co ~2,5 min: sprawdź, czy nie ma szybszej trasy (np. przez nowy korek) i odśwież korki na trasie
 async function fasterCheck(){
   if(!ttKey||!route||!endPt||demo||sim||rerouting||!last||Date.now()-trChk<150000||Date.now()-route.lastRr<60000)return;
@@ -9068,7 +9084,7 @@ function gtfsApproach(t,nowS,c){
   return up&&(up.eta<600||!rec)?up:rec||up;
 }
 let ttDay=0;   // doba (rrrrmmdd), na którą zbudowano rozkład; zmiana doby w trakcie sesji = odświeżenie okna dób
-function setTimetable(d){gtfs=d.trips;gtfsShapes=d.shapes||{};ttDay=d.ymd||0;for(const k in SHC)delete SHC[k];APC.clear();buildIdx();setTimeout(loadLive,400)}
+function setTimetable(d){ttReadyAt=Date.now();gtfs=d.trips;gtfsShapes=d.shapes||{};ttDay=d.ymd||0;for(const k in SHC)delete SHC[k];APC.clear();buildIdx();setTimeout(loadLive,400)}
 // ---- Opóźnienia na żywo (GTFS-RT w JSON z mkuran.pl, z kopią na GitHubie, gdyby serwer blokował CORS) ----
 var gtfsIdx=new Map(),gtfsNum=new Map(),liveOk=false,liveN=0,liveTs=0,liveStamp='',liveFor=null;
 function buildIdx(){
@@ -9088,6 +9104,8 @@ LIVE_SRC.forEach(S=>Object.assign(S,{lm:'',len:'',noHead:false,fails:0,nextAt:0,
 const STAMP_RE=/"timestamp"\s*:\s*"([^"]+)"/;
 const LIVE_EVERY={hot:10000,drive:20000,idle:60000},LIVE_MINGAP={hot:25000,drive:45000,idle:60000};   // co ile sprawdzamy / jak rzadko wolno pobierać duży plik w całości
 const liveK=()=>window.__lvK||1;   // skala czasu (tylko testy)
+// pierwsze opóźnienia dopiero się wczytują (a nie „nie ma ich”): od wczytania rozkładu do 75 s albo do pierwszej nieudanej próby wszystkich źródeł
+function liveLoading(){return !liveN&&!!gtfs&&!demo&&!netOff()&&LV.fails===0&&Date.now()-ttReadyAt<75000*liveK()}
 function liveUrl(S){
   const o=window.__lvUrl;if(o&&o[S.id])return o[S.id];   // adres podmieniany w testach
   if(S.id==='rl')return S.url;
@@ -9105,7 +9123,7 @@ function liveMode(){
 }
 function liveEvery(){
   let e=LIVE_EVERY[liveMode()]*liveK();if(liveSaver())e*=3;
-  if(LV.fails)e=Math.min(300000*liveK(),Math.max(e,15000*liveK()*Math.pow(2,Math.min(LV.fails,6)-1)));   // po błędach coraz rzadziej
+  if(LV.fails)e=Math.min((liveN?300000:60000)*liveK(),Math.max(e,15000*liveK()*Math.pow(2,Math.min(LV.fails,6)-1)));   // po błędach coraz rzadziej
   return e;
 }
 // 'same' = to samo, co już mamy; 'older' = starsze niż mamy (ignorujemy); 'new' = do pobrania/zastosowania
@@ -9120,7 +9138,11 @@ function liveJudge(S,stamp){
   return 'older';
 }
 async function liveCheck(S,force){
-  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),window.__lvTo||(S.heavy?70000:25000)),url=liveUrl(S),mode=liveMode();
+  // Wersja 168: limit czasu liczony od ostatnio odebranych danych, a nie od początku – wolne łącze, na którym plik jednak płynie, nie jest zrywane po 25 / 70 s
+  // (zapasowa kopia na wolnym łączu nigdy się nie wczytywała); zawieszone połączenie bez żadnych danych jest przerywane jak dawniej, a całość ma twardy limit
+  const ctl=new AbortController(),idle=window.__lvTo||(S.heavy?45000:20000),url=liveUrl(S),mode=liveMode();
+  let to=setTimeout(()=>ctl.abort(),idle);const cap=setTimeout(()=>ctl.abort(),window.__lvTo?window.__lvTo*3:(S.heavy?180000:100000));
+  const kick=()=>{clearTimeout(to);to=setTimeout(()=>ctl.abort(),idle)};
   const hdr=r=>[r.headers.get('last-modified')||'',r.headers.get('content-length')||''];
   // zbyt częste pełne pobrania dużego pliku blokujemy (źródło i tak odświeża się co kilkadziesiąt sekund); wolne łącze = rzadziej
   const thr=()=>{if(!S.heavy||force)return false;const dt=Date.now()-LV.parseAt;return dt>=0&&dt<Math.max(LIVE_MINGAP[mode]*liveK(),LV.cool)};
@@ -9143,6 +9165,7 @@ async function liveCheck(S,force){
     if(chg&&thr())return {st:'wait'};
     S.peekAt=Date.now();
     const r=await fetch(url,{cache:S.heavy?'no-store':'no-cache',signal:ctl.signal});
+    kick();
     if(!r.ok)throw new Error('HTTP '+r.status);
     const [lm,len]=hdr(r),t0=Date.now(),dec=new TextDecoder(),parts=[];
     let head='',judged=false,st='new',stamp='',bytes=0;
@@ -9152,7 +9175,7 @@ async function liveCheck(S,force){
     if(rd){
       for(;;){
         const q=await rd.read();if(q.done)break;
-        bytes+=q.value.length;const s=dec.decode(q.value,{stream:true});parts.push(s);
+        kick();bytes+=q.value.length;const s=dec.decode(q.value,{stream:true});parts.push(s);
         if(!judged){head+=s;const m=STAMP_RE.exec(head);if((m||head.length>8000)&&judge(m?m[1]:''))return stop()}
       }
       parts.push(dec.decode());
@@ -9162,6 +9185,7 @@ async function liveCheck(S,force){
     const j=JSON.parse(txt);
     if(!j||typeof j!=='object')throw new Error('zły format pliku');
     if(!(j.trip_updates&&j.trip_updates.length)&&liveN>0)throw new Error('plik bez kursów');   // pusty plik nie kasuje tego, co już wiemy
+    {const sj=typeof j.timestamp==='string'?j.timestamp:'';if(S.id!==LV.src&&liveJudge(S,sj)==='older')return {st:'older',stamp:sj}}   // w trakcie pobierania przyszła nowsza wersja z innego źródła – starszej nie przyjmujemy
     applyLive(j);
     liveStamp=typeof j.timestamp==='string'?j.timestamp:'';liveFor=gtfsIdx;
     S.lm=lm;S.len=len;LV.src=S.id;LV.parseAt=Date.now();LV.bytes=bytes;LV.ms=Date.now()-t0;LV.news++;LV.cool=S.heavy?Math.round(LV.ms*2.5):0;
@@ -9169,15 +9193,31 @@ async function liveCheck(S,force){
     const dd=[];for(let i=1;i<LV.stamps.length;i++)if(LV.stamps[i]>LV.stamps[i-1])dd.push(LV.stamps[i]-LV.stamps[i-1]);
     dd.sort((a,b)=>a-b);LV.gap=dd.length?dd[dd.length>>1]:0;
     return {st:'new',stamp};
-  }finally{clearTimeout(to)}
+  }finally{clearTimeout(to);clearTimeout(cap)}
+}
+// Wersja 168: gdy nie mamy jeszcze żadnych opóźnień, a duże źródło nie odpowiada w kilka sekund, lekka kopia z GitHuba rusza równolegle (kilka sekund zamiast dziesiątek);
+// świeższe dane z dużego źródła i tak ją zastąpią, a starsze nigdy nie nadpiszą nowszych (liveJudge i sprawdzenie przed zastosowaniem)
+let liveQT=0;
+function liveQuickArm(){
+  if(liveN||liveQT)return;
+  liveQT=setTimeout(async()=>{
+    liveQT=0;
+    const S=LIVE_SRC.find(x=>!x.heavy);
+    if(liveN||!gtfs||!gtfsIdx.size||demo||!S||S.qb||S.nextAt>Date.now())return;
+    S.qb=true;
+    try{await liveCheck(S,false);S.fails=0;S.nextAt=0;S.err='';S.ok=Date.now();LV.chk=Date.now();LV.fails=0;LV.ok=Date.now()}
+    catch(e){const ab=e&&e.name==='AbortError';S.fails++;S.err=ab?'brak odpowiedzi w limicie czasu':e&&e.name==='TypeError'?'brak połączenia lub blokada przeglądarki (CORS)':String(e&&e.message||e).slice(0,80);S.nextAt=Date.now()+Math.min(45000,30000*Math.pow(2,Math.min(S.fails,5)-1))*liveK()}
+    finally{S.qb=false}
+  },window.__lvQuick!=null?window.__lvQuick:2500*liveK());
 }
 async function loadLive(force){
   if(LV.busy||!gtfs||!gtfsIdx.size||demo)return;
   LV.busy=true;LV.at=Date.now();
   let got=false;
+  liveQuickArm();
   try{
     for(const S of LIVE_SRC){
-      if(S.nextAt>Date.now()||(S.heavy&&liveSaver()))continue;
+      if(S.nextAt>Date.now()||S.qb||(S.heavy&&liveSaver()))continue;
       try{
         const r=await liveCheck(S,force);
         S.fails=0;S.nextAt=0;S.err='';S.ok=Date.now();LV.chk=Date.now();LV.last=r.st;got=true;
@@ -9185,11 +9225,12 @@ async function loadLive(force){
       }catch(e){
         const ab=e&&e.name==='AbortError';
         S.fails++;S.err=ab?'brak odpowiedzi w limicie czasu':e&&e.name==='TypeError'?'brak połączenia lub blokada przeglądarki (CORS)':String(e&&e.message||e).slice(0,80);
-        S.nextAt=Date.now()+(ab&&S.heavy?600000:Math.min(S.heavy?600000:120000,30000*Math.pow(2,Math.min(S.fails,5)-1)))*liveK();
+        S.nextAt=Date.now()+(ab&&S.heavy?(liveN?600000:150000):Math.min(liveN?(S.heavy?600000:120000):(S.heavy?180000:45000),30000*Math.pow(2,Math.min(S.fails,5)-1)))*liveK();   // bez żadnych danych próbujemy częściej
       }
     }
   }finally{LV.busy=false}
-  if(got){LV.fails=0;LV.ok=Date.now()}else LV.fails++;
+  if(got){LV.fails=0;LV.ok=Date.now()}
+  else{LV.fails++;if(LV.fails===1||LV.fails===6)try{window.bbEv&&window.bbEv('opóźnienia','brak danych ze wszystkich źródeł: '+LIVE_SRC.map(S=>S.id+' – '+(S.err||'w odroczeniu')).join('; '))}catch{}}
 }
 const isoSec=x=>{if(!x)return NaN;const t=Date.parse(String(x).replace(/(\.\d{3})\d+/,'$1'));return isNaN(t)?NaN:t/1000};   // także czas z 7 cyframi ułamka sekundy
 function applyLive(j){
@@ -9289,6 +9330,25 @@ function liveDiagText(){
   if(LV.probe)L.push('',LV.probe);
   return L.join('\n');
 }
+// Wersja 168: krótki opis stanu źródeł danych na żywo (po dotknięciu paska z komunikatem) i ponowienie pobierania od razu
+function liveWhy(){
+  const n=Date.now(),L=[];
+  L.push('Internet: '+(netOff()?'brak połączenia':'połączony'));
+  L.push(liveN?'Opóźnienia pociągów: '+liveN+' kursów, dane sprzed '+liveAgo(n-liveTs):(gtfs?'Opóźnienia pociągów: brak danych':'Rozkład jazdy: jeszcze niewczytany'));
+  if(gtfs)for(const S of LIVE_SRC)L.push('• '+S.name+': '+(S.err?S.err+(S.nextAt>n?' (ponowię za '+liveAgo(S.nextAt-n)+')':''):S.ok?'działa':'jeszcze nie sprawdzano'));
+  const R=route;
+  if(R&&ttKey)L.push('Korki (TomTom): '+((R.fsErr||0)>0?flSt+' – nieudane próby z rzędu: '+R.fsErr:R.fsAt?'działają, sprawdzono '+liveAgo(n-R.fsAt)+' temu':'jeszcze nie sprawdzano'));
+  return L.join('\n');
+}
+function liveRetry(){
+  LIVE_SRC.forEach(S=>{S.nextAt=0});LV.fails=0;LV.at=0;
+  if(!LV.busy)loadLive(true).catch(()=>{});
+  if(route){route.fsRetry=0;route.fsErr=0;route.fsAt=0}
+}
+{const el=$('info');if(el)el.onclick=async()=>{
+  if(el.style.display==='none')return;
+  if(await dlg({title:'Stan danych na żywo',text:liveWhy(),left:true,ok:'Spróbuj ponownie',no:'Zamknij',ic:'info'}))liveRetry();
+}}
 async function liveProbeAll(){   // jednorazowy test źródeł: czy odpowiadają, jak szybko, jak duże i jak stare są dane (nic nie zmienia w aplikacji)
   const L=[],age={};
   for(const S of LIVE_SRC){
