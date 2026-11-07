@@ -1288,6 +1288,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="voice" checked> Głos</label>
   <label style="font-size:.9rem"><input type="checkbox" id="autonight" checked> Dzień/noc wg słońca</label>
   <select id="vsel" class="sec" style="max-width:100%"></select>
+  <button id="vtest" class="sec" type="button">Sprawdź głos</button>
   <select id="vmode" class="sec"><option value="all">Zakres komunikatów: wszystkie</option><option value="hazard">Zakres: tylko pociągi i zagrożenia</option></select>
   <select id="vbose" class="sec"><option value="full">Komunikaty: szczegółowe</option><option value="short">Komunikaty: krótkie</option><option value="beep">Tylko dźwięki (bez mowy)</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="sigsnd" checked> Znaki STOP / ustąp</label>
@@ -1419,7 +1420,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 171</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 172</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1736,11 +1737,21 @@ var ICON_X='<path d="M9 5.5L31 25.5M31 5.5L9 25.5" stroke="rgba(0,0,0,.26)" stro
 var sndKind=(()=>{try{return localStorage.getItem('snd')||'gong'}catch(e){return 'gong'}})(),volTrain=(()=>{try{return +localStorage.getItem('volTrain')||.9}catch(e){return .9}})(),volNav=(()=>{try{return +localStorage.getItem('volNav')||.9}catch{return .9}})(),volRoad=(()=>{try{return +localStorage.getItem('volRoad')||.9}catch{return .9}})(),vmode=(()=>{try{return localStorage.getItem('vmode')||'all'}catch{return 'all'}})();
 const catVol=c=>c==='Train'?volTrain:c==='Nav'?volNav:volRoad;   // głośność wg rodzaju komunikatu
 const HAZ_KEYS=/^(cam|inc|ev|u|z|over|wx|detour|nodetour)/;   // komunikaty o zagrożeniach (poza pociągami)
-function beep(cat){if(sndKind==='none')return;try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
+// Wersja 172: kontekst dźwięku w Safari stoi, dopóki nie zostanie wznowiony w reakcji na dotknięcie. Sygnał zaplanowany na stojącym kontekście zabrzmiałby dopiero po kolejnym
+// dotknięciu (nawet po minutach), więc takiego spóźnionego nie odtwarzamy: czekamy najwyżej 1,5 s na wznowienie.
+function audioGo(fn){
+  try{
+    audio=audio||new (window.AudioContext||window.webkitAudioContext)();
+    if(audio.state==='running'){fn();return}
+    const t0=performance.now(),go=()=>{try{if(audio.state==='running'&&performance.now()-t0<1500)fn()}catch{}},p=audio.resume();
+    if(p&&p.then)p.then(go,()=>{});else go();
+  }catch{}
+}
+function beep(cat){if(sndKind==='none')return;audioGo(()=>{
   const vol=(cat==='Train'?volTrain:catVol(cat)*.8/.9)/.8,tones=sndKind==='bell'?[[1100,0],[880,.16]]:[[660,0]];   // miękki, krótki dźwięk (gong albo dzwonek)
   for(const [f,dl] of tones){const t=audio.currentTime+dl,o=audio.createOscillator(),g=audio.createGain();
     o.type=sndKind==='bell'?'triangle':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09*vol,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+.5);
-    o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.55)}}catch(e){}}
+    o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.55)}})}
 // ---- Głos: łagodny, męski (pl-PL) ----
 var voiceName='',vbose='full';try{voiceName=localStorage.getItem('vname')||'';vbose=localStorage.getItem('vbose')||'full'}catch(e){}
 const V_MALE=/krzysztof|adam|marek|jacek|piotr|filip|jan\b|\bmale\b|m[eę]sk|\bmark\b/i,V_FEMALE=/zosia|ewa|paulina|agnieszka|maja|ola\b|zofia|female|kobiec|anna|\bola\b/i;
@@ -1750,19 +1761,55 @@ function pickVoice(){
   return vs.find(x=>x.name===voiceName)||vs.find(x=>V_MALE.test(x.name)&&!V_FEMALE.test(x.name))||vs.find(x=>!V_FEMALE.test(x.name))||vs[0];
 }
 let voiceMuted=false;
+// Wersja 172: Safari (iOS i macOS) odtwarza mowę i dźwięk dopiero wtedy, gdy pierwsza wypowiedź padła w reakcji na dotknięcie ekranu. Aplikacja mówiła dotąd wyłącznie z liczników i odczytów GPS,
+// więc w Safari nie odblokowywała się nigdy (widok w aplikacji Messenger/Facebook tego nie wymaga – stąd różnica). VX: stan odblokowania i dziennik zdarzeń do okna „Test głosu” i paska stanu.
+const VX={log:[],unl:0,unlAt:null,unlBy:'',tries:0,ok:0,okAt:0,err:'',errAt:0,uerr:'',cancelAt:-1e9,stuckMs:20000,clip:'',clipTry:0,clipBusy:0};
+const VLIVE=new Set();   // wypowiedzi w toku trzymamy w pamięci: obiekt bez odwołań może zostać usunięty, zanim przyjdą jego zdarzenia (start, koniec)
+const SS_SPEAK=(()=>{try{return window.SpeechSynthesis.prototype.speak}catch{return null}})();   // metoda przeglądarki bez nakładek – do cichego odblokowania
+function vlog(t){VX.log.push(new Date().toLocaleTimeString('pl-PL')+' '+t);if(VX.log.length>16)VX.log.shift()}
+const vSec=ms=>(Math.max(0,ms)/1000).toFixed(1).replace('.',',')+' s';
+function vCancel(){try{window.speechSynthesis.cancel();VX.cancelAt=performance.now()}catch{}}   // po cancel() trzeba chwilę poczekać z nową wypowiedzią (Safari ją gubi)
+function vHint(){return VX.err==='not-allowed'&&VX.okAt<VX.errAt&&performance.now()-VX.errAt<300000&&$('voice').checked?'głos zablokowany przez przeglądarkę – dotknij ekranu':''}
 function speak(text,vol,done){if(voiceMuted&&text!==undefined&&!speak.force){if(done)done();return}
-  if(vbose==='beep'&&text!==undefined&&!speak.force&&$('voice').checked){try{chime('go')}catch(e){}if(done)setTimeout(done,500);return}
+  if(vbose==='beep'&&text!==undefined&&!speak.force&&$('voice').checked){try{chime('go')}catch{}if(done)setTimeout(done,500);return}
   if(!$('voice').checked||!window.speechSynthesis){if(done)done();return}
   try{
-    const u=new SpeechSynthesisUtterance(text),v=pickVoice();u.lang='pl-PL';if(v)u.voice=v;
+    const u=new SpeechSynthesisUtterance(text),v=pickVoice();u.lang='pl-PL';
+    try{if(v)u.voice=v}catch{}   // nieważny obiekt głosu nie może zablokować całej wypowiedzi
     const male=v&&V_MALE.test(v.name)&&!V_FEMALE.test(v.name);
     u.rate=.9;u.pitch=male?.9:.75;u.volume=vol||.9;   // spokojne tempo; niższy ton, gdy brak wyraźnie męskiego głosu
-    if(done){u.onend=u.onerror=()=>done()}
-    speechSynthesis.speak(u);
-  }catch(e){if(done)done()}
+    vSay(u,done,text,v);
+  }catch(e){vlog('mowa: wyjątek '+String((e&&e.message)||e).slice(0,40));if(done)done()}
 }
-try{speechSynthesis.onvoiceschanged=fillVoices}catch(e){}
-fillVoices();
+// wypowiedź: zdarzenia trafiają do dziennika, „done” wywołujemy po końcu albo błędzie (jak dotąd); wstrzymaną syntezę wznawiamy, a zawieszoną kolejkę (iOS po rozmowie telefonicznej) czyścimy
+function vSay(u,done,text,v){
+  const t0=performance.now();let t1=0,fin=false;u._t=t0;
+  const fini=()=>{if(fin)return;fin=true;VLIVE.delete(u);if(done)done()};
+  u._fin=fini;
+  u.onstart=()=>{if(t1)return;t1=performance.now();VX.ok++;VX.okAt=t1;VX.err='';if(!VX.unl){VX.unl=1;VX.unlAt=new Date();VX.unlBy='mowa'}vlog('mowa: start po '+vSec(t1-t0))};
+  u.onend=()=>{vlog('mowa: koniec po '+vSec(performance.now()-t0));fini()};
+  u.onerror=e=>{const c=(e&&e.error)||'?';
+    if(c==='canceled'||c==='interrupted'){vlog('mowa: przerwana');fini();return}
+    VX.err=c;VX.errAt=performance.now();if(c==='not-allowed'){VX.unl=0;VX.tries=0}
+    vlog('mowa: błąd '+c);fini()};
+  VLIVE.add(u);
+  const run=()=>{
+    try{
+      const ss=window.speechSynthesis;
+      if(ss.paused){ss.resume();vlog('synteza była wstrzymana – wznowiona')}
+      const idle=!ss.speaking&&!ss.pending;
+      vlog('mowa: „'+String(text).slice(0,24)+'” → '+(v?v.name:'głos domyślny'));
+      ss.speak(u);
+      setTimeout(()=>{if(idle&&!t1&&!fin)vlog('mowa: brak reakcji syntezatora w 5 s')},5000);
+    }catch(e){vlog('mowa: wyjątek '+String((e&&e.message)||e).slice(0,40));fini()}
+  };
+  const stuck=[...VLIVE].filter(x=>x!==u&&t0-x._t>VX.stuckMs);
+  if(stuck.length){vlog('kolejka mowy wisiała – wyczyszczona');vCancel();stuck.forEach(x=>x._fin&&x._fin())}
+  const w=Math.min(150,VX.cancelAt+150-performance.now());
+  if(w>0)setTimeout(run,w);else run();
+}
+try{speechSynthesis.onvoiceschanged=fillVoices}catch{}
+fillVoices();setTimeout(fillVoices,1500);   // Safari bywa, że nie zgłasza zmiany listy głosów
 $('vsel').onchange=e=>{voiceName=e.target.value;try{localStorage.setItem('vname',voiceName)}catch(_){}speak('Dzień dobry. Tak będę do Pana mówił.')};
 $('vbose').value=vbose;$('vbose').onchange=e=>{vbose=e.target.value;try{localStorage.setItem('vbose',vbose)}catch(_){}};
 var vcOff=(()=>{try{return JSON.parse(localStorage.getItem('vcOff')||'{}')}catch(e){return {}}})();
@@ -1783,7 +1830,7 @@ function say(key,text,vib,short){if(window.preview)return;const now=Date.now();i
   // nagrody i wyzwania (tylko dodatek): nie mówimy ich tuż po ostrzeżeniu ani wskazówce, a ostrzeżenie przerywa taki komunikat – kolejka mowy opóźniłaby je o kilka sekund (ok. 80 m przy 80 km/h)
   const chat=/^(ach|ch)\d/.test(key);
   if(chat){if(now-lastSafeSay<12000)return;chatUntil=now+4000}
-  else{lastSafeSay=now;if(now<chatUntil){chatUntil=0;try{window.speechSynthesis.cancel()}catch{}}}
+  else{lastSafeSay=now;if(now<chatUntil){chatUntil=0;vCancel()}}
   {const sl=clipSlot(key);if(sl&&clips[sl]&&$('voice').checked&&!voiceMuted){if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}if(playClip(sl,catVol(cat)))return}}
   beep(cat);if(navigator.vibrate)try{navigator.vibrate(vib||[200,100,200])}catch(e){}
   speak(vbose==='short'&&short?short:text,catVol(cat))}
@@ -3942,7 +3989,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens','terrSel','det3Sel']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
-  mv('snd',['vsel','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
+  mv('snd',['vsel','vtest','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['hudBtn','eco']);
@@ -4066,13 +4113,51 @@ function speakSeq(parts,vol){
   })();
 }
 const clips={},clipAudio=new Audio();
-const CLIP_SILENCE='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+const CLIP_SILENCE='data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
 function clipSlot(key){for(const x of CLIP_SLOTS)if(x[3]&&x[3].test(key))return x[0];return null}
 function playClip(slot,vol){
   const c=clips[slot];if(!c||!$('voice').checked||(voiceMuted&&!speak.force))return false;
   try{clipAudio.src=c.url;clipAudio.volume=Math.max(.1,Math.min(1,vol||.9));const p=clipAudio.play();if(p&&p.catch)p.catch(()=>{});return true}catch(e){return false}
 }
-document.addEventListener('pointerdown',()=>{try{clipAudio.src=CLIP_SILENCE;clipAudio.volume=0;const p=clipAudio.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}},{once:true});   // odblokowanie odtwarzania po pierwszym dotknięciu
+// Wersja 172: odblokowanie mowy i dźwięku w reakcji na dotknięcie. Dotąd robił to jednorazowy „pointerdown”, a w Safari na telefonie dopiero touchend / click uruchamiają odtwarzanie;
+// teraz: cicha wypowiedź (zwalnia blokadę syntezy mowy), wznowienie kontekstu dźwięku i cichy klip w elemencie z własnymi nagraniami. Powtarzamy przy kolejnych dotknięciach, aż się uda.
+function voiceUnlock(by){
+  VX.tries++;
+  try{   // 1) kontekst dźwięku (sygnały gong / dzwonek)
+    audio=audio||new (window.AudioContext||window.webkitAudioContext)();
+    if(audio.state!=='running'){const p=audio.resume();if(p&&p.then)p.then(()=>{},()=>{})}
+    const bf=audio.createBuffer(1,1,22050),sr=audio.createBufferSource();sr.buffer=bf;sr.connect(audio.destination);sr.start(0);
+  }catch{}
+  try{   // 2) element audio z własnymi nagraniami
+    if(VX.clip!=='ok'&&!VX.clipBusy&&VX.clipTry<8&&clipAudio.paused){
+      VX.clipTry++;VX.clipBusy=1;clipAudio.src=CLIP_SILENCE;clipAudio.volume=0;
+      const p=clipAudio.play();
+      if(p&&p.then)p.then(()=>{VX.clip='ok';VX.clipBusy=0},e=>{VX.clip=(e&&e.name)||'błąd';VX.clipBusy=0});else{VX.clip='ok';VX.clipBusy=0}
+    }
+  }catch{VX.clipBusy=0}
+  try{   // 3) synteza mowy: cicha wypowiedź w reakcji na dotknięcie
+    const ss=window.speechSynthesis;
+    if(ss&&!VX.unl&&VX.tries<=30){
+      const u=new window.SpeechSynthesisUtterance([' ','.','a'][Math.min(2,Math.floor((VX.tries-1)/3))]);u.volume=0;u.lang='pl-PL';   // jeśli pusta wypowiedź nie daje żadnego zdarzenia, kolejne dotknięcia próbują krótkiego znaku (przy głośności 0)
+      try{const v=pickVoice();if(v)u.voice=v}catch{}
+      u._t=performance.now();u._fin=()=>VLIVE.delete(u);
+      const ok=()=>{VLIVE.delete(u);if(VX.unl)return;VX.unl=1;VX.unlAt=new Date();VX.unlBy=by;if(VX.err==='not-allowed')VX.err='';
+        const lost=[...VLIVE].filter(x=>x._t<u._t);lost.forEach(x=>x._fin&&x._fin());   // wypowiedzi sprzed odblokowania nie ruszyły (Safari je porzucił; kolejka jest po kolei) – zwalniamy ich „done”
+        vlog('odblokowanie ('+by+'): mowa działa'+(lost.length?' · '+lost.length+' wcześniejszych wypowiedzi przepadło':''))};
+      u.onstart=ok;u.onend=ok;
+      u.onerror=e=>{VLIVE.delete(u);const c=(e&&e.error)||'?';if(c==='canceled'||c==='interrupted')return;if(VX.uerr!==c){VX.uerr=c;vlog('odblokowanie ('+by+'): błąd '+c)}};
+      VLIVE.add(u);
+      (SS_SPEAK||ss.speak).call(ss,u);   // metoda przeglądarki wprost (to nie jest komunikat dla kierowcy)
+    }
+  }catch(e){vlog('odblokowanie: wyjątek '+String((e&&e.message)||e).slice(0,40))}
+  try{fillVoices()}catch{}
+}
+for(const ev of ['touchend','pointerup','click'])document.addEventListener(ev,()=>{
+  if(audio&&audio.state!=='running'&&audio.state!=='closed'){try{audio.resume()}catch{}}   // po przerwie (rozmowa, blokada ekranu) Safari wstrzymuje dźwięk do następnego dotknięcia
+  if(VX.unl&&(VX.clip==='ok'||VX.clipTry>=8)&&audio&&audio.state==='running')return;
+  voiceUnlock(ev);
+},{capture:true,passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){try{fillVoices()}catch{}if(audio&&audio.state!=='running'&&audio.state!=='closed')try{audio.resume()}catch{}}});
 async function loadClips(){
   for(const x of ALL_SLOTS){
     try{const c=await idbGet('clip|'+x[0]);if(c&&c.buf){clips[x[0]]={url:URL.createObjectURL(new Blob([c.buf],{type:c.type||'audio/mpeg'})),name:c.name||'nagranie'}}}catch(e){}
@@ -5186,8 +5271,7 @@ async function loadSigns(lat,lon){   // pobiera jedną, najbliższą brakującą
   finally{signsBusy=false}
 }
 function chime(kind){   // dwie miękkie, ciche nutki
-  try{
-    audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
+  audioGo(()=>{
     const t=audio.currentTime;
     (kind==='stop'?[784,587]:[659,880]).forEach((f,i)=>{
       const o=audio.createOscillator(),g=audio.createGain(),t0=t+i*.22;
@@ -5195,7 +5279,7 @@ function chime(kind){   // dwie miękkie, ciche nutki
       g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.06,t0+.03);g.gain.exponentialRampToValueAtTime(.0001,t0+.55);
       o.connect(g);g.connect(audio.destination);o.start(t0);o.stop(t0+.6);
     });
-  }catch(e){}
+  });
 }
 // znaki i światła tylko dla wyznaczonej trasy (stop, ustąp pierwszeństwa – tylko te dotyczące naszego kierunku jazdy)
 var rSigns=[];
@@ -5422,8 +5506,9 @@ function infoText(p){
     }else if(feedUrl&&feedAt&&Date.now()-feedAt>60000)dq='dane o pociągach nieaktualne';
     if((!dq||soft)&&xErr&&Date.now()-xErr<180000&&!xReady(p)&&route&&nav){dq='nie udało się pobrać przejazdów kolejowych – ponawiam';soft=false}   // bez trasy mówi o tym już baner; Wersja 170: ważniejsze od neutralnego „wczytuję opóźnienia…”, które inaczej by je przykrywało
   }
-  $('info').classList.toggle('warn',!!dq&&!soft);
-  const parts=[dq,src,vec&&vecErr?(OWNER?vecErr:'problem z wczytaniem mapy – ponawiam'):'',route&&ttKey&&bad(ttSt)?(OWNER?'ruch: '+ttSt:'brak danych o ruchu'):'',route&&ttKey&&!off?flNote():'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
+  const vh=!demo&&window.speechSynthesis?vHint():'';   // Wersja 172: Safari zablokował mowę – wskazówka obok innych komunikatów, po dotknięciu ekranu znika
+  $('info').classList.toggle('warn',(!!dq&&!soft)||!!vh);
+  const parts=[dq,vh,src,vec&&vecErr?(OWNER?vecErr:'problem z wczytaniem mapy – ponawiam'):'',route&&ttKey&&bad(ttSt)?(OWNER?'ruch: '+ttSt:'brak danych o ruchu'):'',route&&ttKey&&!off?flNote():'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
   const tx=parts.join(' · '),el=$('info'),dsp=parts.length?'':'none';
   if(el.textContent!==tx)el.textContent=tx;
   if(el.style.display!==dsp)el.style.display=dsp;
@@ -9491,6 +9576,36 @@ function xRetry(){   // „Spróbuj ponownie”: przejazdy od razu (bez czekania
   try{if(last&&!demo)loadCrossings(last.lat,last.lon)}catch{}
   xProbe().catch(()=>{});
 }
+// Wersja 172: stan głosu (okno po dotknięciu paska i okno „Test głosu”); full – z dziennikiem zdarzeń
+function vWhy(full){
+  const L=[],ss=window.speechSynthesis,pn=performance.now(),on=$('voice').checked;
+  const mode={full:'szczegółowe',short:'krótkie',beep:'tylko dźwięki (bez mowy)'}[vbose]||vbose;
+  if(!ss){L.push('Głos: ta przeglądarka nie ma syntezy mowy – zostają same dźwięki');return L}
+  const prob=on&&(!!VX.err||!VX.unl);
+  if(!full&&!prob){L.push(on?'Głos: działa'+(VX.okAt?' (ostatnio ruszył '+liveAgo(pn-VX.okAt)+' temu)':''):'Głos: wyłączony');return L}
+  let all=0,pl=[],pv=null;try{all=ss.getVoices().length;pl=plVoices();pv=pickVoice()}catch{}
+  L.push('Głos: '+(on?'włączony':'wyłączony')+' · komunikaty: '+mode+(voiceMuted?' · chwilowo wyciszony':''));
+  L.push('• głosy: '+(pl.length?pl.length+' polskich, używany: '+(pv?pv.name:'?'):all?'brak polskiego (jest '+all+' innych)':'lista pusta (ładuje się albo brak głosów w systemie)'));
+  L.push('• odblokowanie: '+(VX.unl?'tak ('+VX.unlBy+', '+VX.unlAt.toLocaleTimeString('pl-PL')+')':VX.tries?'brak potwierdzenia (prób: '+VX.tries+(VX.uerr?', błąd: '+VX.uerr:'')+')':'jeszcze nie było dotknięcia ekranu'));
+  L.push('• sygnały: '+(audio?({running:'działają',suspended:'wstrzymane – dotknij ekranu',interrupted:'przerwane – dotknij ekranu',closed:'zamknięte'}[audio.state]||audio.state):'jeszcze nie uruchomione')+' · nagrania: '+(VX.clip==='ok'?'odblokowane':VX.clip||'jeszcze nie'));
+  L.push('• mowa: '+(VX.okAt?'ostatnio ruszyła '+liveAgo(pn-VX.okAt)+' temu':'jeszcze nie ruszyła')+(VX.err?' · błąd: '+VX.err:''));
+  const lg=VX.log.slice(full?-8:-4);if(lg.length){L.push('• dziennik:');lg.forEach(x=>L.push('    '+x))}
+  return L;
+}
+{const b=$('vtest');if(b)b.onclick=async()=>{   // „Sprawdź głos”: mówi zdanie próbne i pokazuje, co zrobił syntezator
+  if(b.disabled)return;
+  const lab=b.textContent,t0=performance.now();b.disabled=true;b.textContent='Sprawdzam…';
+  try{await new Promise(ok=>{const to=setTimeout(ok,7000);speak.force=true;try{speak('Test głosu. Jeśli to słychać, komunikaty głosowe działają.',.9,()=>{clearTimeout(to);ok()})}finally{speak.force=false}})}catch{}
+  b.disabled=false;b.textContent=lab;
+  const on=$('voice').checked,started=VX.okAt>=t0,errNow=VX.errAt>=t0?VX.err:'',blocked=errNow==='not-allowed';
+  const verdict=!window.speechSynthesis?'Ta przeglądarka nie ma syntezy mowy.'
+    :!on?'Głos jest wyłączony – włącz przełącznik „Głos” i powtórz test.'
+    :blocked?'Przeglądarka zablokowała mowę. Dotknij ekranu (np. „Powtórz test”) i spróbuj jeszcze raz.'
+    :started?'Mowa ruszyła. Jeśli jej nie słychać: wyłącz tryb cichy (przełącznik z boku telefonu), zwiększ głośność multimediów i odłącz słuchawki lub Bluetooth.'
+    :errNow?'Syntezator zgłosił błąd ('+errNow+'). Sprawdź, czy w telefonie jest polski głos (iOS: Ustawienia → Dostępność → Treści czytane → Głosy).'
+    :'Syntezator nie zareagował. Uruchom aplikację od nowa i dotknij ekranu przed testem.';
+  if(await dlg({title:'Test głosu',text:verdict+'\n\n'+vWhy(true).join('\n'),left:true,ok:'Powtórz test',no:'Zamknij',ic:'info'}))setTimeout(()=>b.click(),0);
+}}
 function liveWhy(){
   const n=Date.now(),L=[];
   L.push('Internet: '+(netOff()?'brak połączenia':'połączony'));
@@ -9500,6 +9615,7 @@ function liveWhy(){
   const R=route;
   if(R&&ttKey)L.push('Korki (TomTom): '+((R.fsErr||0)>0?flSt+' – nieudane próby z rzędu: '+R.fsErr:R.fsAt?'działają, sprawdzono '+liveAgo(n-R.fsAt)+' temu':'jeszcze nie sprawdzano'));
   {const tt=$('ttstat');if(tt&&tt.textContent&&(!gtfs||ttStaleNote()))L.push(tt.textContent)}
+  L.push(...vWhy(false));
   L.push(liveEnv());
   return L.join('\n');
 }
