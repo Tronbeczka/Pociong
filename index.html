@@ -1419,7 +1419,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 170</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 171</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1809,6 +1809,22 @@ const xsIn=(lat,lon)=>lat>48.9&&lat<55.1&&lon>13.9&&lon<24.4;   // obszar wycią
 // a na końcu jest kopia zapisana na urządzeniu. 404 ze wszystkich dróg = komórki nie ma w bazie. Wynik każdej drogi trafia do dziennika (okno po dotknięciu paska).
 const XS_RAW=(()=>{const L=window.location,m=L.hostname.match(/^([^.]+)\.github\.io$/);return 'https://raw.githubusercontent.com/'+(m?m[1]:'Tronbeczka')+'/'+(m?(L.pathname.split('/')[1]||'Pociong'):'Pociong')+'/main/przejazdy/'})();
 const XS_NONE=new Map();   // komórki, o których serwery powiedziały, że ich nie ma (przez 10 minut nie pytamy ponownie)
+// Wersja 171: granica Polski do oceny, czy komórka bazy oznaczona jako „częściowa” (f=0: choć jeden z 81 punktów komórki leży poza wyciągiem) jest kompletna w danym miejscu.
+// Takich komórek jest jedna trzecia (granice i wybrzeże) i obejmują też miejsca 30–50 km od granicy. Dotąd w każdej z nich aplikacja wymagała odpowiedzi serwera Overpass i gdy ten
+// zawodził (Safari: „Load failed”), pokazywała błąd pobierania mimo wczytanych przejazdów. Teraz miejsce w głębi kraju (koło zapytania plus PL_M zapasu w całości w Polsce)
+// uznajemy za pokryte bazą. Linia: granica lądowa z Natural Earth 1:10 000 000 (domena publiczna), uproszczona do 0,8 km, na morzu zamknięta równoleżnikiem 54,95°N (lon,lat,…).
+const PL_M=3000;   // zapas na dokładność granicy i uproszczenie linii (m)
+const PL_B=[14.21,53.938,14.175,53.906,14.263,53.78,14.277,53.735,14.261,53.656,14.297,53.598,14.297,53.529,14.36,53.444,14.403,53.279,14.442,53.252,14.381,53.19,14.39,53.132,14.343,53.049,14.144,52.96,14.165,52.896,14.15,52.865,14.124,52.851,14.153,52.828,14.216,52.818,14.382,52.738,14.432,52.686,14.49,52.651,14.55,52.636,14.645,52.577,14.609,52.518,14.632,52.497,14.592,52.45,14.54,52.422,14.545,52.382,14.59,52.309,14.584,52.291,14.697,52.253,14.712,52.236,14.686,52.121,14.761,52.077,14.699,51.993,14.687,51.912,14.596,51.842,14.586,51.804,14.634,51.769,14.648,51.717,14.732,51.658,14.744,51.607,14.713,51.567,14.71,51.53,14.945,51.449,14.964,51.328,15.019,51.272,15.022,51.237,14.991,51.189,14.955,51.064,14.86,50.917,14.81,50.877,14.81,50.858,14.982,50.859,14.997,50.959,14.961,50.993,15.004,51.021,15.074,51.003,15.108,50.981,15.144,51.012,15.17,50.978,15.227,50.977,15.27,50.953,15.256,50.9,15.288,50.855,15.341,50.832,15.356,50.775,15.37,50.773,15.4,50.798,15.442,50.8,15.642,50.756,15.684,50.731,15.792,50.743,15.848,50.675,15.941,50.688,15.971,50.679,15.999,50.636,15.982,50.604,16.024,50.609,16.086,50.647,16.129,50.644,16.175,50.624,16.232,50.661,16.332,50.644,16.426,50.568,16.394,50.559,16.391,50.522,16.353,50.493,16.288,50.493,16.211,50.451,16.218,50.437,16.198,50.44,16.19,50.424,16.2,50.406,16.232,50.403,16.262,50.364,16.344,50.37,16.371,50.318,16.438,50.298,16.535,50.208,16.567,50.142,16.661,50.093,16.701,50.095,16.818,50.187,16.881,50.192,16.919,50.217,16.955,50.213,16.96,50.232,16.996,50.213,17.015,50.218,16.988,50.285,16.927,50.319,16.866,50.408,16.866,50.422,16.893,50.433,17.085,50.398,17.132,50.377,17.188,50.378,17.211,50.336,17.246,50.322,17.337,50.313,17.319,50.308,17.342,50.26,17.355,50.253,17.366,50.272,17.388,50.273,17.424,50.241,17.469,50.266,17.63,50.262,17.685,50.312,17.708,50.311,17.734,50.289,17.719,50.253,17.748,50.218,17.738,50.202,17.675,50.175,17.589,50.163,17.584,50.146,17.633,50.106,17.732,50.095,17.719,50.081,17.763,50.025,17.839,49.974,17.876,49.969,17.942,49.993,18.032,50.003,18.036,50.017,18.007,50.024,18.002,50.047,18.092,50.017,18.098,49.989,18.162,49.981,18.256,49.946,18.292,49.908,18.329,49.929,18.369,49.932,18.482,49.897,18.544,49.913,18.559,49.907,18.567,49.861,18.594,49.852,18.566,49.832,18.567,49.805,18.618,49.714,18.728,49.669,18.788,49.669,18.835,49.548,18.833,49.51,18.932,49.504,18.961,49.493,18.962,49.389,19.007,49.388,19.068,49.406,19.117,49.391,19.173,49.402,19.234,49.507,19.265,49.521,19.34,49.529,19.438,49.6,19.457,49.598,19.505,49.563,19.557,49.454,19.635,49.441,19.627,49.402,19.706,49.388,19.769,49.393,19.78,49.293,19.809,49.271,19.748,49.206,19.786,49.188,19.854,49.191,19.906,49.223,19.938,49.225,20.05,49.173,20.07,49.183,20.086,49.243,20.136,49.309,20.16,49.306,20.207,49.334,20.284,49.339,20.318,49.392,20.422,49.383,20.422,49.4,20.438,49.403,20.544,49.371,20.605,49.4,20.69,49.401,20.778,49.331,20.849,49.321,20.919,49.29,20.964,49.308,21.017,49.352,21.073,49.357,21.069,49.381,21.033,49.4,21.054,49.414,21.125,49.424,21.173,49.398,21.194,49.401,21.261,49.449,21.428,49.41,21.62,49.423,21.659,49.402,21.692,49.402,21.758,49.349,21.82,49.377,21.964,49.309,21.993,49.278,22.012,49.211,22.041,49.197,22.198,49.172,22.216,49.14,22.339,49.126,22.39,49.093,22.54,49.072,22.561,49.086,22.643,49.043,22.755,49.045,22.855,48.994,22.867,49.01,22.843,49.043,22.853,49.085,22.706,49.169,22.682,49.161,22.738,49.275,22.72,49.383,22.68,49.419,22.641,49.529,22.666,49.567,22.742,49.634,22.766,49.674,22.827,49.697,22.888,49.77,22.933,49.791,22.951,49.827,23.101,49.957,23.436,50.193,23.644,50.313,23.682,50.368,23.748,50.389,23.929,50.391,23.981,50.405,24.011,50.493,24.075,50.514,24.108,50.541,24.085,50.604,24.108,50.63,24.075,50.69,24.081,50.713,24.027,50.728,24.013,50.743,24.026,50.767,23.974,50.776,23.958,50.808,23.993,50.836,24.047,50.829,24.131,50.839,24.143,50.856,23.979,50.938,23.955,50.984,23.912,51.007,23.904,51.063,23.854,51.122,23.875,51.136,23.864,51.148,23.743,51.216,23.687,51.292,23.635,51.305,23.634,51.339,23.684,51.37,23.679,51.394,23.698,51.404,23.649,51.454,23.663,51.48,23.615,51.497,23.543,51.593,23.532,51.659,23.56,51.672,23.546,51.69,23.559,51.695,23.552,51.737,23.56,51.755,23.618,51.787,23.629,51.81,23.595,51.843,23.622,51.877,23.629,51.946,23.676,51.994,23.637,52.084,23.579,52.122,23.512,52.124,23.485,52.159,23.488,52.182,23.471,52.172,23.45,52.186,23.437,52.176,23.391,52.183,23.396,52.2,23.19,52.241,23.194,52.271,23.166,52.289,23.392,52.51,23.569,52.586,23.736,52.615,23.869,52.67,23.909,52.7,23.922,52.743,23.901,52.923,23.918,52.951,23.911,53.005,23.859,53.068,23.894,53.152,23.801,53.242,23.591,53.611,23.565,53.742,23.53,53.784,23.487,53.91,23.49,53.951,23.459,53.982,23.496,54.022,23.463,54.135,23.433,54.169,23.391,54.18,23.316,54.236,23.235,54.254,23.117,54.303,23.05,54.295,23.032,54.31,23.035,54.347,22.99,54.353,22.963,54.382,22.919,54.381,22.859,54.399,22.813,54.394,22.767,54.356,22.698,54.343,19.68,54.437,19.61,54.457,19.61,54.95,14.21,54.95];
+function plDist(lat,lon){   // odległość (m) od granicy Polski; ujemna, gdy punkt leży poza Polską (morze do 54,95°N liczy się jako Polska)
+  const n=PL_B.length/2,k=Math.cos(rad(lat))*111195;let best=1e12,ins=false;
+  for(let i=0,j=n-1;i<n;j=i++){
+    const x1=PL_B[2*j],y1=PL_B[2*j+1],x2=PL_B[2*i],y2=PL_B[2*i+1];
+    if((y1>lat)!==(y2>lat)&&lon<(x2-x1)*(lat-y1)/(y2-y1)+x1)ins=!ins;
+    const ax=(x1-lon)*k,ay=(y1-lat)*111195,dx=(x2-x1)*k,dy=(y2-y1)*111195,L=dx*dx+dy*dy;
+    let t=L?-(ax*dx+ay*dy)/L:0;t=t<0?0:t>1?1:t;const d=Math.hypot(ax+dx*t,ay+dy*t);if(d<best)best=d;
+  }
+  return ins?best:-best;
+}
 async function xsCell(k,rec){
   const nm='c'+k+'.json',info={k,v:[]};if(rec)rec.cells.push(info);
   const nt=XS_NONE.get(k);if(nt&&Date.now()-nt<600000){info.via='brak komórki w bazie (404)';return {e:[],f:0,none:1}}
@@ -1858,6 +1874,10 @@ async function xStatic(lat,lon,R,rec){
   const elements=[];let full=!miss,t='';
   for(const c of cs){if(!c)continue;if(!c.f)full=false;if(c.t&&(!t||c.t<t))t=c.t;
     for(const q of c.e)if(Math.abs(q[1]-lat)<dg&&dist(lat,lon,q[1],q[2])<R)elements.push({type:'node',id:q[0],lat:q[1],lon:q[2],tags:q[3]||{}})}
+  // Wersja 171: komórka częściowa jest kompletna tam, gdzie całe koło zapytania leży w Polsce z zapasem (żadnej komórki nie brakuje i żadna nie jest „pusta” z powodu 404)
+  const pd=plDist(lat,lon);let pl=false;
+  if(!full&&!miss&&!cs.some(c=>c.none)&&pd>=R+PL_M){full=true;pl=true}
+  if(rec){rec.edge=pd;rec.pl=pl}
   return {elements,full,t,miss};
 }
 async function loadCrossings(lat,lon){
@@ -3166,10 +3186,11 @@ function recCross(id){
 // Dotąd zapytanie Overpass szło przez punkty trasy co co najmniej 700 m, więc na łukach drogi linia zapytania odchodziła od drogi i przejazdy umykały.
 async function xStaticRoute(P){   // P: [[lat,lon],…]; wynik: {elements, full} albo null (poza obszarem bazy / brak danych)
   if(window.__noXStatic||!P||P.length<2)return null;
-  const ks=new Set();let out_=false;
+  const ks=new Set(),smp=[];let out_=false,ls=null;
   for(let i=0;i<P.length;i++){
     const a=P[i],b=P[Math.min(P.length-1,i+1)],n=Math.max(1,Math.ceil(dist(a[0],a[1],b[0],b[1])/2000));
     for(let k=0;k<=n;k++){const la=a[0]+(b[0]-a[0])*k/n,lo=a[1]+(b[1]-a[1])*k/n;if(!xsIn(la,lo)){out_=true;continue}
+      if(!ls||Math.abs(la-ls[0])>.0065||Math.abs(lo-ls[1])>.01){ls=[la,lo];smp.push(ls)}   // Wersja 171: próbki do oceny odległości od granicy
       const dg=60/111195,dn=60/(111195*Math.cos(rad(la)));
       for(const x of [la-dg,la+dg])for(const y of [lo-dn,lo+dn])ks.add(Math.floor(x*2)+'_'+Math.floor(y*2))}
   }
@@ -3177,6 +3198,10 @@ async function xStaticRoute(P){   // P: [[lat,lon],…]; wynik: {elements, full}
   const cs=await Promise.all([...ks].map(k=>xsCell(k)));
   if(cs.some(c=>!c))return null;
   let full=!out_;for(const c of cs)if(!c.f)full=false;
+  if(!full&&!out_&&!cs.some(c=>c.none)){   // Wersja 171: komórki częściowe wystarczą, gdy trasa w ich obrębie biegnie w głębi kraju
+    const part=new Set();[...ks].forEach((k,i)=>{if(!cs[i].f)part.add(k)});
+    full=smp.every(q=>!part.has(Math.floor(q[0]*2)+'_'+Math.floor(q[1]*2))||plDist(q[0],q[1])>=PL_M);
+  }
   const RX=18,CS=200,lat0=P[0][0],lon0=P[0][1],cl0=Math.cos(rad(lat0)),grid=new Map();
   const X=(la,lo)=>(lo-lon0)*111195*cl0,Y=la=>(la-lat0)*111195;
   for(let i=0;i<P.length-1;i++){
@@ -5540,8 +5565,8 @@ function fetchOverpass(q,ms,tag){
   const urls=['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
   const ctl=urls.map(()=>new AbortController());
   return new Promise((ok,no)=>{let fails=0,err='',won=false;
-    const t0=performance.now(),rec=tag?{t:Date.now(),tag,r:{}}:null,note=(i,x)=>{if(rec&&!rec.r[i])rec.r[i]={h:urls[i].split('/')[2],s:x,ms:Math.round(performance.now()-t0)}};   // Wersja 170: wynik każdego serwera do okna ze stanem danych
-    if(rec){X_LOG.ov.push(rec);if(X_LOG.ov.length>8)X_LOG.ov.shift()}
+    const t0=performance.now(),rec=tag?{t:Date.now(),tag,r:{}}:null,note=(i,x)=>{if(rec&&rec.r[i]&&rec.r[i].s==null){rec.r[i].s=x;rec.r[i].ms=Math.round(performance.now()-t0)}};   // Wersja 170: wynik każdego serwera do okna ze stanem danych
+    if(rec){urls.forEach((u,i)=>{rec.r[i]={h:u.split('/')[2],s:null,ms:0}});X_LOG.ov.push(rec);if(X_LOG.ov.length>8)X_LOG.ov.shift()}   // Wersja 171: od początku wszystkie trzy serwery („czeka na odpowiedź”)
     const to=setTimeout(()=>ctl.forEach(c=>c.abort()),window.__ovTo||ms||26000);   // zawieszone połączenie: po 26 s (szybkie zapytania: krócej) rezygnujemy
     const done=f=>x=>{clearTimeout(to);f(x)};ok=done(ok);no=done(no);
     urls.forEach((u,i)=>{
@@ -9413,13 +9438,16 @@ function xWhy(){
   if(near)L.push('Przejazdy kolejowe: wczytane'+(crossings.length?' ('+crossings.length+' w okolicy)':' (brak w okolicy)')+(X_LOG.okSrc?' – '+X_LOG.okSrc:''));
   else if(failing){const w=xErr+Math.min(60000,6000*Math.pow(2,Math.max(0,xFails-1)))-n;L.push('Przejazdy kolejowe: nie udało się pobrać'+(xFails?' (próba '+xFails+')':'')+' – ponawiam'+(w>0?' za '+liveAgo(w):''))}
   else L.push('Przejazdy kolejowe: jeszcze niewczytane'+(lastFetch?' (pobieranie trwa)':''));
+  const bl=(S&&S.edge!=null&&S.cells.some(c=>c.via&&c.via!=='błąd'&&!/^brak/.test(c.via)&&!c.f))?'• granica Polski: '+(S.edge<0?'położenie poza granicą':(S.edge/1000).toFixed(1).replace('.',',')+' km od granicy')+(S.pl?' → komórki graniczne uznane za kompletne':' → komórki graniczne mogą być niepełne, potrzebna odpowiedź Overpass'):'';
+  if(near&&bl&&S.pl&&!(OWNER||X_LOG.probe))L.push(bl);   // Wersja 171: komórka częściowa uznana za kompletną – jedna linia wyjaśnienia
   if(!near||OWNER||X_LOG.probe){
     if(S&&S.cells.length)for(const c of S.cells){
       const f=c.v.filter(x=>!/ B w /.test(x)).join('; '),ago=ms=>ms<5400000?liveAgo(ms):ms<172800000?Math.round(ms/3600000)+' godz.':Math.round(ms/86400000)+' dni';
       L.push('• komórka '+c.k+': '+(!c.via?'pobieranie…'+(f?' ('+f+')':''):c.via==='błąd'?'✗ '+f:/^brak/.test(c.via)?c.via:c.via.startsWith('kopia')?'kopia z urządzenia'+(c.age?' (sprzed '+ago(c.age)+')':'')+', '+c.n+' przejazdów – sieć: '+f:c.n+' przejazdów, '+(c.f?'pełna':'częściowa')+' ('+c.via+', '+sec(c.ms)+')'+(f?' – wcześniej: '+f:'')));
     }
+    if(bl)L.push(bl);
     const o=[...X_LOG.ov].reverse().find(x=>/^x2?\|/.test(x.tag));
-    if(o){const rs=Object.keys(o.r).map(i=>o.r[i]);L.push('• Overpass (sprzed '+liveAgo(n-o.t)+'): '+(rs.length?rs.map(r=>r.h+' – '+r.s+' ('+sec(r.ms)+')').join('; '):'czeka na odpowiedź'))}
+    if(o){const rs=Object.keys(o.r).map(i=>o.r[i]);L.push('• Overpass (sprzed '+liveAgo(n-o.t)+'): '+(rs.length?rs.map(r=>r.h+' – '+(r.s==null?'czeka na odpowiedź':r.s+' ('+sec(r.ms)+')')).join('; '):'czeka na odpowiedź'))}
     else L.push('• Overpass: jeszcze nie pytano');
     if(X_LOG.probe)L.push('Test połączeń:',X_LOG.probe);
   }
@@ -9429,10 +9457,18 @@ function xWhy(){
 async function xProbe(){
   if(X_LOG.probing)return;X_LOG.probing=true;X_LOG.probeAt=Date.now();X_LOG.probe='trwa…';
   const sec=t=>((performance.now()-t)/1000).toFixed(1).replace('.',',')+' s';
-  const one=async(nm,url,init)=>{
+  const one=async(nm,url,init,reach)=>{
     const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),9000),t0=performance.now();
     try{const r=await fetch(url,Object.assign({signal:ctl.signal},init||{})),tx=await r.text();return (r.ok?'✓ ':'✗ ')+nm+': HTTP '+r.status+', '+tx.length+' B, '+sec(t0)}
-    catch(e){return '✗ '+nm+': '+(ctl.signal.aborted?'brak odpowiedzi w 9 s':String((e&&e.message)||e).slice(0,50))+' ('+sec(t0)+')'}
+    catch(e){
+      let w='';
+      if(reach&&!ctl.signal.aborted){   // Wersja 171: „Load failed” znaczy brak połączenia albo odpowiedź bez zgody CORS (błąd serwera, limit zapytań) – sprawdzamy, które
+        const c2=new AbortController(),t2=setTimeout(()=>c2.abort(),5000);
+        try{await fetch(reach,{mode:'no-cors',signal:c2.signal});w=' – serwer odpowiada, ale bez zgody CORS (błąd serwera lub limit zapytań)'}
+        catch{w=c2.signal.aborted?' – serwer nie odpowiada':' – brak połączenia z serwerem (blokada sieci lub przeglądarki)'}
+        finally{clearTimeout(t2)}
+      }
+      return '✗ '+nm+': '+(ctl.signal.aborted?'brak odpowiedzi w 9 s':String((e&&e.message)||e).slice(0,50))+w+' ('+sec(t0)+')'}
     finally{clearTimeout(to)}
   };
   const idbT=async()=>{const t0=performance.now();
@@ -9443,7 +9479,7 @@ async function xProbe(){
     const R=await Promise.all([
       one('baza przejazdów (ta sama domena)',(window.__xsBase||XS_BASE)+'meta.json?p='+Date.now(),{cache:'no-store'}),
       one('baza przejazdów (raw.githubusercontent.com)',(window.__xsRaw||XS_RAW)+'meta.json?p='+Date.now(),{cache:'no-store'}),
-      ...['overpass-api.de/api/interpreter','overpass.private.coffee/api/interpreter','overpass.kumi.systems/api/interpreter'].map(u=>one('Overpass '+u.split('/')[0],'https://'+u,{method:'POST',body})),
+      ...['overpass-api.de/api/interpreter','overpass.private.coffee/api/interpreter','overpass.kumi.systems/api/interpreter'].map(u=>one('Overpass '+u.split('/')[0],'https://'+u,{method:'POST',body},'https://'+u.split('/')[0]+'/api/status?p='+Date.now())),
       idbT()]);
     X_LOG.probe=R.join('\n');
   }catch(e){X_LOG.probe='test przerwany: '+String((e&&e.message)||e).slice(0,60)}
