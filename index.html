@@ -1419,7 +1419,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 169</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 170</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1660,6 +1660,7 @@ const me=L.circleMarker([0,0],{radius:9,color:'#fff',fillColor:'#2b6cb0',fillOpa
 const xLayer=L.layerGroup().addTo(map), tLayer=L.layerGroup().addTo(map);
 
 const xAll=new Map();let xErr=0,xViewAt=null,xViewNext=0;
+const X_LOG={st:null,ov:[],okAt:0,okSrc:'',probe:'',probeAt:0,probing:false};   // Wersja 170: przebieg pobierania przejazdów (komórki bazy, serwery Overpass, test połączeń) – okno po dotknięciu paska
 function xParse(e){const t=e.tags||{};
   return {id:e.id,lat:e.lat,lon:e.lon,tr:+t.tracks||1,br:t['crossing:barrier'],li:t['crossing:light'],bell:t['crossing:bell'],sup:t.supervised||(t['crossing:supervision']&&t['crossing:supervision']!=='no'?'yes':undefined),act:t['crossing:activation'],nb:(t['crossing:barrier']==='no'&&t['crossing:light']!=='yes')||t.crossing==='uncontrolled',inf:t.railway!=='level_crossing'}}   // nb = przejazd bez zapór
 function xAdd(list){for(const c of list){if(c.lat==null||c.lon==null||isNaN(c.lat)||xHid(c))continue;xAll.set(c.id,c)}
@@ -1788,9 +1789,11 @@ function say(key,text,vib,short){if(window.preview)return;const now=Date.now();i
   speak(vbose==='short'&&short?short:text,catVol(cat))}
 
 // zapytanie Overpass z pamięcią podręczną: bez internetu użyjemy ostatniego wyniku dla tego obszaru
+// Wersja 170: odczyt i zapis pamięci urządzenia mają limit czasu – zawieszona pamięć (zdarza się w Safari) nie może wstrzymać pobierania ani odebranego wyniku
+function idbQ(p,ms){return Promise.race([Promise.resolve(p).catch(()=>null),new Promise(r=>setTimeout(()=>r(null),ms||2000))])}
 async function cachedOverpass(key,q,ms){
-  try{const j=await fetchOverpass(q,ms);try{await idbSet('op|'+key,{t:Date.now(),j})}catch(e){}return j}
-  catch(e){let c=null;try{c=await idbGet('op|'+key)}catch(_){}if(c&&c.j)return c.j;throw e}
+  try{const j=await fetchOverpass(q,ms,key);await idbQ(idbSet('op|'+key,{t:Date.now(),j}),1500);return j}
+  catch(e){const c=await idbQ(idbGet('op|'+key),2500);if(c&&c.j)return c.j;throw e}
 }
 var xFails=0;
 var xOk=null;   // gdzie ostatnio udało się pobrać przejazdy (do czasu odpowiedzi nie mówimy „droga wolna”)
@@ -1801,50 +1804,83 @@ const xReady=p=>demo||!!(xOk&&dist(xOk.lat,xOk.lon,p.lat,p.lon)<3200);
 // adresu (w sieci komórkowej wielu użytkowników dzieli jeden adres), aplikacja pokazywała „brak danych o przejazdach”. Overpass zostaje jako źródło świeższe.
 const XS_BASE=(window.location.protocol==='https:'&&/\.github\.io$/.test(window.location.hostname))?new URL('przejazdy/',window.location.href).href:'https://tronbeczka.github.io/Pociong/przejazdy/';
 const xsIn=(lat,lon)=>lat>48.9&&lat<55.1&&lon>13.9&&lon<24.4;   // obszar wyciągu (Polska z okolicą)
-async function xsCell(k){
-  const u=(window.__xsBase||XS_BASE)+'c'+k+'.json';
-  try{
-    const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),8000);
-    let r;try{r=await fetch(u,{signal:ctl.signal})}finally{clearTimeout(to)}
-    if(r.status===404)return {e:[],f:0,none:1};   // komórki nie ma w bazie (np. poza Polską)
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const c=await r.json();if(!c||!Array.isArray(c.e))throw new Error('zły plik');
-    try{await idbSet('xs|'+k,{t:Date.now(),c})}catch{}
-    return c;
-  }catch{let m=null;try{m=await idbGet('xs|'+k)}catch{}if(m&&m.c)return m.c;return null}   // bez sieci: ostatnia zapisana kopia komórki
+// Wersja 170: komórka bazy z kilku dróg – ta sama domena; ta sama domena z ominięciem pamięci przeglądarki (uszkodzony albo ucięty wpis w pamięci Safari);
+// raw.githubusercontent.com. Kolejna droga startuje po błędzie poprzedniej albo po 2,5 s, pierwszy poprawny plik wygrywa, limit czasu obejmuje cały odczyt,
+// a na końcu jest kopia zapisana na urządzeniu. 404 ze wszystkich dróg = komórki nie ma w bazie. Wynik każdej drogi trafia do dziennika (okno po dotknięciu paska).
+const XS_RAW=(()=>{const L=window.location,m=L.hostname.match(/^([^.]+)\.github\.io$/);return 'https://raw.githubusercontent.com/'+(m?m[1]:'Tronbeczka')+'/'+(m?(L.pathname.split('/')[1]||'Pociong'):'Pociong')+'/main/przejazdy/'})();
+const XS_NONE=new Map();   // komórki, o których serwery powiedziały, że ich nie ma (przez 10 minut nie pytamy ponownie)
+async function xsCell(k,rec){
+  const nm='c'+k+'.json',info={k,v:[]};if(rec)rec.cells.push(info);
+  const nt=XS_NONE.get(k);if(nt&&Date.now()-nt<600000){info.via='brak komórki w bazie (404)';return {e:[],f:0,none:1}}
+  const base=window.__xsBase||XS_BASE,raw=window.__xsRaw||XS_RAW,t0=performance.now();
+  const C=[{u:base+nm,ms:8000,n:'baza'},{u:base+nm+'?r='+Date.now(),ms:8000,n:'baza bez pamięci',rl:1},{u:raw+nm,ms:9000,n:'raw.githubusercontent.com'}];
+  const sec=t=>((performance.now()-t)/1000).toFixed(1).replace('.',',')+' s';
+  const R=await new Promise(res=>{
+    let started=0,failed=0,nf=0,done=false;const ctls=[];
+    function fin(v){if(done)return;done=true;for(const c of ctls)try{c.abort()}catch{}res(v)}
+    function next(){if(done||started>=C.length)return;run(started++);if(started<C.length)setTimeout(next,2500)}
+    async function run(i){
+      const c=C[i],ctl=new AbortController(),t1=performance.now(),to=setTimeout(()=>ctl.abort(),c.ms);ctls.push(ctl);
+      try{
+        const r=await fetch(c.u,c.rl?{signal:ctl.signal,cache:'reload'}:{signal:ctl.signal});
+        if(r.status===404){nf++;throw new Error('HTTP 404')}
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        const tx=await r.text();let j=null;
+        try{j=JSON.parse(tx)}catch{throw new Error(tx.length?'odpowiedź nie jest plikiem JSON ('+tx.length+' B)':'pusta odpowiedź (0 B)')}
+        if(!j||!Array.isArray(j.e))throw new Error('zły plik');
+        if(!done)info.v.push(c.n+': '+tx.length+' B w '+sec(t1));
+        fin({c:j,n:c.n});
+      }catch(e){
+        if(done)return;
+        info.v.push(c.n+': '+(ctl.signal.aborted?'brak odpowiedzi w '+c.ms/1000+' s':String((e&&e.message)||e).slice(0,60))+' ('+sec(t1)+')');
+        if(++failed>=C.length)fin(nf>=C.length?{none:1}:null);else next();
+      }finally{clearTimeout(to)}
+    }
+    next();
+  });
+  if(R&&R.c){
+    info.via=R.n;info.ms=Math.round(performance.now()-t0);info.n=R.c.e.length;info.f=R.c.f?1:0;
+    await idbQ(idbSet('xs|'+k,{t:Date.now(),c:R.c}),1500);
+    return R.c;
+  }
+  if(R&&R.none){XS_NONE.set(k,Date.now());info.via='brak komórki w bazie (404)';return {e:[],f:0,none:1}}
+  const m=await idbQ(idbGet('xs|'+k),2500);   // bez sieci: ostatnia zapisana kopia komórki
+  if(m&&m.c&&Array.isArray(m.c.e)){info.via='kopia zapisana na urządzeniu';info.age=m.t?Date.now()-m.t:0;info.n=m.c.e.length;info.f=m.c.f?1:0;return m.c}
+  info.via='błąd';return null;
 }
-async function xStatic(lat,lon,R){
+async function xStatic(lat,lon,R,rec){
   if(window.__noXStatic||!xsIn(lat,lon))return null;
   R=R||4200;const dg=R/111195,dn=R/(111195*Math.cos(rad(lat))),ks=new Set();
   for(const a of [lat-dg,lat+dg])for(const o of [lon-dn,lon+dn])ks.add(Math.floor(a*2)+'_'+Math.floor(o*2));
-  const cs=await Promise.all([...ks].map(xsCell));
-  if(cs.some(c=>!c))return null;
-  const elements=[];let full=true,t='';
-  for(const c of cs){if(!c.f)full=false;if(c.t&&(!t||c.t<t))t=c.t;
+  const cs=await Promise.all([...ks].map(k=>xsCell(k,rec)));
+  const miss=cs.filter(c=>!c).length;if(rec)rec.miss=miss;
+  if(miss===cs.length)return null;   // Wersja 170: choć jedna komórka dotarła – pokazujemy przejazdy z niej (komunikat o niepełnych danych zostaje)
+  const elements=[];let full=!miss,t='';
+  for(const c of cs){if(!c)continue;if(!c.f)full=false;if(c.t&&(!t||c.t<t))t=c.t;
     for(const q of c.e)if(Math.abs(q[1]-lat)<dg&&dist(lat,lon,q[1],q[2])<R)elements.push({type:'node',id:q[0],lat:q[1],lon:q[2],tags:q[3]||{}})}
-  return {elements,full,t};
+  return {elements,full,t,miss};
 }
 async function loadCrossings(lat,lon){
   const LF=lastFetch={lat,lon};
   // 1) węzły oznaczone railway=level_crossing, 2) węzły wspólne toru i drogi (przejazdy, których nikt nie opisał tagami)
   const q=`[out:json][timeout:25];way(around:4000,${lat},${lon})["railway"~"^(rail|narrow_gauge|preserved)$"]["service"!~"."][!"bridge"][!"tunnel"]->.r;node(w.r)->.rn;way(bn.rn)["highway"]["highway"!~"^(footway|path|cycleway|steps|pedestrian|bridleway|construction|proposed|corridor|elevator)$"][!"bridge"][!"tunnel"]->.h;node(w.h)->.hn;(node.rn.hn;node(around:4000,${lat},${lon})["railway"="level_crossing"];);out;`;
   const q0=`[out:json][timeout:20];node(around:4000,${lat},${lon})["railway"="level_crossing"];out;`;
+  let got=false,ovJ=null,st=null;
   const apply=j=>{
-    const seen=new Set();crossings=j.elements.filter(e=>e.lat!=null&&!seen.has(e.id)&&seen.add(e.id)).map(xParse).filter(c=>!xHid(c));xAdd(crossings);xErr=0;xFails=0;xOk={lat,lon};
+    const seen=new Set();crossings=j.elements.filter(e=>e.lat!=null&&!seen.has(e.id)&&seen.add(e.id)).map(xParse).filter(c=>!xHid(c));xAdd(crossings);xErr=0;xFails=0;xOk={lat,lon};X_LOG.okAt=Date.now();X_LOG.okSrc=(ovJ?'Overpass':'')+(ovJ&&st?' + ':'')+(st?'baza przejazdów'+(st.t?' z '+st.t:''):'');
     xDerSync();xUserSync();
     xLayer.clearLayers();
   };
   // Overpass i baza z GitHub Pages równolegle; wynik to suma obu (przy tym samym węźle wygrywa Overpass – świeższe tagi)
-  let got=false,ovJ=null,st=null;
   const mix=()=>({elements:(ovJ?ovJ.elements:[]).concat(st?st.elements:[])});
-  const sP=xStatic(lat,lon).catch(()=>null).then(v=>{st=v;if(v&&v.full&&!got&&lastFetch===LF)apply(mix());window.xStat={at:Date.now(),n:v?v.elements.length:null,full:v?v.full:null,t:v?v.t:''};return v});   // pełna komórka: przejazdy od razu, bez czekania na Overpass
+  const sP=xStatic(lat,lon,0,X_LOG.st={at:Date.now(),cells:[]}).catch(()=>null).then(v=>{st=v;if(v&&v.full&&!got&&lastFetch===LF)apply(mix());window.xStat={at:Date.now(),n:v?v.elements.length:null,full:v?v.full:null,t:v?v.t:''};return v});   // pełna komórka: przejazdy od razu, bez czekania na Overpass
   try{ovJ=await cachedOverpass('x|'+Math.round(lat*20)+'|'+Math.round(lon*13),q0,12000);if(lastFetch===LF)apply(mix());got=true}catch(e){}   // szybko: tylko oznaczone przejazdy
   if(got)try{ovJ=await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q);if(lastFetch===LF)apply(mix())}catch(e){}   // potem pełne: także przejazdy bez tagów (gdy szybkie zapytanie nie przeszło, pełne też by nie przeszło)
   else{try{ovJ=await cachedOverpass('x2|'+Math.round(lat*20)+'|'+Math.round(lon*13),q,1500);if(lastFetch===LF)apply(mix());got=true}catch(e){}}   // sama pamięć urządzenia: bez sieci pokazujemy to, co zapisano
   await sP;
   if(lastFetch!==LF&&lastFetch!==null)return;   // w międzyczasie zaczęło się pobieranie dla innego miejsca
   if(st){apply(mix());if(st.full)got=true}
-  if(!got){lastFetch=null;xErr=Date.now();xFails++;if(st)xOk=null}   // komórka tylko częściowo w bazie (przy granicy): przejazdy pokazujemy, ale ostrzeżenie o niepełnych danych zostaje
+  if(!got){lastFetch=null;xErr=Date.now();xFails++;if(st)xOk=null;if(xFails>=2)xAutoProbe()}   // komórka tylko częściowo w bazie (przy granicy): przejazdy pokazujemy, ale ostrzeżenie o niepełnych danych zostaje
 }
 async function loadTrains(){
   if(demo||!feedUrl||gKey||gtfs)return;
@@ -3138,7 +3174,7 @@ async function xStaticRoute(P){   // P: [[lat,lon],…]; wynik: {elements, full}
       for(const x of [la-dg,la+dg])for(const y of [lo-dn,lo+dn])ks.add(Math.floor(x*2)+'_'+Math.floor(y*2))}
   }
   if(!ks.size||ks.size>90)return null;
-  const cs=await Promise.all([...ks].map(xsCell));
+  const cs=await Promise.all([...ks].map(k=>xsCell(k)));
   if(cs.some(c=>!c))return null;
   let full=!out_;for(const c of cs)if(!c.f)full=false;
   const RX=18,CS=200,lat0=P[0][0],lon0=P[0][1],cl0=Math.cos(rad(lat0)),grid=new Map();
@@ -5359,7 +5395,7 @@ function infoText(p){
       else if(age!=null&&age>8)dq='opóźnienia pociągów sprzed '+fmtAge(age)+' – godziny mogą się różnić';
       else if(age!=null&&age<-2)dq='zegar urządzenia chyba się spóźnia – czasy pociągów mogą być przesunięte';
     }else if(feedUrl&&feedAt&&Date.now()-feedAt>60000)dq='dane o pociągach nieaktualne';
-    if(!dq&&xErr&&Date.now()-xErr<180000&&!xReady(p)&&route&&nav)dq='nie udało się pobrać przejazdów kolejowych – ponawiam';   // bez trasy mówi o tym już baner
+    if((!dq||soft)&&xErr&&Date.now()-xErr<180000&&!xReady(p)&&route&&nav){dq='nie udało się pobrać przejazdów kolejowych – ponawiam';soft=false}   // bez trasy mówi o tym już baner; Wersja 170: ważniejsze od neutralnego „wczytuję opóźnienia…”, które inaczej by je przykrywało
   }
   $('info').classList.toggle('warn',!!dq&&!soft);
   const parts=[dq,src,vec&&vecErr?(OWNER?vecErr:'problem z wczytaniem mapy – ponawiam'):'',route&&ttKey&&bad(ttSt)?(OWNER?'ruch: '+ttSt:'brak danych o ruchu'):'',route&&ttKey&&!off?flNote():'',route&&wxTxt&&!/bez opadów/.test(wxTxt)?wxTxt.replace(/^na trasie /,''):''].filter(Boolean);
@@ -5500,18 +5536,20 @@ function ovQuery(lat,lon,R,full){
   return '[out:json][timeout:25];(way["highway"~"^('+hw+')$"]'+bb+';way["railway"~"^(rail|light_rail|tram|narrow_gauge)$"]'+bb+';way["natural"="water"]'+bb+';way["waterway"~"^(river|canal)$"]'+bb+';way["leisure"~"^(park|garden)$"]'+bb+(full?';way["building"]'+bb:'')+';);out geom qt;';
 }
 // zapytanie idzie równolegle do trzech serwerów, wygrywa najszybszy
-function fetchOverpass(q,ms){
+function fetchOverpass(q,ms,tag){
   const urls=['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
   const ctl=urls.map(()=>new AbortController());
-  return new Promise((ok,no)=>{let fails=0,err='';
+  return new Promise((ok,no)=>{let fails=0,err='',won=false;
+    const t0=performance.now(),rec=tag?{t:Date.now(),tag,r:{}}:null,note=(i,x)=>{if(rec&&!rec.r[i])rec.r[i]={h:urls[i].split('/')[2],s:x,ms:Math.round(performance.now()-t0)}};   // Wersja 170: wynik każdego serwera do okna ze stanem danych
+    if(rec){X_LOG.ov.push(rec);if(X_LOG.ov.length>8)X_LOG.ov.shift()}
     const to=setTimeout(()=>ctl.forEach(c=>c.abort()),window.__ovTo||ms||26000);   // zawieszone połączenie: po 26 s (szybkie zapytania: krócej) rezygnujemy
     const done=f=>x=>{clearTimeout(to);f(x)};ok=done(ok);no=done(no);
     urls.forEach((u,i)=>{
       fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),signal:ctl[i].signal})
         .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
         .then(j=>{if(!j||!Array.isArray(j.elements)||(j.remark&&/runtime error|timed out|out of memory/i.test(j.remark)))throw new Error('overpass: '+(j&&j.remark||'bad'));   // przeciążony serwer odpowiada kodem 200 i uwagą o przekroczonym czasie (zwykle z pustym lub niepełnym wynikiem) – to nie jest odpowiedź, tylko błąd: bierzemy ją od innego serwera albo z pamięci urządzenia
-          ctl.forEach((c,k)=>{if(k!==i)c.abort()});ok(j)})
-        .catch(e=>{err=e.message;if(++fails===urls.length)no(new Error(err))});
+          won=true;note(i,'ok');ctl.forEach((c,k)=>{if(k!==i)c.abort()});ok(j)})
+        .catch(e=>{note(i,won?'przerwano (wygrał inny serwer)':ctl[i].signal.aborted?'brak odpowiedzi w '+Math.round((window.__ovTo||ms||26000)/1000)+' s':String((e&&e.message)||e).slice(0,50));err=e.message;if(++fails===urls.length)no(new Error(err))});
     });
   });
 }
@@ -9365,11 +9403,62 @@ function liveEnv(){   // w jakiej przeglądarce to działa (Safari, Messenger, e
   const ua=navigator.userAgent||'',io=/iPhone|iPad|iPod/.test(ua),m=ua.match(/OS (\d+)[_.](\d+)/);
   let sa=false;try{sa=navigator.standalone===true||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)}catch{}
   const app=/FBAN|FBAV|FB_IAB|FBIOS|Messenger/i.test(ua)?'Messenger/Facebook':/Instagram/i.test(ua)?'Instagram':/CriOS/.test(ua)?'Chrome (iOS)':/FxiOS/.test(ua)?'Firefox (iOS)':/EdgiOS/.test(ua)?'Edge (iOS)':/Safari\//.test(ua)&&!/Chrome|Android/.test(ua)?'Safari':/Chrome/.test(ua)?'Chrome':io?'przeglądarka w aplikacji':'przeglądarka';
-  return (($('ver')||{}).textContent||'')+' · '+app+(io&&m?' (iOS '+m[1]+'.'+m[2]+')':'')+(sa?' · ekran początkowy':'');
+  return (($('ver')||{}).textContent||'')+' · '+app+(io&&m?' (iOS '+m[1]+'.'+m[2]+')':'')+(sa?' · ekran początkowy':'')+(window.location.host?' · '+window.location.host+window.location.pathname.replace(/index\.html$/,''):'');
+}
+// Wersja 170: stan pobierania przejazdów kolejowych – własna baza (komórki z GitHub Pages) i serwery Overpass – oraz wynik testu połączeń
+function xWhy(){
+  if(demo)return [];
+  const n=Date.now(),L=[],S=X_LOG.st,sec=t=>(t/1000).toFixed(1).replace('.',',')+' s';
+  const near=!!(xOk&&last&&dist(xOk.lat,xOk.lon,last.lat,last.lon)<3200),failing=!near&&!!xErr&&n-xErr<180000;
+  if(near)L.push('Przejazdy kolejowe: wczytane'+(crossings.length?' ('+crossings.length+' w okolicy)':' (brak w okolicy)')+(X_LOG.okSrc?' – '+X_LOG.okSrc:''));
+  else if(failing){const w=xErr+Math.min(60000,6000*Math.pow(2,Math.max(0,xFails-1)))-n;L.push('Przejazdy kolejowe: nie udało się pobrać'+(xFails?' (próba '+xFails+')':'')+' – ponawiam'+(w>0?' za '+liveAgo(w):''))}
+  else L.push('Przejazdy kolejowe: jeszcze niewczytane'+(lastFetch?' (pobieranie trwa)':''));
+  if(!near||OWNER||X_LOG.probe){
+    if(S&&S.cells.length)for(const c of S.cells){
+      const f=c.v.filter(x=>!/ B w /.test(x)).join('; '),ago=ms=>ms<5400000?liveAgo(ms):ms<172800000?Math.round(ms/3600000)+' godz.':Math.round(ms/86400000)+' dni';
+      L.push('• komórka '+c.k+': '+(!c.via?'pobieranie…'+(f?' ('+f+')':''):c.via==='błąd'?'✗ '+f:/^brak/.test(c.via)?c.via:c.via.startsWith('kopia')?'kopia z urządzenia'+(c.age?' (sprzed '+ago(c.age)+')':'')+', '+c.n+' przejazdów – sieć: '+f:c.n+' przejazdów, '+(c.f?'pełna':'częściowa')+' ('+c.via+', '+sec(c.ms)+')'+(f?' – wcześniej: '+f:'')));
+    }
+    const o=[...X_LOG.ov].reverse().find(x=>/^x2?\|/.test(x.tag));
+    if(o){const rs=Object.keys(o.r).map(i=>o.r[i]);L.push('• Overpass (sprzed '+liveAgo(n-o.t)+'): '+(rs.length?rs.map(r=>r.h+' – '+r.s+' ('+sec(r.ms)+')').join('; '):'czeka na odpowiedź'))}
+    else L.push('• Overpass: jeszcze nie pytano');
+    if(X_LOG.probe)L.push('Test połączeń:',X_LOG.probe);
+  }
+  return L;
+}
+// jednorazowy test połączeń (po „Spróbuj ponownie” i samoczynnie po dwóch nieudanych pobraniach przejazdów): baza przejazdów (dwie drogi), serwery Overpass i pamięć urządzenia
+async function xProbe(){
+  if(X_LOG.probing)return;X_LOG.probing=true;X_LOG.probeAt=Date.now();X_LOG.probe='trwa…';
+  const sec=t=>((performance.now()-t)/1000).toFixed(1).replace('.',',')+' s';
+  const one=async(nm,url,init)=>{
+    const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),9000),t0=performance.now();
+    try{const r=await fetch(url,Object.assign({signal:ctl.signal},init||{})),tx=await r.text();return (r.ok?'✓ ':'✗ ')+nm+': HTTP '+r.status+', '+tx.length+' B, '+sec(t0)}
+    catch(e){return '✗ '+nm+': '+(ctl.signal.aborted?'brak odpowiedzi w 9 s':String((e&&e.message)||e).slice(0,50))+' ('+sec(t0)+')'}
+    finally{clearTimeout(to)}
+  };
+  const idbT=async()=>{const t0=performance.now();
+    try{await Promise.race([(async()=>{await idbSet('probe',{t:Date.now()});await idbGet('probe')})(),new Promise((_,no)=>setTimeout(()=>no(new Error('brak odpowiedzi w 4 s')),4000))]);return '✓ pamięć urządzenia (IndexedDB): zapis i odczyt w '+sec(t0)}
+    catch(e){return '✗ pamięć urządzenia (IndexedDB): '+String((e&&e.message)||e).slice(0,50)}};
+  const body='data='+encodeURIComponent('[out:json][timeout:5];node(1);out ids;');
+  try{
+    const R=await Promise.all([
+      one('baza przejazdów (ta sama domena)',(window.__xsBase||XS_BASE)+'meta.json?p='+Date.now(),{cache:'no-store'}),
+      one('baza przejazdów (raw.githubusercontent.com)',(window.__xsRaw||XS_RAW)+'meta.json?p='+Date.now(),{cache:'no-store'}),
+      ...['overpass-api.de/api/interpreter','overpass.private.coffee/api/interpreter','overpass.kumi.systems/api/interpreter'].map(u=>one('Overpass '+u.split('/')[0],'https://'+u,{method:'POST',body})),
+      idbT()]);
+    X_LOG.probe=R.join('\n');
+  }catch(e){X_LOG.probe='test przerwany: '+String((e&&e.message)||e).slice(0,60)}
+  X_LOG.probing=false;
+}
+function xAutoProbe(){if(X_LOG.probing||Date.now()-X_LOG.probeAt<600000)return;xProbe().catch(()=>{})}
+function xRetry(){   // „Spróbuj ponownie”: przejazdy od razu (bez czekania na kolejną próbę) i test połączeń
+  xErr=0;xFails=0;lastFetch=null;X_LOG.probeAt=0;
+  try{if(last&&!demo)loadCrossings(last.lat,last.lon)}catch{}
+  xProbe().catch(()=>{});
 }
 function liveWhy(){
   const n=Date.now(),L=[];
   L.push('Internet: '+(netOff()?'brak połączenia':'połączony'));
+  L.push(...xWhy());
   L.push(liveN?'Opóźnienia pociągów: '+liveN+' kursów, dane sprzed '+liveAgo(n-liveTs):(gtfs?'Opóźnienia pociągów: brak danych':'Rozkład jazdy: jeszcze niewczytany'));
   if(gtfs)for(const S of LIVE_SRC)L.push('• '+S.name+liveHost(S)+': '+(S.err?S.err+(S.nextAt>n?' (ponowię za '+liveAgo(S.nextAt-n)+')':''):S.ok?'działa':'jeszcze nie sprawdzano')+liveLast(S));
   const R=route;
@@ -9382,6 +9471,7 @@ function liveRetry(){
   LIVE_SRC.forEach(S=>{S.nextAt=0});LV.fails=0;LV.at=0;
   if(!LV.busy)loadLive(true).catch(()=>{});
   if(route){route.fsRetry=0;route.fsErr=0;route.fsAt=0}
+  xRetry();
 }
 {const el=$('info');if(el)el.onclick=async()=>{
   if(el.style.display==='none')return;
