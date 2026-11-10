@@ -313,6 +313,7 @@ body.big #bmain{font-size:1.35em}body.big #bsub{font-size:1.1em}body.big #menu b
 #spd{font-size:1.7rem;font-weight:700;line-height:1}
 #speed small{font-size:.65rem;color:#5f6368}
 #attr{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 70px);z-index:900;font-size:10px;background:#fffc;color:#222;padding:1px 5px;border-radius:4px;white-space:nowrap}
+body.night #attr{background:rgba(20,24,32,.72);color:#b9c2cf}
 #rt{margin:0 0 14px;text-align:left}
 .fld{display:flex;align-items:center;gap:8px;background:#1b2330;border-radius:12px;padding:4px 10px;margin-bottom:8px}
 .fld span{flex:none;width:24px;height:24px;border-radius:50%;background:#4285f4;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800}
@@ -589,6 +590,7 @@ body.night #speed.over #spd{color:#ff8a80}
 #tmeta2,#tmeta{font-size:.76rem}
 #nextStrip span{background:rgba(22,26,34,.9);border-radius:999px;padding:5px 12px;font-weight:600;font-size:.95rem;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 3px 10px rgba(0,0,0,.28)}
 #nextStrip span.w{background:rgba(190,38,30,.95)}
+#nextStrip span.w1{background:rgba(27,72,130,.95)}#nextStrip span.w2{background:rgba(150,92,8,.96)}   /* Wersja 173: deszcz – niebieski, śnieg i mgła – bursztynowy, czerwony zostaje dla burzy i gołoledzi */
 #nextStrip{justify-content:flex-start}
 #sig{font-weight:600;font-size:1.02rem}
 #sig,body.night #sig{background:var(--u-surf);color:var(--u-ink);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1)}
@@ -1420,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 172</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 173</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1655,7 +1657,10 @@ function makeBase(){
   return k?L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key='+encodeURIComponent(k),{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'})
           :L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
 }
-osm=makeBase().addTo(map);
+// Wersja 173: podkład rastrowy (kafelki OSM albo Google) jest dołączany do mapy dopiero w trybie „Mapa: kafelki”. Dotąd był dołączony zawsze – ukryty pod mapą wektorową –
+// i przy każdym uruchomieniu pobierał kilkadziesiąt kafelków, których nikt nie widział (zmierzone z prawdziwą biblioteką Leaflet: 56 zapytań na start).
+var rasterOn=false;
+osm=makeBase();
 try{document.getElementById('tkey').value=localStorage.getItem('tkey')||''}catch(e){}
 const me=L.circleMarker([0,0],{radius:9,color:'#fff',fillColor:'#2b6cb0',fillOpacity:1,weight:3});
 const xLayer=L.layerGroup().addTo(map), tLayer=L.layerGroup().addTo(map);
@@ -2033,7 +2038,7 @@ function evaluate(p){
   const near=ahead[0], n=Math.round(near.d/10)*10;
   if(trip&&near.d<40)trip.xs.add(near.c.id);
   window._nearX={id:near.c.id,d:near.d,lat:near.c.lat,lon:near.c.lon,t:Date.now()};
-  setDist(n>=1000?(n/1000).toFixed(1)+' km':n+' m');
+  setDist(fmtD(n));
   // zagrożenie pociągiem dla każdego przejazdu przed nami
   let threat=null, maybe=null, recent=null, nearestTd=Infinity;
   const nowS=nowT();
@@ -2074,7 +2079,7 @@ function evaluate(p){
     window._thr={id:threat.a.c.id,eta:s,d:m};
     if(s<=45&&threat.a.d<400&&!((p.speed||0)<1&&threat.a.d<120))showAlarm(s,m,threat.a.c.id);
     const R=threat.r,weak=R&&R.q==='sched',old=R&&(R.q==='old'||R.q==='stale');
-    setBanner('bad','Nadjeżdża pociąg',`Pociąg ${fmtTE(s)}${bar}${(p.speed||0)<2&&threat.a.d<250&&G.k!=='none'?' · otwarcie ok. '+xOpenIn(threat,s)+' s':''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}${R?dataNote(R):''}${nTr>=2?' · drugi pociąg: sprawdź drugi tor':''}`);
+    setBanner('bad','Nadjeżdża pociąg',`Pociąg ${fmtTE(s)}${bar}${(p.speed||0)<2&&threat.a.d<250&&G.k!=='none'?' · otwarcie ok. '+fmtS(xOpenIn(threat,s)):''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}${R?dataNote(R):''}${nTr>=2?' · drugi pociąg: sprawdź drugi tor':''}`);
     say('t'+threat.a.c.id,`${weak?'Proszę uważać, według rozkładu jazdy nadjeżdża pociąg.':'Proszę uważać, nadjeżdża pociąg.'} Przejazd kolejowy za ${m} metrów. Proszę zwolnić.${old?' Dane o opóźnieniach nie są aktualne.':''}`,[300,120,300],'Nadjeżdża pociąg, proszę zwolnić');
   }else if(recent){
     const ago=Math.max(5,Math.round(-recent.r.eta/5)*5);
@@ -2089,7 +2094,7 @@ function evaluate(p){
     xNearId=near.c.id;
     let tn;   // informacja o pociągach przy najbliższym przejeździe
     if(gtfs&&!gKey&&!feedUrl){const nx=xNextInfo(near.c);tn=nx==null?' · rozkład się wczytuje':nx.m==null?' · brak pociągów pasażerskich w najbliższych 3 godzinach'+dataNote(nx,1):' · najbliższy pociąg '+(nx.m<1?'za chwilę':'za ok. '+(nx.m<60?nx.m+' min':Math.floor(nx.m/60)+' h '+(nx.m%60)+' min'))+dataNote(nx,1)}
-    else tn=nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1)} km od przejazdu`:' · brak pociągów w pobliżu';
+    else tn=nearestTd<8000?` · najbliższy pociąg ${(nearestTd/1000).toFixed(1).replace('.',',')} km od przejazdu`:' · brak pociągów w pobliżu';
     setBanner('warn',near.c.nb?'Przejazd bez zapór':'Przejazd kolejowy',((crossRisk(near.c)>=3&&!near.c.nb?'Wymaga szczególnej uwagi':'')+tn+feedNote).replace(/^\s*·\s*/,'').replace(/^./,ch=>ch.toUpperCase()));
     {const stg=near.d>150?'far':'near';   // zwykła zapowiedź przejazdu: raz z wyprzedzeniem i raz tuż przed nim (ostrzeżenia o pociągu powtarzają się osobno)
       if(annOnce('x',near.c.lat,near.c.lon,stg))say('x'+near.c.id+stg,stg==='near'?(near.c.nb?'Przejazd kolejowy bez zapór.':'Przejazd kolejowy.'):(near.c.nb?`Za ${n} metrów przejazd kolejowy bez zapór. Proszę zwolnić i się rozejrzeć.`:`Za ${n} metrów przejazd kolejowy.`)+(crossRisk(near.c)>=3&&!near.c.nb?' Ten przejazd wymaga szczególnej uwagi.':''),near.c.nb?[250,120,250]:[150],near.c.nb?'Przejazd bez zapór, proszę uważać':'Przejazd kolejowy')}
@@ -2245,19 +2250,20 @@ try{gmKey=localStorage.getItem('gmkey')||'';$('gmkey').value=gmKey}catch(e){}
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
 function backToOsm(msg){
   if(gmLayer){map.removeLayer(gmLayer);gmLayer=null}
-  if(!map.hasLayer(osm))osm.addTo(map);
+  if(rasterOn&&!map.hasLayer(osm))osm.addTo(map);
   $('attr').textContent=osmAttr;
   if(msg)setBanner('warn','Google Maps niedostępne',msg);
 }
 window.gm_authFailure=()=>backToOsm('Klucz odrzucony – sprawdź włączone API, rozliczenia i ograniczenia. Użyto OpenStreetMap.');
 async function useGoogle(){
   backToOsm();
-  if(!gmKey)return;
+  if(!gmKey||!rasterOn)return;
   try{
     if(!(window.google&&google.maps&&google.maps.Map))
       await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(gmKey));
     if(!(L.gridLayer&&L.gridLayer.googleMutant))
       await loadScript('https://cdn.jsdelivr.net/npm/leaflet.gridlayer.googlemutant@0.13.5/dist/Leaflet.GoogleMutant.js');
+    if(!rasterOn)return;   // w trakcie wczytywania biblioteki mapa wróciła do trybu wektorowego
     gmLayer=L.gridLayer.googleMutant({type:'roadmap',maxZoom:20}).addTo(map);
     $('attr').textContent='Map data © Google';
     map.removeLayer(osm);
@@ -2439,6 +2445,30 @@ function routeAt(R,d){
   const L=R.cum[hi]-R.cum[lo],f=L>0?(d-R.cum[lo])/L:0;
   return [R.pts[lo][0]+(R.pts[hi][0]-R.pts[lo][0])*f,R.pts[lo][1]+(R.pts[hi][1]-R.pts[lo][1])*f];
 }
+// Wersja 173: czas przejazdu wzdłuż trasy. Serwer tras podaje czas każdego kroku; z kroków powstaje profil „droga → sekundy od startu”. Dotąd czas do celu liczono proporcjonalnie
+// do pozostałej drogi (czas całej trasy × ułamek drogi): na trasie „najpierw miasto, potem autostrada” po wyjeździe z miasta zawyżało to czas do celu nawet o kilkanaście minut,
+// a prognozy „o której będę na przejeździe” i „jaka pogoda będzie w tym miejscu” trafiały w złą godzinę. Bez czasów kroków (stara zapisana trasa) zostaje proporcja.
+function routeProfile(R,steps){   // steps: [{dist,dur}] → R.tp={d:[m],t:[s]} od (0,0) do (R.len,R.dur)
+  R.tp=null;if(!steps||!steps.length||!(R.len>0)||!(R.dur>0))return;
+  let sd=0,st=0;const d=[0],t=[0];
+  for(const x of steps){
+    if(x.dist==null||x.dur==null)return;const dd=+x.dist,dt=+x.dur;if(!(dd>=0)||!(dt>=0))return;
+    if(dd===0&&dt===0)continue;sd+=dd;st+=dt;d.push(sd);t.push(st)}
+  if(!(sd>0)||!(st>0)||d.length<3)return;   // jeden krok to to samo co proporcja
+  const kd=R.len/sd,kt=R.dur/st;
+  if(kd<.8||kd>1.25)return;   // kroki nie opisują tej linii
+  for(let i=0;i<d.length;i++){d[i]*=kd;t[i]*=kt}
+  d[d.length-1]=R.len;t[t.length-1]=R.dur;
+  R.tp={d,t};
+}
+function routeT(R,x){   // sekundy od startu trasy do miejsca x metrów wzdłuż trasy
+  if(!R||!(R.len>0))return 0;
+  x=Math.max(0,Math.min(R.len,+x||0));
+  const p=R.tp;if(!p)return (R.dur||0)*x/R.len;
+  let lo=0,hi=p.d.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(p.d[m]<=x)lo=m;else hi=m}
+  const L=p.d[hi]-p.d[lo];return p.t[lo]+(L>0?(x-p.d[lo])/L:0)*(p.t[hi]-p.t[lo]);
+}
+function routeRem(R,x){return R&&R.len>0?Math.max(0,routeT(R,R.len)-routeT(R,x==null?(R.along||0):x)):0}   // sekundy do celu od miejsca x (domyślnie: od auta)
 // ROUTE-PURE-END
 function setRoute(coords,dur,steps,jam,delay,inc){
   arrivedAt=0;
@@ -2446,6 +2476,9 @@ function setRoute(coords,dur,steps,jam,delay,inc){
   document.body.classList.add('navr');
   route=makeRoute(coords,dur);route.inc=inc||[];route.jam0=(jam&&jam.length>=route.pts.length-1)?jam:null;route.jam=route.jam0;route.fsAt=0;route.fsTo=0;route.delay=delay||0;routeSeg=route.pts;routeSegI=0;navSaid={};
   let o=0;route.steps=(steps||[]).map(x=>{const y={...x,off:o};o+=x.dist;return y});
+  routeProfile(route,steps);
+  // Wersja 173: po przeliczeniu trasy w czasie jazdy prognoza znikała z mapy aż do odświeżenia co 25 min – teraz nowa trasa dostaje ją po kilku sekundach (planer pobiera ją sam, od razu)
+  clearTimeout(setRoute.wxT);{const R=route;setRoute.wxT=setTimeout(()=>{if(route===R&&!R.wx&&!demo&&!sim&&!window.preview)loadWeather(R)},4000)}
   rCase.setLatLngs(route.pts);rLine.setLatLngs(route.pts);
   try{saveResume()}catch(e){}   // trasa do wznowienia po odświeżeniu strony
   try{camRouteAt=Date.now();camRoute(0)}catch(e){}   // fotoradary i odcinkowe pomiary wzdłuż trasy
@@ -2580,7 +2613,7 @@ function navUpdate(){
   if(!route)lnRender(null);
   if(rerouting&&route){lnRender(null);nav={txt:'Przeliczam trasę…',icon:navIcon('round'),dist:'',d:0,i:-1,then:'Zjechałeś z trasy – szukam najszybszej drogi'};return}
   if(!route||!route.steps||route.steps.length<2)return;
-  if(route.off>150&&route.offN>=2){lnRender(null);nav={txt:'Poza trasą',icon:navIcon('round'),dist:route.off>=1000?(route.off/1000).toFixed(1)+' km':Math.round(route.off/10)*10+' m',d:route.off,i:-1,then:'Wróć na wyznaczoną trasę albo poczekaj na nową'};return}   // zjechaliśmy daleko, a nowej trasy nie ma (brak sieci): nie podajemy skrętów dla odległego punktu trasy
+  if(route.off>150&&route.offN>=2){lnRender(null);nav={txt:'Poza trasą',icon:navIcon('round'),dist:fmtD(route.off),d:route.off,i:-1,then:'Wróć na wyznaczoną trasę albo poczekaj na nową'};return}   // zjechaliśmy daleko, a nowej trasy nie ma (brak sieci): nie podajemy skrętów dla odległego punktu trasy
   const st=route.steps;let i=1;
   while(i<st.length-1&&st[i].off<route.along-8)i++;
   if(route.navI>i&&route.along>st[route.navI-1].off-40)i=route.navI;   // krok nie wraca przez szum GPS tuż za punktem manewru (postój na światłach przy zakręcie)
@@ -2674,27 +2707,37 @@ function wxKind(code,mm,t,vis){
   if(mm>=0.3||[51,53,55,61,63,65,80,81,82].includes(code))return ['deszcz',2];
   return ['bez opadów',0];
 }
+const WX_ART={'deszcz':'możliwy deszcz','śnieg':'możliwy śnieg','mgła':'możliwa mgła','burza':'możliwa burza','gołoledź':'możliwa gołoledź'};
+const wxTemp=t=>(t<0?'−'+(-t):String(t))+'°';   // temperatura z prawdziwym minusem
+// Wersja 173: (1) próbki leżą wzdłuż POZOSTAŁEJ trasy – po odświeżeniu w czasie jazdy większość dawnych próbek była już za autem; (2) godzina prognozy to czas dojazdu do punktu
+// liczony od teraz (dotąd: od chwili startu trasy, więc po godzinie jazdy prognoza dla celu była o godzinę za późna); (3) temperatura jest interpolowana między godzinami,
+// opad brany z godziny, w której tam będziemy (suma opadu w danych opisuje godzinę PRZED znacznikiem czasu); (4) „za ok. X km” liczy się od auta, nie od startu trasy;
+// (5) nieudane odświeżenie nie kasuje poprzedniej prognozy z mapy.
 async function loadWeather(R){
-  wxTxt='';$('wxinfo').textContent='';
+  if(!R.wx){wxTxt='';$('wxinfo').textContent=''}
   try{
-    const fr=[0,.17,.33,.5,.66,.83,1],pts=fr.map(f=>routeAt(R,R.len*f));R.wx=[];
+    const a0=Math.max(0,Math.min(R.len,R.along||0)),rem=R.len-a0,t0=routeT(R,a0);
+    const fr=[0,.17,.33,.5,.66,.83,1],ds=fr.map(f=>a0+rem*f),pts=ds.map(d=>routeAt(R,d));
     const url='https://api.open-meteo.com/v1/forecast?latitude='+pts.map(q=>q[0].toFixed(3)).join(',')+'&longitude='+pts.map(q=>q[1].toFixed(3)).join(',')+'&hourly=temperature_2m,precipitation,weather_code,visibility&forecast_days=2&timezone=auto';
     const r=await fetchT(url);if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json(),arr=Array.isArray(j)?j:[j];
+    const j=await r.json(),arr=Array.isArray(j)?j:[j],out=[];
     let worst=null,end=null;
     arr.forEach((w,k)=>{
-      const h=w.hourly;if(!h||!h.time)return;
-      const eta=Date.now()+R.dur*1000*fr[k],loc=eta+(w.utc_offset_seconds||0)*1000;
-      let i=Math.floor((loc-Date.parse(h.time[0]+'Z'))/3600000);i=Math.max(0,Math.min(h.time.length-1,i));
-      const kd=wxKind(h.weather_code[i],h.precipitation[i],h.temperature_2m[i],h.visibility&&h.visibility[i]);
-      const km=Math.round(R.len*fr[k]/1000);R.wx.push({d:R.len*fr[k],lat:pts[k][0],lon:pts[k][1],kd:kd[0],code:h.weather_code[i],t:Math.round(h.temperature_2m[i])});
-      if(k===arr.length-1)end={t:Math.round(h.temperature_2m[i]),kd:kd[0]};
+      const h=w.hourly;if(!h||!h.time||!h.time.length||k>=ds.length)return;
+      const eta=Date.now()+(routeT(R,ds[k])-t0)*1000,loc=eta+(w.utc_offset_seconds||0)*1000,N=h.time.length;
+      const x=Math.max(0,Math.min(N-1,(loc-Date.parse(h.time[0]+'Z'))/3600000)),i0=Math.floor(x),i1=Math.min(N-1,i0+1),f=x-i0,ic=f<.5?i0:i1;
+      const ta=h.temperature_2m[i0],tb=h.temperature_2m[i1],tv=ta==null?tb:tb==null?ta:ta+(tb-ta)*f;if(tv==null||isNaN(tv))return;
+      const kd=wxKind(h.weather_code[ic],h.precipitation[i1]||0,tv,h.visibility&&h.visibility[ic]);
+      const km=Math.round((ds[k]-a0)/1000);out.push({d:ds[k],lat:pts[k][0],lon:pts[k][1],kd:kd[0],code:h.weather_code[ic],t:Math.round(tv)});
+      if(k===arr.length-1)end={t:Math.round(tv),kd:kd[0]};
       if(kd[1]>0&&(!worst||kd[1]>worst.s))worst={kind:kd[0],s:kd[1],km,when:new Date(eta).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})};
     });
-    wxTxt=worst?('na trasie możliwy(a) '+worst.kind+(worst.km>0?' (ok. '+worst.km+' km, '+worst.when+')':' na starcie'))+(end?', u celu '+end.t+'°C':''):'na trasie bez opadów'+(end?', u celu '+end.t+'°C':'');
+    if(!out.length)throw new Error('pusta prognoza');
+    R.wx=out;
+    wxTxt=worst?('na trasie '+WX_ART[worst.kind]+(worst.km>0?' (za ok. '+worst.km+' km, '+worst.when+')':' już teraz'))+(end?', u celu '+wxTemp(end.t)+'C':''):'na trasie bez opadów'+(end?', u celu '+wxTemp(end.t)+'C':'');
     $('wxinfo').textContent='Pogoda: '+wxTxt;
-    if(worst&&worst.s>=3)setTimeout(()=>{if(route===R)say('wx',worst.kind==='gołoledź'?'Na trasie może być ślisko, możliwa gołoledź. Proszę zwolnić i zachować większy odstęp.':worst.kind==='mgła'?'Na trasie możliwa mgła i ograniczona widoczność. Proszę zwolnić i włączyć światła.':'Na trasie możliwa jest zła pogoda: '+worst.kind+'. Proszę jechać ostrożnie.',[100],'Na trasie możliwa '+worst.kind)},4000);
-  }catch(e){}
+    if(worst&&worst.s>=3)setTimeout(()=>{if(route===R)say('wx',worst.kind==='gołoledź'?'Na trasie może być ślisko, możliwa gołoledź. Proszę zwolnić i zachować większy odstęp.':worst.kind==='mgła'?'Na trasie możliwa mgła i ograniczona widoczność. Proszę zwolnić i włączyć światła.':'Na trasie możliwa jest zła pogoda: '+worst.kind+'. Proszę jechać ostrożnie.',[100],'Na trasie '+WX_ART[worst.kind])},4000);
+  }catch{}
 }
 // ---- Parkingi przy celu i stacje paliw przy trasie (OpenStreetMap) ----
 var poi=[];
@@ -2777,9 +2820,9 @@ function routeUpdate(p){
     route.jamGone=0;
     if(jamD<1500&&!route.jamSaid){route.jamSaid=Date.now();say('jam','Na trasie przed nami jest korek. Proszę zachować ostrożność.',[120,80,120],'Korek na trasie')}
   }else if(route.jamSaid){route.jamGone=route.jamGone||Date.now();if(Date.now()-route.jamGone>90000){route.jamSaid=0;route.jamGone=0}}
-  const rem=Math.max(0,route.len-r.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
+  const rem=Math.max(0,route.len-r.along),mins=Math.max(1,Math.round(routeRem(route,r.along)/60));
   const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  $('bsub').textContent=mins+' min · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
+  $('bsub').textContent=fmtMin(mins)+' · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
   if(rem<40){const cmp=finishTrip();try{arriveSay()}catch(e){}arrivedAt=Date.now();arrivedSub='Jesteśmy u celu'+cmp;setBanner('ok','Dojechaliśmy',arrivedSub);clearRoute();setTimeout(()=>{try{evToast('🅿️ Dojechałeś na miejsce','Zapisać, gdzie zaparkowałeś?',[['Zapisz',saveParking],['Nie',()=>{}]],20000)}catch(e){}},2500);return}
   // zjechanie z trasy (zły skręt): po ~3 s poza trasą liczymy nową, najszybszą od bieżącej pozycji
   // równoległa droga tuż obok trasy (do ~100 m) i jazda zgodnie z jej kierunkiem to nie zjechanie z trasy (błąd GPS, inny pas, dojazd do skrzyżowania)
@@ -2822,7 +2865,8 @@ function ttRoute(r){
   });
   const ins=((r.guidance&&r.guidance.instructions)||[]).filter(x=>TT_MAN[x.maneuver]);
   const steps=fixSteps(ins.map((x,i)=>{const m=TT_MAN[x.maneuver],nx=ins[i+1];
-    return {type:m[0],mod:m[1],exit:x.roundaboutExitNumber,name:x.street||x.roadNumbers&&x.roadNumbers[0]||'',dist:nx?Math.max(0,nx.routeOffsetInMeters-x.routeOffsetInMeters):0}}));
+    return {type:m[0],mod:m[1],exit:x.roundaboutExitNumber,name:x.street||x.roadNumbers&&x.roadNumbers[0]||'',dist:nx?Math.max(0,nx.routeOffsetInMeters-x.routeOffsetInMeters):0,
+      dur:!nx?0:(nx.travelTimeInSeconds!=null&&x.travelTimeInSeconds!=null?Math.max(0,nx.travelTimeInSeconds-x.travelTimeInSeconds):null)}}));
   const sm=r.summary||{};
   return {geometry:{coordinates:coords},duration:sm.travelTimeInSeconds,distance:sm.lengthInMeters,steps,jam,inc,delay:sm.trafficDelayInSeconds||0,traffic:true};
 }
@@ -2859,7 +2903,7 @@ function sameAsRoute(R,rt){
 // kroki po punkcie pośrednim: „ruszaj” w środku trasy znika, jego długość dolicza się do poprzedniego kroku
 function fixSteps(st){
   const out=[];
-  st.forEach((x,i)=>{if(i>0&&x.type==='depart'&&out.length){out[out.length-1].dist+=x.dist}else out.push(x)});
+  st.forEach((x,i)=>{if(i>0&&x.type==='depart'&&out.length){const q=out[out.length-1];q.dist+=x.dist;if(q.dur!=null&&x.dur!=null)q.dur+=x.dur;else q.dur=null}else out.push(x)});
   return out;
 }
 async function fetchRoute(a,b,hdg){
@@ -2884,7 +2928,7 @@ async function fetchRouteOsrm(a,b,hdg){
   }
   if(j.code!=='Ok'||!j.routes||!j.routes[0])throw new Error('nie znaleziono trasy ('+(j.code||'brak odpowiedzi')+')');
   const rt=j.routes[0];
-  rt.steps=fixSteps([].concat(...(rt.legs||[]).map(l=>(l.steps||[]).map(x=>({type:x.maneuver.type,mod:x.maneuver.modifier||'',exit:x.maneuver.exit,name:x.name||'',dist:x.distance})))));
+  rt.steps=fixSteps([].concat(...(rt.legs||[]).map(l=>(l.steps||[]).map(x=>({type:x.maneuver.type,mod:x.maneuver.modifier||'',exit:x.maneuver.exit,name:x.name||'',dist:x.distance,dur:x.duration})))));
   return rt;
 }
 function gpsNow(){return new Promise((ok,no)=>{
@@ -3035,7 +3079,7 @@ function fitGeom(ov){
   const pk=shown('pick'),br=shown('bar');
   let bot=(br&&br.top>H*.5?br.top:H-110)-34;   // dół: miejsce na znacznik startu nad paskiem i podpisem mapy
   if(pk&&pk.top>H*.2)bot=Math.min(bot,pk.top-14);   // panel planera zasłania dół ekranu
-  const top=Math.max(uiTopLim||0,100)+18+34,left=54,right=W-60;   // góra: miejsce na szpilkę celu (rysowana nad punktem); po bokach – kolumny przycisków (ok. 62 px)
+  const top=Math.max(uiTopLim||0,100)+18+34,left=76,right=W-84;   // góra: miejsce na szpilkę celu (rysowana nad punktem); po bokach – kolumny przycisków (ok. 62 px) i połowa szerokości auta, szpilki albo znaku przejazdu (Wersja 173: dotąd 54 i 60 – auto na brzegu trasy chowało się pod przyciskami)
   const availW=Math.max(140,right-left),availH=Math.max(140,bot-top);
   const sc=Math.max(MINS,Math.min(2.4,availW/bw,availH/bh)),xc=left+availW/2,yc=top+availH/2;
   return {s:sc,lat:cLat-(H*.68-yc)/sc/111195,lon:cLon-(xc-W/2)/sc/(111195*Math.cos(rad(cLat))),box:{la0,la1,lo0,lo1,bw,bh},rect:{l:left,t:top,r:right,b:bot}};
@@ -3129,6 +3173,7 @@ function startMark(x,y,k){
 }
 function pin(x,y,k,col){
   const r=Math.max(10,Math.min(30,14*k));
+  mx.beginPath();mx.ellipse(x,y+1,r*.5,r*.19,0,0,6.2832);mx.fillStyle='rgba(0,0,0,.26)';mx.fill();   // Wersja 173: cień u podstawy – szpilka „stoi” na mapie
   mx.beginPath();mx.moveTo(x,y);mx.bezierCurveTo(x-r*1.2,y-r*1.1,x-r,y-r*2.6,x,y-r*2.6);
   mx.bezierCurveTo(x+r,y-r*2.6,x+r*1.2,y-r*1.1,x,y);mx.fillStyle=col||'#d93025';mx.fill();mx.lineWidth=2;mx.strokeStyle='#fff';mx.stroke();
   mx.beginPath();mx.arc(x,y-r*1.65,r*.42,0,6.2832);mx.fillStyle='#fff';mx.fill();
@@ -3136,7 +3181,11 @@ function pin(x,y,k,col){
 
 
 // ---- Wygląd jak w nawigacji Google: menu, zakończenie, pasek informacji ----
-const fmtD=m=>m>=1000?(m/1000).toFixed(1)+' km':Math.round(m/10)*10+' m';
+// Wersja 173: jeden zapis odległości i czasu w całej aplikacji – przecinek dziesiętny („4,8 km”, dotąd w kilku miejscach kropka), 995–999 m to już „1,0 km” (dotąd „1000 m”),
+// a czas od godziny w górę to „2 h 5 min” (dotąd „125 min”)
+function fmtD(m){return m>=995?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m'}
+function fmtMin(m){return m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'}
+function fmtS(x){return x<90?x+' s':String(Math.round(x/30)/2).replace('.',',')+' min'}   // czas oczekiwania: do 1,5 min w sekundach, dalej w minutach co pół
 
 ['start'].forEach(id=>$(id).addEventListener('click',()=>$('menu').classList.remove('open')));
 $('closeNav').onclick=()=>{
@@ -3354,9 +3403,9 @@ $('hist').onclick=()=>{
 $('share').onclick=async()=>{
   $('menu').classList.remove('open');
   if(!route||!endPt){note('Najpierw wyznacz trasę');return}
-  const rem=Math.max(0,route.len-route.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
+  const mins=Math.max(1,Math.round(routeRem(route)/60));
   const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  const txt='Jadę do: '+(F.to.el.value||'celu')+'. Przyjazd ok. '+eta+' (za '+mins+' min). Cel: https://www.google.com/maps/dir/?api=1&destination='+endPt.lat+','+endPt.lon;
+  const txt='Jadę do: '+(F.to.el.value||'celu')+'. Przyjazd ok. '+eta+' (za '+fmtMin(mins)+'). Cel: https://www.google.com/maps/dir/?api=1&destination='+endPt.lat+','+endPt.lon;
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
   try{await navigator.clipboard.writeText(txt);note('Skopiowano do schowka',txt)}catch(e){dlg({ic:'copy',title:'Skopiuj wiadomość',input:txt,ro:true,ok:'Gotowe',no:false})}
 };
@@ -3627,7 +3676,7 @@ function showWait(th,s,nTr,ago){
   }else{
     const open=xOpenIn(th,s);
     w.className='';
-    q('.w2').textContent=nbsp('Przejazd otworzy się za ok. '+open+' s'+(nTr>=2?' · po nim może jechać kolejny — proszę sprawdzić drugi tor':''));
+    q('.w2').textContent=nbsp('Przejazd otworzy się za ok. '+fmtS(open)+(nTr>=2?' · po nim może jechać kolejny — proszę sprawdzić drugi tor':''));
   }
   w.style.display='block';
 }
@@ -3906,7 +3955,9 @@ function fuelTick(p){
   if(fuelPrev){
     const d=dist(fuelPrev.lat,fuelPrev.lon,p.lat,p.lon);
     if(d>=3&&d<500){fuelPrev={lat:p.lat,lon:p.lon};
-      if((p.speed||0)>1){fuel.lvl=Math.max(0,fuel.lvl-d/1000*fuel.cons/fuel.cap*100);
+      // Wersja 173: poziom spadał 100 razy za szybko. Droga [km] × zużycie [l/100 km] to SETNE części litra, więc procent baku = km × zużycie / pojemność (bez dodatkowego ×100):
+      // przy baku 50 l i 6 l/100 km kilometr jazdy to 0,12% baku, a nie 12% – dotąd „bak” pustoszał po ok. 8 km i aplikacja kazała tankować
+      if((p.speed||0)>1){fuel.lvl=Math.max(0,fuel.lvl-d/1000*fuel.cons/fuel.cap);
         if(Date.now()-fuelSaved>15000){fuelSaved=Date.now();fuelSave();if($('fuelLvl')!==document.activeElement)$('fuelLvl').value=Math.round(fuel.lvl)}}}
     else if(d>=500)fuelPrev={lat:p.lat,lon:p.lon};
   }else fuelPrev={lat:p.lat,lon:p.lon};
@@ -4036,7 +4087,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
     home.style.display=homeOwn.style.display=grpHd.style.display=k?'none':'';
     const c=CATS.find(x=>x[0]===k);SH.textContent=c?c.title:'Ustawienia';
     const v=$('setVer');if(v)v.style.display=k?'none':'';
-    SB.scrollTop=0;
+    if(S.classList.contains('open'))SB.scrollTop=0;   // Wersja 173: przy zamkniętych ustawieniach (start aplikacji) przewijanie wymuszało przeliczenie układu całej strony
   };
   setCat('');
 }
@@ -4692,7 +4743,7 @@ setInterval(()=>{
   // Wersja 165: bez osobnego „chipu” o braku danych o przejazdach – mówi o tym baner (bez trasy) albo pasek informacji pod banerem (na trasie)
   if(grpFr.length&&!pv)chips.push('<span>'+icoSvg('people')+grpFr.map(f=>(f.n||'?').slice(0,8)).slice(0,3).join(', ')+(grpFr.length>3?' +'+(grpFr.length-3):'')+'</span>');
   if(radOn&&radSamp.length&&!pv)chips.push('<span>'+icoSvg('rain','wx wx-rain')+'radar</span>');
-  if(route&&route.wx&&!pv){const nw=route.wx.find(w=>w.d!=null&&w.d>(route.along||0)+2000&&w.kd!=='bez opadów');if(nw)chips.push('<span class="w">'+wxSvg(nw.code,nw.kd)+nw.kd+' za '+Math.max(1,Math.round((nw.d-(route.along||0))/1000))+' km</span>')}
+  if(route&&route.wx&&!pv){const nw=route.wx.find(w=>w.d!=null&&w.d>(route.along||0)+2000&&w.kd!=='bez opadów');if(nw)chips.push('<span class="'+(nw.kd==='burza'||nw.kd==='gołoledź'?'w':nw.kd==='deszcz'?'w1':'w2')+'">'+wxSvg(nw.code,nw.kd)+nw.kd+' za '+Math.max(1,Math.round((nw.d-(route.along||0))/1000))+' km</span>')}
   if(route&&!window.preview&&last&&route.off<=120&&route.pts&&route.pts.length>=3){
     const fm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m',it=[];
     (typeof aheadList!=='undefined'?aheadList:[]).slice(0,2).forEach(a=>it.push([a.d,icoSvg('train')+fm(a.d)]));
@@ -4722,8 +4773,8 @@ $('dlarea').onclick=async()=>{
 $('sharePos').onclick=async()=>{
   const c=last;if(!c){note('Brak pozycji GPS');return}
   let txt='Jestem tutaj: https://www.google.com/maps?q='+c.lat.toFixed(6)+','+c.lon.toFixed(6);
-  if(route&&endPt){const rem=Math.max(0,route.len-route.along),mins=Math.max(1,Math.round(route.dur*(rem/route.len)/60));
-    txt+='\nJadę do: '+(F.to.el.value||'celu')+', przyjazd ok. '+new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' (za '+mins+' min).'}
+  if(route&&endPt){const mins=Math.max(1,Math.round(routeRem(route)/60));
+    txt+='\nJadę do: '+(F.to.el.value||'celu')+', przyjazd ok. '+new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+' (za '+fmtMin(mins)+').'}
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e.name==='AbortError')return}
   try{await navigator.clipboard.writeText(txt);note('Skopiowano do schowka',txt)}catch(e){dlg({ic:'copy',title:'Skopiuj wiadomość',input:txt,ro:true,ok:'Gotowe',no:false})}
 };
@@ -4751,33 +4802,24 @@ async function wxHere(){
 }
 setInterval(wxHere,15000);setTimeout(wxHere,3000);
 const wxP=[];
+const WXR=[];   // Wersja 173: etykiety pogody narysowane w tej klatce: {x,y,w,h,i,ps} – omijają je nazwy miejscowości; podgląd dla testów
 function drawWx(){
+  WXR.length=0;
   if(!$('wxMap').checked)return;
-  const W=window.innerWidth,H=window.innerHeight;
+  const W=window.innerWidth,H=window.innerHeight,now=performance.now();
   // prognoza w punktach wzdłuż trasy
-  if(route&&route.wx&&vec&&!window.preview){
-    const wc=(vf&&vf.cam)||last;
-    for(const w of route.wx){
-      if(wc&&dist(wc.lat,wc.lon,w.lat,w.lon)<1500)continue;   // bez znacznika pogody nad samochodem
-      const q=proj(w.lat,w.lon);if(!q||q.x<-30||q.x>W+30||q.y<60||q.y>H+30)continue;
-      const u=Math.max(15,Math.min(24,17*q.k)),txt=w.t+'°',wk=wxIk(w.code,w.kd);
-      mx.save();mx.font='700 '+Math.round(u*.8)+'px '+FONT_UI;
-      const is=u*1.05,pd=u*.5,tw=mx.measureText(txt).width+is+pd*2+u*.2;mx.translate(q.x,q.y-u*1.4);
-      mx.beginPath();mx.roundRect(-tw/2,-u*.7,tw,u*1.4,u*.7);mx.fillStyle='rgba(32,33,36,.86)';mx.fill();mx.lineWidth=1.5;mx.strokeStyle='rgba(255,255,255,.7)';mx.stroke();
-      icoDraw(mx,wk,-tw/2+pd+is/2,0,is,WXC[wk],Math.max(1.7,is/10));
-      mx.fillStyle='#fff';mx.textAlign='left';mx.textBaseline='middle';mx.fillText(txt,-tw/2+pd+is+u*.2,1);mx.restore();
-    }
-  }
+  if(route&&route.wx&&vec&&!window.preview){try{wxRoute(W,H,now)}catch(e){errNote('pogoda na trasie',e)}}
   // opady przy aktualnym położeniu
-  const kd=wxNow&&wxNow.kd;if(!kd||kd==='bez opadów')return;
+  const kd=wxNow&&wxNow.kd;if(!kd||kd==='bez opadów'){drawWx.t=0;return}
   const rain=kd==='deszcz'||kd==='burza',snow=kd==='śnieg'||kd==='gołoledź',N=rain?(kd==='burza'?130:90):snow?70:0;
   if(kd==='mgła'){const g=mx.createLinearGradient(0,0,0,H*.55);g.addColorStop(0,'rgba(210,216,224,.55)');g.addColorStop(1,'rgba(210,216,224,0)');mx.fillStyle=g;mx.fillRect(0,0,W,H*.55);return}
+  const f=drawWx.t?Math.min(4,Math.max(.25,(now-drawWx.t)*.06)):1;drawWx.t=now;   // krok animacji wg czasu (1 = 60 klatek/s): deszcz pada tak samo szybko przy każdej liczbie klatek
   while(wxP.length<N)wxP.push({x:Math.random()*W,y:Math.random()*H,v:rain?9+Math.random()*7:1.2+Math.random()*1.6,s:Math.random()});
   wxP.length=N;mx.save();
   if(rain){mx.strokeStyle='rgba(170,200,255,.55)';mx.lineWidth=1.3;mx.beginPath();
-    for(const p of wxP){p.y+=p.v;p.x-=p.v*.18;if(p.y>H){p.y=-12;p.x=Math.random()*W+30}if(p.x<-10)p.x=W+10;mx.moveTo(p.x,p.y);mx.lineTo(p.x+p.v*.18*1.8,p.y-p.v*1.8)}mx.stroke()}
+    for(const p of wxP){p.y+=p.v*f;p.x-=p.v*.18*f;if(p.y>H){p.y=-12;p.x=Math.random()*W+30}if(p.x<-10)p.x=W+10;mx.moveTo(p.x,p.y);mx.lineTo(p.x+p.v*.18*1.8,p.y-p.v*1.8)}mx.stroke()}
   else{mx.fillStyle='rgba(255,255,255,.85)';
-    for(const p of wxP){p.y+=p.v;p.x+=Math.sin((p.y+p.s*50)/28)*.7;if(p.y>H){p.y=-6;p.x=Math.random()*W}mx.beginPath();mx.arc(p.x,p.y,1.4+p.s*1.6,0,6.2832);mx.fill()}}
+    for(const p of wxP){p.y+=p.v*f;p.x+=Math.sin((p.y+p.s*50)/28)*.7*f;if(p.y>H){p.y=-6;p.x=Math.random()*W}mx.beginPath();mx.arc(p.x,p.y,1.4+p.s*1.6,0,6.2832);mx.fill()}}
   mx.restore();
 }
 
@@ -4932,9 +4974,10 @@ async function evScanRoutes(){
 // ================= Pomocnicze do poleceń głosowych, parking, „Prowadź tutaj” =================
 function etaText(){
   if(!route||!endPt)return null;
-  const rem=Math.max(0,route.len-route.along),mins=Math.max(1,Math.round(route.dur*(rem/Math.max(1,route.len))/60));
-  const km=rem>=1000?(rem/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(rem/10)*10+' metrów';
-  return 'Do celu zostało '+km+', około '+mins+' minut. Przyjazd o '+new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+'.';
+  const rem=Math.max(0,route.len-route.along),mins=Math.max(1,Math.round(routeRem(route)/60));
+  const km=rem>=995?(rem/1000).toFixed(1).replace('.',',')+' kilometra':Math.round(rem/10)*10+' metrów';
+  const hh=Math.floor(mins/60),mm=mins%60,tt=hh?hh+(hh===1?' godziny':' godzin')+(mm?' i '+mm+' minut':''):mins+' minut';   // „około 2 godzin i 5 minut”
+  return 'Do celu zostało '+km+', około '+tt+'. Przyjazd o '+new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})+'.';
 }
 function nearestX(max){
   const p=(typeof gpsOk!=='undefined'&&gpsOk)||last;if(!p)return null;let b=null,bd=max;
@@ -5442,7 +5485,7 @@ function routeHaz(sg){
   return r;
 }
 let nearTrainId=null,aheadList=[];
-const fmtKm=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m';
+const fmtKm=m=>m>=995?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m/10)*10+' m';
 const fmtEta=sec=>sec<90?'ok. '+Math.max(1,Math.round(sec))+' s':'ok. '+Math.round(sec/60)+' min';
 function updTrainCard(p){
   const card=$('tcard'),nowS=nowT();
@@ -6213,7 +6256,7 @@ async function fasterCheck(){
   try{
     const x=await fetchTT({lat:last.lat,lon:last.lon},endPt,(gpsOk&&gpsOk.speed>2)?lastH:null);
     if(route!==old||rerouting)return;
-    const cur=x.alts.find(a=>sameAsRoute(old,a)),curT=cur?cur.duration:old.dur*(rem/old.len);
+    const cur=x.alts.find(a=>sameAsRoute(old,a)),curT=cur?cur.duration:routeRem(old);
     // zmiana trasy w czasie jazdy tylko z uzasadnieniem: na obecnej trasie jest korek/zamknięcie, a nowa jest wyraźnie szybsza (albo zysk jest bardzo duży),
     // i tak wynika z dwóch kolejnych sprawdzeń – sama niewielka różnica w szacunkach czasu nie zmienia trasy
     const gain=curT-x.duration,jamM=jamAheadM(old),big=gain>=Math.max(900,curT*.2);
@@ -6964,6 +7007,9 @@ function drawRouteTop(){
 }
 function setVec(on){
   vec=on;
+  rasterOn=!on;
+  if(on){if(map.hasLayer(osm))map.removeLayer(osm);if(gmLayer){map.removeLayer(gmLayer);gmLayer=null}}
+  else if(gmKey)useGoogle();else if(!map.hasLayer(osm))osm.addTo(map);
   $('map').style.display=on?'none':'block';$('vmap').style.display=on?'block':'none';
   $('mapmode').textContent=on?'Mapa: wektorowa':'Mapa: kafelki';
   $('tilt').style.display='block';
@@ -7640,7 +7686,10 @@ function laneTarget(Rr){
 var singleLane=false,slAt=0,slHits=0;
 function checkSingleLane(){
   const D=vecData,c=vctx;if(!D||!c||!D.P||!vf||!vf.car)return singleLane;
-  const now=performance.now();if(now-slAt<300)return singleLane;slAt=now;
+  const now=performance.now();if(now-slAt<300)return singleLane;const forced=!slAt;slAt=now;
+  // Wersja 173: auto w tym samym miejscu (do ok. 2 m), te same dane mapy i ta sama trasa → wynik się nie zmieni; test „czy punkt leży na drodze” na dużych konturach jest kosztowny
+  {const q=checkSingleLane.q;if(!forced&&q&&q.D===D&&q.R===route&&slHits!==1&&Math.abs(vf.car.lat-q.lat)<1.8e-5&&Math.abs(vf.car.lon-q.lon)<2.8e-5)return singleLane;
+   checkSingleLane.q={D,R:route,lat:vf.car.lat,lon:vf.car.lon}}
   const x=(vf.car.lon-D.lon)*111195*Math.cos(rad(D.lat)),y=(vf.car.lat-D.lat)*111195,P=D.P;
   let on=false;
   try{
@@ -7712,7 +7761,7 @@ function updCarSnap(){
 }
 // budynki jako bryły 3D (ściany i dachy), rysowane nad płaską mapą – im większe nachylenie, tym wyższe wyglądają
 const shadeC=(hex,f)=>{const n=parseInt(hex.slice(1,7),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')'};
-let wallKey='',wallCol=null,bldCache=null,bldTick=0,wallH=[],shc=null,shx=null;
+let wallKey='',wallCol=null,bldCache=null,bldTick=0,wallH=[];
 const wallCC=new Map();
 const mixC=(h1,h2,t)=>{const a=parseInt(h1.slice(1,7),16),b=parseInt(h2.slice(1,7),16),f=(x,y)=>Math.round(x+(y-x)*t);return '#'+((1<<24)|(f(a>>16,b>>16)<<16)|(f((a>>8)&255,(b>>8)&255)<<8)|f(a&255,b&255)).toString(16).slice(1)};
 // kolor z OSM (60%) zmieszany z kolorem budynków na mapie (40%) – barwy zostają stonowane; te same odcienie jasności co dla zwykłych budynków
@@ -7890,9 +7939,16 @@ function bld3Draw(){
   if(fogOn){mx.save();mx.beginPath();mx.rect(0,fq,W,H-fq);mx.clip()}   // nad horyzontem nie ma mapy, więc i budynków
   // cienie budynków i drzew wg położenia Słońca (rysowane do osobnej warstwy i nakładane półprzezroczyście)
   if(!night&&sp.el>3&&scaleCur>=.9){
-    const sw=Math.max(1,mk.width>>1),sh2=Math.max(1,mk.height>>1);   // Wersja 165: warstwa cieni w połowie rozdzielczości
-    if(!shc||shc.width!==sw||shc.height!==sh2){shc=document.createElement('canvas');shc.width=sw;shc.height=sh2;shx=shc.getContext('2d')}
-    shx.setTransform(1,0,0,1,0,0);shx.clearRect(0,0,shc.width,shc.height);shx.setTransform(sw/W,0,0,sh2/H,0,0);shx.fillStyle='#000';
+    // Wersja 173: wszystkie cienie to jeden kontur wypełniany raz, wprost na mapie. Dotąd każda ściana była osobnym wypełnieniem na dodatkowej warstwie (kilkaset do ponad
+    // tysiąca wypełnień na klatkę), a warstwę trzeba było w każdej klatce wyczyścić i przenieść na cały ekran. Czworokąty mają ten sam kierunek obiegu, więc nakładające się
+    // cienie sumują się w jedną plamę (bez podwójnego przyciemnienia) – tak jak na warstwie, a bez szwów między ścianami.
+    const SP=new Path2D();let sn=0;
+    const quad=(a,b,c,d)=>{
+      const ar=(b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)+(c.x-a.x)*(d.y-a.y)-(d.x-a.x)*(c.y-a.y);
+      SP.moveTo(a.x,a.y);
+      if(ar>=0){SP.lineTo(b.x,b.y);SP.lineTo(c.x,c.y);SP.lineTo(d.x,d.y)}else{SP.lineTo(d.x,d.y);SP.lineTo(c.x,c.y);SP.lineTo(b.x,b.y)}
+      sn++;   // bez closePath(): wypełnienie samo domyka kontur, a closePath() na konturze z tysiącami punktów jest w Chromium bardzo wolne (czas rósł z kwadratem liczby ścian)
+    };
     const dirE=Math.sin(rad(sp.az+180)),dirN=Math.cos(rad(sp.az+180)),tn=Math.tan(rad(Math.max(sp.el,6)));
     for(let n=Math.max(start,lst.length-260);n<lst.length;n++){
       if(fogOn&&lst[n].y<fe)continue;   // w pasie mgły cieni nie rysujemy
@@ -7901,18 +7957,18 @@ function bld3Draw(){
       const Lm=b.m>0?Math.min(b.m/tn,b.m*3.2):0,bx=dirE*Lm,by=dirN*Lm;   // część wisząca rzuca cień dopiero od swojej podstawy
       for(let i=0;i<m;i++){const a=g(p[2*i]+bx,p[2*i+1]+by,0),c2=g(p[2*i]+ex,p[2*i+1]+ny,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
       if(!ok)continue;
-      for(let i=0;i<m;i++){const j=(i+1)%m;shx.beginPath();shx.moveTo(G[i].x,G[i].y);shx.lineTo(G[j].x,G[j].y);shx.lineTo(Sd[j].x,Sd[j].y);shx.lineTo(Sd[i].x,Sd[i].y);shx.closePath();shx.fill()}
+      for(let i=0;i<m;i++){const j=(i+1)%m;quad(G[i],G[j],Sd[j],Sd[i])}
     }
     if(dl>=2&&D.TR){   // cienie drzew: owalne plamy, dłuższe przy niskim Słońcu
-      shx.beginPath();let tn2=0;
+      let tn2=0;
       for(let n=Math.max(start,lst.length-260);n<lst.length&&tn2<260;n++){
         const it=lst[n];if(it.r===undefined||(fogOn&&it.y<fe))continue;
         const TR=D.TR,i=it.r,z=TR.z[i]/255,Hm=TR.t[i]?9+7*z:6.5+6.5*z,Lt=Math.min(Hm*.55/tn,Hm*1.8),q=g(TR.x[i]+dirE*Lt*.55,TR.y[i]+dirN*Lt*.55,0);if(!q)continue;
-        const rp=(TR.t[i]?1.9+1.3*z:2.5+2.5*z)*s*q.k;shx.moveTo(q.x+rp,q.y);shx.ellipse(q.x,q.y,rp*(1+Lt*.05),rp*.62,0,0,6.2832);tn2++;
+        const rp=(TR.t[i]?1.9+1.3*z:2.5+2.5*z)*s*q.k,rx=rp*(1+Lt*.05);SP.moveTo(q.x+rx,q.y);SP.ellipse(q.x,q.y,rx,rp*.62,0,0,6.2832);tn2++;sn++;
       }
-      shx.fill();
     }
-    mx.save();mx.globalAlpha=.2;mx.setTransform(1,0,0,1,0,0);mx.imageSmoothingEnabled=true;mx.drawImage(shc,0,0,mk.width,mk.height);mx.restore();
+    if(sn){mx.save();mx.globalAlpha=.2;mx.fillStyle='#000';mx.fill(SP);mx.restore()}
+    bld3Draw.sn=sn;   // podgląd dla testów: liczba czworokątów i plam cienia w tej klatce
   }
   // przed trudnym manewrem budynki zasłaniające jezdnię za skrzyżowaniem stają się półprzezroczyste (jak w „immersyjnej nawigacji” Google), żeby było widać, dokąd skręcamy
   let GS=null;
@@ -8233,6 +8289,106 @@ function drawMarkers(){
   drawPlaces();
   drawXLabels();
 }
+// Wersja 173: prognoza wzdłuż trasy. Dotąd każdy z 7 punktów trasy miał etykietę nad sobą: po oddaleniu mapy etykiety nachodziły na siebie, na szpilkę celu i na nazwy
+// miejscowości, a na krótkiej trasie powtarzały tę samą temperaturę co kilkaset metrów. Teraz etykieta dostaje miejsce tylko wtedy, gdy: (1) wnosi coś nowego – groźne zjawisko,
+// cel albo temperatura różna o co najmniej 2° od sąsiedniej etykiety, (2) jej punkt leży dość daleko od punktów innych etykiet na ekranie, (3) mieści się obok punktu (nad nim,
+// z prawej, z lewej albo pod nim) bez zasłaniania auta, szpilki celu, etykiet tras i innych etykiet pogody. Kolejność przydziału: zjawiska groźne, cel, potem reszta od środka trasy.
+// Punkty już przejechane znikają. Etykieta pokazana w poprzedniej klatce ma łagodniejsze progi (nie miga przy przesuwaniu mapy); etykiety pojawiają się i znikają płynnie.
+const WX_SEV={'burza':5,'gołoledź':4,'śnieg':3,'mgła':3,'deszcz':2};
+const WX_POS=[[0,-1],[1,0],[-1,0],[0,1]];   // etykieta względem punktu: nad, z prawej, z lewej, pod
+const wxTw=new Map();   // szerokości napisów (pomiar tekstu raz, a nie w każdej klatce)
+let wxLt=0,wxStill=null,wxUiAt=0,wxUiR=[];
+function wxUi(now){   // przyciski i tabliczki przy brzegach ekranu (układ strony czytamy najwyżej co 0,6 s, nie w każdej klatce)
+  if(wxUiAt&&now-wxUiAt<600&&now>=wxUiAt)return wxUiR;
+  wxUiAt=now;const out=[];
+  for(const id of ['lfab','rfab','speed','lim','compass','setfab','repfab','tcard','jp']){
+    const e=$(id);if(!e)continue;const r=e.getBoundingClientRect();
+    if(r.width>0&&r.height>0&&r.bottom>0)out.push({x:r.left,y:r.top,w:r.width,h:r.height})}
+  return wxUiR=out;
+}
+const wxHit=(a,b,m)=>a.x<b.x+b.w+m&&a.x+a.w+m>b.x&&a.y<b.y+b.h+m&&a.y+a.h+m>b.y;
+function wxBis(i,n){   // kolejność „od środka”: 1 = środek trasy, 2 = ćwiartki, 3 = ósemki… (końce: 0)
+  let lo=0,hi=n-1,d=1;if(i<=lo||i>=hi)return 0;
+  while(hi-lo>1){const m=(lo+hi)>>1;if(i===m)return d;if(i<m)hi=m;else lo=m;d++}
+  return d;
+}
+function wxGeom(q,w){   // rozmiary etykiety w punkcie ekranu q
+  const u=Math.max(15,Math.min(24,17*(q.k||1))),fs=Math.round(u*.8),txt=wxTemp(w.t),key=fs+'|'+txt;
+  let t0=wxTw.get(key);if(t0==null){mx.font='700 '+fs+'px '+FONT_UI;t0=mx.measureText(txt).width;if(wxTw.size>300)wxTw.clear();wxTw.set(key,t0)}
+  const is=u*1.05,pd=u*.5;
+  return {u,fs,txt,is,pd,w:t0+is+pd*2+u*.2,h:u*1.4,tip:u*.62};
+}
+const wxBox=(q,g,ps)=>{const o=WX_POS[ps];return {x:q.x+o[0]*(g.w/2+g.tip)-g.w/2,y:q.y+o[1]*(g.h/2+g.tip)-g.h/2,w:g.w,h:g.h}};
+function wxPill(q,b,g,ps,w,a){   // etykieta z „dzióbkiem” wskazującym punkt trasy
+  const ik=wxIk(w.code,w.kd),sev=WX_SEV[w.kd]||0,col=WXC[ik],o=WX_POS[ps],u=g.u,cx=b.x+b.w/2,cy=b.y+b.h/2;
+  const dr=Math.max(3,u*.19),ex=cx-o[0]*b.w/2,ey=cy-o[1]*b.h/2,tx=q.x+o[0]*(dr+2),ty=q.y+o[1]*(dr+2),hw=u*.3;
+  const P=new Path2D();P.roundRect(b.x,b.y,b.w,b.h,b.h/2);
+  if(o[1]){P.moveTo(ex-hw,ey+o[1]*1.5);P.lineTo(tx,ty);P.lineTo(ex+hw,ey+o[1]*1.5)}else{P.moveTo(ex+o[0]*1.5,ey-hw);P.lineTo(tx,ty);P.lineTo(ex+o[0]*1.5,ey+hw)}
+  P.closePath();
+  mx.save();mx.globalAlpha=a;mx.lineJoin='round';
+  mx.translate(0,1.6);mx.fillStyle='rgba(0,0,0,.24)';mx.fill(P);mx.translate(0,-1.6);   // miękki cień pod etykietą
+  mx.lineWidth=sev?4:2.6;mx.strokeStyle=sev?col:'rgba(255,255,255,.8)';mx.stroke(P);   // połowa obrysu zostaje na zewnątrz (reszta pod wypełnieniem) – etykieta i dzióbek mają wspólny kontur
+  mx.fillStyle='#22252b';mx.fill(P);
+  mx.beginPath();mx.arc(q.x,q.y,dr,0,6.2832);mx.fillStyle='#fff';mx.fill();mx.lineWidth=1.6;mx.strokeStyle='#22252b';mx.stroke();
+  icoDraw(mx,ik,b.x+g.pd+g.is/2,cy,g.is,col,Math.max(1.7,g.is/10));
+  mx.font='700 '+g.fs+'px '+FONT_UI;mx.fillStyle='#fff';mx.textAlign='left';mx.textBaseline='middle';mx.fillText(g.txt,b.x+g.pd+g.is+u*.2,cy+1);
+  mx.restore();
+}
+function wxRoute(W,H,now){
+  const R=route,wx=R.wx,n=wx.length;if(!n)return;
+  if(wxStill==null)wxStill=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const dt=Math.min(.1,Math.max(0,(now-(wxLt||now))/1000));wxLt=now;
+  const car=(vf&&vf.car)||last,al=R.along||0;
+  const x0=8,x1=W-8,y0=Math.max(uiTopLim||0,56)+4,y1=H-88;   // etykieta w całości na ekranie: pod banerem i nad dolnym paskiem
+  const G=Math.max(96,Math.min(150,Math.min(W,H)*.26));   // najmniejszy odstęp punktów sąsiednich etykiet (px)
+  const ob=wxUi(now).slice();   // przeszkody: przyciski przy brzegach, auto, szpilka celu i miejsca, etykiety tras
+  const cq=car&&proj(car.lat,car.lon);if(cq)ob.push({x:cq.x-27,y:cq.y-34,w:54,h:60});
+  for(const pt of [endPt,window.pinPt]){const e=pt&&proj(pt.lat,pt.lon);if(e){const r=Math.max(10,Math.min(30,14*e.k));ob.push({x:e.x-r*1.1,y:e.y-r*2.7,w:r*2.2,h:r*2.8})}}
+  if(window.__altLb&&planRoute.alts&&planRoute.alts.length>1&&$('pick').style.display!=='none')for(const b of window.__altLb)ob.push(b);
+  const cand=[];
+  for(let i=0;i<n;i++){
+    const w=wx[i];w.won=!!w.on;w.on=false;w.q=null;
+    if(w.d!=null&&w.d<al-300)continue;   // już przejechane
+    if(car&&dist(car.lat,car.lon,w.lat,w.lon)<500)continue;   // przy samym samochodzie pogodę pokazuje pasek u góry (dotąd 1500 m – chodziło o to, żeby etykieta nie zasłaniała auta; teraz pilnuje tego omijanie auta)
+    const q=proj(w.lat,w.lon);if(!q||q.x<x0||q.x>x1||q.y<y0-30||q.y>y1+30||skyA(q.y)>.8)continue;
+    w.q=q;const sev=WX_SEV[w.kd]||0,end=i===n-1;
+    cand.push({w,i,q,sev,end,ik:wxIk(w.code,w.kd),pri:sev*100+(w.t<=1?45:0)+(end?60:0)+(i===0?-30:(6-Math.min(6,wxBis(i,n)))*4)});
+  }
+  cand.sort((a,b)=>b.pri-a.pri||a.i-b.i);
+  const acc=[];
+  for(const c of cand){
+    const w=c.w,gap=w.won?G*.78:G;let ok=true;
+    for(const a of acc){
+      const dd=Math.hypot(a.q.x-c.q.x,a.q.y-c.q.y);
+      if(dd<gap){ok=false;break}
+      if(!c.end&&dd<gap*(c.sev?1.6:2.3)&&a.w.kd===w.kd&&a.ik===c.ik&&Math.abs(a.w.t-w.t)<2){ok=false;break}   // nic nowego względem sąsiedniej etykiety
+    }
+    if(!ok)continue;
+    const g=wxGeom(c.q,w),m=w.won?2:6;let bx=null,ps=0,ord=[0,3,1,2];
+    if(w.d!=null&&vf&&vf.s>0){   // kierunek trasy na ekranie w tym punkcie: etykieta staje obok linii, a nie na niej
+      const e=30/vf.s,a=routeAt(R,w.d-e),b2=routeAt(R,w.d+e),qa=proj(a[0],a[1]),qb=proj(b2[0],b2[1]);
+      if(qa&&qb&&Math.abs(qb.y-qa.y)>Math.abs(qb.x-qa.x)*1.2)ord=[1,2,0,3];
+    }
+    if(w.won&&w.ps!=null)ord=[w.ps].concat(ord);
+    for(const k of ord){
+      const b=wxBox(c.q,g,k);
+      if(b.x<x0||b.x+b.w>x1||b.y<y0||b.y+b.h>y1)continue;
+      if(ob.some(q=>wxHit(b,q,m))||acc.some(a=>wxHit(b,a.b,m+4)))continue;
+      bx=b;ps=k;break;
+    }
+    if(!bx)continue;
+    w.on=true;w.ps=ps;c.b=bx;c.g=g;acc.push(c);
+  }
+  for(let i=0;i<n;i++){   // płynne pojawianie się i znikanie (ok. 0,2 s)
+    const w=wx[i];if(!w.q){w.a=0;continue}
+    const tg=w.on?1:0;w.a=wxStill?tg:Math.max(0,Math.min(1,(w.a||0)+(tg?1:-1)*dt/.18));
+    if(!w.on&&w.a>.02){const g=wxGeom(w.q,w);wxPill(w.q,wxBox(w.q,g,w.ps||0),g,w.ps||0,w,w.a)}   // znikająca: jeszcze w dotychczasowym miejscu
+  }
+  for(let k=acc.length-1;k>=0;k--){   // od najmniej ważnej – ważniejsze leżą na wierzchu
+    const c=acc[k];if(c.w.a>.02)wxPill(c.q,c.b,c.g,c.w.ps,c.w,c.w.a);
+    WXR.push({x:c.b.x,y:c.b.y,w:c.b.w,h:c.b.h,i:c.i,ps:c.w.ps,ax:c.q.x,ay:c.q.y,a:c.w.a});
+  }
+}
 // nazwy miejscowości i wód: rysowane prosto (niezależnie od obrotu mapy) i tylko przy oddaleniu, żeby nie zasłaniać drogi
 function drawPlaces(){
   const D=vecData,Wd=(vf&&vf.s<.45)?wideD:null;
@@ -8254,6 +8410,7 @@ function drawPlaces(){
   if(!cand.length)return;
   cand.sort((a,b)=>(a.o.wn?9:a.o.p.c)-(b.o.wn?9:b.o.p.c)||(a.o.p.r||0)-(b.o.p.r||0));
   const placed=[],seen=new Set();let n=0;
+  for(const b of WXR)placed.push([b.x+b.w/2,b.y+b.h/2,b.w/2+3,b.h/2+2]);   // Wersja 173: nazwa nie wchodzi pod etykietę pogody
   mx.save();mx.textAlign='center';mx.textBaseline='middle';mx.lineJoin='round';
   for(const {o,q} of cand){
     const p=o.p;if(seen.has(p.n))continue;
@@ -8379,13 +8536,28 @@ window.glideStart=function(rotOnly,tq){   // rotOnly: mapa nie jest przesunięta
   if(!rotOnly&&dist>40){   // czy liniowe przesunięcie i wykładnicze zbliżenie wyrzuciłyby auto daleko poza ekran (powrót z mocno oddalonego widoku)? wtedy lecimy po krzywej lotu
     const Wp=camW(),l0=Math.log(s0),l1=Math.log(s1);let om=0;
     for(let j=0;j<=20;j++){const k=j/20;om=Math.max(om,dist*(1-k)*Math.exp(l0+(l1-l0)*k))}
-    if(om>Math.max(1.3*dist*s0,.9*Wp))vw=vwnPath(dist,Wp/s0,Wp/s1);
+    if(om>Math.max(1.3*dist*s0,Math.min(.9*Wp,window.innerWidth*.5-20)))vw=vwnPath(dist,Wp/s0,Wp/s1);   // Wersja 173: próg to połowa szerokości ekranu (auto przy krawędzi), a nie 0,9 szerokości (auto już dawno poza ekranem)
   }
   panGlide={k:0,f:0,hd:-lastH,tp:performance.now(),e0:rotOnly?0:panE,n0:rotOnly?0:panN,t0:performance.now(),dur:vw?Math.min(1500,Math.max(700,vw.S*500)):Math.min(1400,Math.max(600,520+200*Math.log(1+eff/180))),r0:curRot,sg:dr<0?-1:1,l0:Math.log(s0),ls:Math.log(s1),ls1:Math.log(s1),vw,cy0:cyCur,cy1:cyFor(),
     a:vw?0:far>1100?Math.min(.45,.08+.22*Math.log(far/1100)):0,td:(dmOn&&freeCam&&tq==null)?tiltDyn:null,tq:tq==null?null:tq};
   if(tq!=null)tiltOv=tq;
   updRecenter();return true;
 };
+// Wersja 173: postój. Gdy auto stoi i kamera się nie rusza, mapę z nakładkami rysujemy co trzecią klatkę (ok. 20 zamiast 60 razy na sekundę): telefon mniej się grzeje
+// i zużywa mniej baterii, np. przy czekaniu przed przejazdem. Ruch auta, dotknięcie ekranu, lot kamery albo zmiana zbliżenia od razu przywracają pełną płynność.
+let idleKey='',idleSame=0,idleTick=0,idleTouch=0;
+for(const ev of ['pointerdown','pointermove','touchmove','wheel','keydown'])window.addEventListener(ev,()=>{idleTouch=performance.now()},{capture:true,passive:true});
+function idleNote(){   // po narysowaniu klatki: czy kamera i auto są tam, gdzie w poprzedniej?
+  const c=vf&&vf.cam,k=c?c.lat.toFixed(7)+','+c.lon.toFixed(7)+','+vf.s.toPrecision(5)+','+curRot.toFixed(2)+','+tiltE().toFixed(2)+','+cyCur.toFixed(4)+(vf.car?','+vf.car.lat.toFixed(7)+','+vf.car.lon.toFixed(7):''):'';
+  if(k&&k===idleKey)idleSame++;else{idleSame=0;idleKey=k}
+}
+function idleSkip(now){   // czy tę klatkę można pominąć?
+  if(navigator.webdriver&&!window.__idleTest)return false;   // w testach automatycznych tylko na życzenie (jak upraszczanie mapy)
+  if(idleSame<20||panGlide||tiltOv!=null||now-idleTouch<1200||Math.abs(scaleTgt-scaleCur)>scaleCur*.001||curRot!==tgtRot)return false;
+  if(fix&&(now-fix.t<750||((fix.ve||fix.vn)&&now-fix.t<1400)))return false;   // kamera dojeżdża do nowego odczytu GPS albo auto jedzie
+  if(idleTick++%3===0)return false;
+  idleSkip.n=(idleSkip.n||0)+1;return true;   // licznik pominiętych klatek (podgląd dla testów)
+}
 function frame(){
   if(ecoOn&&(fcnt++&1)){requestAnimationFrame(frame);return}
   const fnow=performance.now(),fdt=Math.min(.12,Math.max(.004,(fnow-(lastFt||fnow-16))/1000));lastFt=fnow;
@@ -8403,7 +8575,7 @@ function frame(){
   dmStep(fk);
   if(!gl){const d=((tgtRot-curRot)%360+540)%360-180;curRot=Math.abs(d)<.05?tgtRot:curRot+d*fr}
   {const tf='rotateX('+tiltE().toFixed(2)+'deg) rotate('+curRot+'deg)';if(tf!==frame.tf){frame.tf=tf;$('rot').style.transform=tf}}   // Wersja 165: zapis stylu tylko przy zmianie (mniej przeliczeń stylu)
-  {const t0=performance.now();drawMarkers();const dtm=performance.now()-t0;fpsRec(fnow,dtm);liteTick(dtm)}
+  if(!idleSkip(fnow)){const t0=performance.now();drawMarkers();const dtm=performance.now()-t0;fpsRec(fnow,dtm);liteTick(dtm);idleNote()}
   {const cf='rotate('+curRot+'deg)';if(cf!==frame.cf){frame.cf=cf;$('compass').style.transform=cf}}
   requestAnimationFrame(frame);
 }
@@ -8936,7 +9108,7 @@ $('liveShare').onclick=async()=>{
 };
 async function livePush(){
   if(!liveOn||!evDb||!gpsOk||Date.now()-gpsOk.t>30000)return;const now=Date.now();if(now-liveAt<9000)return;liveAt=now;
-  let eta=null,rem=null;if(route&&route.len>0){const r=Math.max(0,route.len-(route.along||0));rem=Math.round(r/100)/10;eta=now+Math.max(1,route.dur*(r/route.len))*1000}
+  let eta=null,rem=null;if(route&&route.len>0){const r=Math.max(0,route.len-(route.along||0));rem=Math.round(r/100)/10;eta=now+Math.max(1,routeRem(route))*1000}
   try{await fetch(evBase()+'/trk/'+liveCode+'.json',{method:'PUT',body:JSON.stringify({n:grpName||'Kierowca',lat:+gpsOk.lat.toFixed(5),lon:+gpsOk.lon.toFixed(5),h:gpsOk.h!=null?Math.round(gpsOk.h):null,v:Math.round((gpsOk.speed||0)*3.6),to:String(F.to.el.value||'').slice(0,60),eta,rem,t:now})})}catch(e){}
 }
 setInterval(livePush,3000);
@@ -10014,7 +10186,8 @@ async function routeForecast(R,xs,when){
     dl.push({al:r.al,L});
   }
   if(!dl.length)return '';
-  const eta=(r,sh)=>dep+sh+R.dur*(r.al/Math.max(1,R.len));
+  const t0=when?0:routeT(R,R.along||0);   // prognoza „od teraz” liczy czas od miejsca, w którym jest auto
+  const eta=(r,sh)=>dep+sh+Math.max(0,routeT(R,r.al)-t0);
   const hit=sh=>{const out=[];for(const r of dl){const d=r.L.find(q=>Math.abs(q.t-eta(r,sh))<75);if(d)out.push({r,d})}return out};
   const h0=hit(0);
   if(!h0.length)return 'prognoza wg rozkładu: brak pociągów w Twoim czasie przejazdu (orientacyjnie)';
