@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 173</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 174</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -6624,7 +6624,12 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
   const dm=dmA>.02;   // widok kierowcy: szersze drogi, cień jezdni, chodniki, wyraźne pasy, nocą poświata latarni
   const terr=Q=>{for(const k of TERR)if(Q[k]&&pal[k]){c.fillStyle=pal[k];c.fill(Q[k])}};
   // przy oddaleniu minimalna szerokość małych ulic maleje, a najmniejsze znikają – zamiast białych plam zostaje czytelna siatka
-  const zq=Math.max(0,Math.min(1,(s-.1)/.4)),ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mwl:.5,mw:.56},rwz=k=>Math.max(1.6,rw(k,s)*(ZF[k]+(1-ZF[k])*zq)),cwz=2.4+1.6*zq;
+  // Wersja 174: przy dużym oddaleniu (poniżej 0,1 px/m) szerokości dalej maleją (dotąd stawały: autostrada 13 px, droga główna 11 px nawet na mapie całego województwa – drogi
+  // zlewały się w plamy), obwódki cienieją, a kolejne klasy dróg znikają: zbiorcze poniżej 0,05, zjazdy poniżej 0,02, drugorzędne poniżej 0,012 px/m.
+  const zq=Math.max(0,Math.min(1,(s-.1)/.4)),ZF={sv:.34,rs:.34,tr:.38,sc:.5,pr:.54,mwl:.5,mw:.56},Z2={sv:.2,rs:.2,tr:.2,sc:.18,pr:.2,mwl:.18,mw:.22};
+  const zf2=s>=.1?1:Math.pow(Math.max(0,Math.log(Math.max(s,.006)/.006)/Math.log(.1/.006)),1.5);
+  const rwz=k=>Math.max(s<.1?1.1:1.6,rw(k,s)*(ZF[k]+(1-ZF[k])*zq)*(Z2[k]+(1-Z2[k])*zf2)),cwz=(2.4+1.6*zq)*(.3+.7*zf2);
+  const farOk=k=>!(k==='tr'&&s<.05)&&!(k==='mwl'&&s<.02)&&!(k==='sc'&&s<.012);
   const rlw=Math.max(2.2,Math.min(6,1.6+s*7)),Wd=(s<.45&&wideD)?wideD:null;
   if(Wd){   // oddalenie: tło z kafelków z-12 / z-10 (tereny, drogi główne, wody, tory) wokół kamery – także tam, gdzie szczegółowa mapa jeszcze się nie wczytała
     const Q=Wd.P,wx=(cam.lon-Wd.lon)*111195*Math.cos(rad(Wd.lat)),wy=(cam.lat-Wd.lat)*111195;
@@ -6633,9 +6638,9 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
     if(Q.park){c.fillStyle=pal.park;c.fill(Q.park)}
     try{demDraw(c,Wd.lat,Wd.lon,s,night)}catch(e){errNote('rzeźba',e)}   // rzeźba terenu (cieniowanie) pod wodą, drogami i budynkami
     if(Q.water){c.fillStyle=pal.water;c.fill(Q.water)}
-    if(Q.wline){c.strokeStyle=pal.water;c.lineWidth=4/s;c.stroke(Q.wline)}
+    if(Q.wline){c.strokeStyle=pal.water;c.lineWidth=Math.max(1.2,4*(.3+.7*zf2))/s;c.stroke(Q.wline)}
     if(Q.tun){c.save();c.setLineDash([7/s,6/s]);c.lineCap='butt';c.strokeStyle=pal.tun;c.lineWidth=Math.max(2,Math.min(7,rwz('pr')*.5))/s;c.stroke(Q.tun);c.restore()}   // tunele: blada kreskowana linia ciągłości
-    const wo=['sc','pr','mwl','mw'];
+    const wo=['sc','pr','mwl','mw'].filter(farOk);
     for(const k of wo)if(Q[k]){c.strokeStyle=k==='mw'||k==='mwl'?pal.csMw:k==='pr'?pal.csPr:pal.csSc;c.lineWidth=(rwz(k)+cwz)/s;c.stroke(Q[k])}
     for(const k of wo)if(Q[k]){c.strokeStyle=pal[k==='mwl'?'mw':k];c.lineWidth=rwz(k)/s;c.stroke(Q[k])}
     if(Q.rail){c.strokeStyle=night?'#6f7a96':'#a3a9b3';c.lineWidth=Math.max(1.3,rlw*.5)/s;c.stroke(Q.rail)}
@@ -6645,14 +6650,14 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
     const D=vecData,P=D.P,ox=(cam.lon-D.lon)*111195*Math.cos(rad(D.lat)),oy=(cam.lat-D.lat)*111195;
     c.save();c.translate(S/2,S/2);c.scale(s,-s);c.translate(-ox,-oy);
     c.lineCap='round';c.lineJoin='round';
-    const order=['sv','rs','tr','sc','pr','mwl','mw'].filter(k=>!(k==='sv'&&s<.3)&&!(k==='rs'&&s<.14));
+    const order=['sv','rs','tr','sc','pr','mwl','mw'].filter(k=>!(k==='sv'&&s<.3)&&!(k==='rs'&&s<.14)&&farOk(k));
     let LV=[],LG=null;try{LV=lnVis(D,s,ox,oy,S);LG=LV.length?lnGroups(LV,s):null}catch(e){LV=[];LG=null;lnFail(e)}   // drogi z kilkoma pasami (dane OSM)
     if(Wd&&D.bb){c.fillStyle=pal.bg;c.fillRect(D.bb[0],D.bb[1],D.bb[2]-D.bb[0],D.bb[3]-D.bb[1])}   // szczegółowy obszar rysujemy od czystego tła (bez „duchów” z uproszczonych kafelków)
     terr(P);
     if(P.park){c.fillStyle=pal.park;c.fill(P.park);c.strokeStyle=pal.parkEdge;c.lineWidth=1.2/s;c.stroke(P.parkE||P.park)}
     try{demDraw(c,D.lat,D.lon,s,night)}catch(e){errNote('rzeźba',e)}
     if(P.water){c.fillStyle=pal.water;c.fill(P.water);c.strokeStyle=pal.waterEdge;c.lineWidth=1.2/s;c.stroke(P.waterE||P.water)}
-    if(P.wline){c.strokeStyle=pal.water;c.lineWidth=7/s;c.stroke(P.wline)}
+    if(P.wline){c.strokeStyle=pal.water;c.lineWidth=Math.max(1.2,7*(.25+.75*zf2))/s;c.stroke(P.wline)}
     if(P.tun&&s>=.18){c.save();c.setLineDash([7/s,6/s]);c.lineCap='butt';c.strokeStyle=pal.tun;c.lineWidth=Math.max(2,Math.min(9,rw('sc',s)*.5))/s;c.stroke(P.tun);c.restore()}   // tunele
     if(P.bld&&s>=.5){
       if(s>=.8){c.save();c.translate(1.6/s,-1.6/s);c.fillStyle=pal.bldSh;c.fill(P.bld);c.restore()}   // delikatny cień budynków
