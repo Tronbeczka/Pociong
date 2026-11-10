@@ -18,41 +18,109 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SRC: https://mkuran.pl/gtfs/polish_trains/updates.json
+      API: https://api.github.com
     steps:
+      # Serwer źródłowy potrafi zerwać połączenie w trakcie pobierania ok. 30 MB: curl kończy wtedy kodem 92 (błąd strumienia HTTP/2),
+      # czasem 18 albo 56. Samo --retry takich błędów nie ponawia, stąd HTTP/1.1, własna pętla prób i sprawdzenie treści po każdej próbie.
+      # Gdy źródło nie odpowiada mimo prób, zadanie NIE kończy się błędem: zostaje poprzednia kopia, a aplikacja i tak pokazuje wiek danych.
+      # Dotąd każde takie zerwanie (ok. 4 na 100 uruchomień) kończyło się mailem „Run failed”.
       - name: Pobierz opóźnienia (PKP PLK przez mkuran.pl)
+        id: dl
         run: |
-          curl -fL --retry 3 --retry-delay 5 -o updates.json https://mkuran.pl/gtfs/polish_trains/updates.json
-          python3 -c "import json;j=json.load(open('updates.json'));assert j.get('trip_updates') is not None;print(len(j['trip_updates']),'kursow')"
+          ok=0
+          for i in 1 2 3 4; do
+            rm -f updates.json
+            if curl -fsSL --http1.1 --compressed --connect-timeout 15 --max-time 90 -o updates.json "$SRC"; then
+              if python3 -c "import json;j=json.load(open('updates.json'));assert isinstance(j.get('trip_updates'),list);print(len(j['trip_updates']),'kursow')"; then ok=1; break; fi
+              echo "próba $i: plik nie jest poprawnym JSON-em z listą trip_updates"
+            else
+              echo "próba $i: curl zakończył się kodem $?"
+            fi
+            if [ "$i" -lt 4 ]; then sleep $((i*${WAIT:-10})); fi
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          if [ "$ok" != 1 ]; then
+            echo "::warning title=Źródło opóźnień nie odpowiada::Cztery próby pobrania nie powiodły się – zostaje poprzednia kopia. To chwilowa awaria serwera źródłowego, zadanie nie zgłasza błędu."
+          fi
       - name: Odchudź plik (bez autobusów i dawno zakończonych kursów, 32 MB -> ok. 1 MB)
+        id: slim
+        if: steps.dl.outputs.ok == '1'
         run: |
           python3 - <<'PY'
-          import json,sys,datetime,re
+          import json,sys,datetime,re,os
           j=json.load(open('updates.json'))
           now=datetime.datetime.now(datetime.timezone.utc)
           def ts(s):
-              return datetime.datetime.fromisoformat(re.sub(r'(\.\d{6})\d+',r'\1',s))
-          out=[]
+              d=datetime.datetime.fromisoformat(re.sub(r'(\.\d{6})\d+',r'\1',s).replace('Z','+00:00'))
+              return d if d.tzinfo else d.replace(tzinfo=datetime.timezone.utc)
+          out=[];bad=0
           for u in j['trip_updates']:
-              st=u.get('stop_times') or []
-              if st and all(x.get('platform')=='BUS' for x in st): continue
-              last=None
-              for x in reversed(st):
-                  v=x.get('departure') or x.get('arrival')
-                  if v: last=ts(v);break
-              if last and (now-last).total_seconds()>3600 and not u.get('cancelled'): continue
-              k={a:u[a] for a in ('id','trip_id','start_date','agency_id','numbers','cancelled','detour') if a in u}
-              k['stop_times']=[{a:x[a] for a in ('stop_sequence','arrival','departure','confirmed','cancelled') if a in x} for x in st]
-              out.append(k)
-          r={'timestamp':j['timestamp'],'trip_updates':out}
+              try:
+                  st=u.get('stop_times') or []
+                  if st and all(x.get('platform')=='BUS' for x in st): continue
+                  last=None
+                  for x in reversed(st):
+                      v=x.get('departure') or x.get('arrival')
+                      if v: last=ts(v);break
+                  if last and (now-last).total_seconds()>3600 and not u.get('cancelled'): continue
+                  k={a:u[a] for a in ('id','trip_id','start_date','agency_id','numbers','cancelled','detour') if a in u}
+                  k['stop_times']=[{a:x[a] for a in ('stop_sequence','arrival','departure','confirmed','cancelled') if a in x} for x in st]
+                  out.append(k)
+              except Exception as e:      # pojedynczy uszkodzony wpis nie może zatrzymać całej kopii
+                  bad+=1
+                  if bad<=3: print('pominięty wpis:',repr(e)[:120])
+          n=len(j['trip_updates'])
+          print(n,'->',len(out),'(pominięte z błędem: %d)'%bad)
+          if n and bad>n*0.2:
+              # to nie jest chwilowa awaria: zmienił się format danych i skrypt wymaga poprawki – ten błąd ma być widoczny
+              print('::error title=Zmienił się format danych::%d z %d wpisów nie dało się odczytać'%(bad,n));sys.exit(1)
+          r={'timestamp':j.get('timestamp'),'trip_updates':out}
           json.dump(r,open('slim.json','w'),ensure_ascii=False,separators=(',',':'))
-          print(len(j['trip_updates']),'->',len(out))
           PY
           mv slim.json updates.json
       - name: Opublikuj w gałęzi gtfs-live (bez narastania historii)
+        id: pub
+        if: steps.dl.outputs.ok == '1'
+        env:
+          PUSH_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           git init -q -b gtfs-live
           git config user.name "gtfs-bot"
           git config user.email "gtfs-bot@users.noreply.github.com"
           git add updates.json
           git commit -qm "updates $(date -u +%FT%TZ)"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gtfs-live
+          pushed=0
+          for i in 1 2 3; do
+            if git push -q -f "$PUSH_URL" gtfs-live; then pushed=1; break; fi
+            echo "wysyłka: próba $i nieudana"
+            if [ "$i" -lt 3 ]; then sleep $((i*${WAIT:-5})); fi
+          done
+          echo "pushed=$pushed" >> "$GITHUB_OUTPUT"
+          if [ "$pushed" != 1 ]; then echo "::warning title=Kopia niewysłana::Nie udało się zapisać kopii w gałęzi gtfs-live (3 próby) – zostaje poprzednia."; fi
+      # Bezpiecznik: gdy kopia nie odświeża się od ponad 12 godzin, zadanie zgłasza błąd – ale tylko w jednym oknie na dobę (05:00–06:59 UTC),
+      # żeby długa awaria dała jeden–dwa maile dziennie, a nie mail przy każdym uruchomieniu.
+      - name: Wiek opublikowanej kopii (gdy to uruchomienie nic nie zapisało)
+        if: always() && steps.slim.outcome != 'failure' && (steps.dl.outputs.ok != '1' || steps.pub.outputs.pushed != '1')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json,os,sys,datetime,urllib.request
+          url=os.environ['API']+'/repos/'+os.environ['REPO']+'/commits/gtfs-live'
+          now=datetime.datetime.now(datetime.timezone.utc)
+          hour=int(os.environ.get('TEST_HOUR') or now.hour)
+          try:
+              rq=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','Authorization':'Bearer '+os.environ.get('GH_TOKEN','')})
+              d=json.load(urllib.request.urlopen(rq,timeout=20))['commit']['committer']['date']
+              age=(now-datetime.datetime.fromisoformat(d.replace('Z','+00:00'))).total_seconds()/3600
+          except Exception as e:
+              print('nie udało się sprawdzić wieku kopii:',repr(e)[:160]);sys.exit(0)
+          print('opublikowana kopia ma %.1f h'%age)
+          open(os.environ.get('GITHUB_STEP_SUMMARY','/dev/null'),'a').write('Źródło nie odpowiedziało – opublikowana kopia opóźnień ma %.1f h.\n'%age)
+          if age>12 and hour in (5,6):
+              print('::error title=Kopia opóźnień nie odświeża się::Od %.0f godzin nie udało się pobrać opóźnień ze źródła (mkuran.pl). Aplikacja korzysta wtedy z samego rozkładu.'%age);sys.exit(1)
+          PY

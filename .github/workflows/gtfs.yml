@@ -14,18 +14,52 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SRC: https://mkuran.pl/gtfs/polish_trains.zip
+      OLD: https://raw.githubusercontent.com/${{ github.repository }}/gtfs-data/updated.txt
     steps:
+      # Ten sam serwer co przy opóźnieniach: potrafi zerwać połączenie w trakcie pobierania (curl: kod 92, 18 albo 56), a samo --retry
+      # tego nie ponawia. Stąd HTTP/1.1, własna pętla prób i sprawdzenie archiwum po każdej próbie. Gdy źródło nie odpowiada, a opublikowany
+      # rozkład ma mniej niż 3 dni, zadanie nie zgłasza błędu (jutro spróbuje znowu); błąd – i mail – dopiero, gdy rozkład naprawdę się starzeje.
       - name: Pobierz rozkład (PKP PLK przez mkuran.pl)
+        id: dl
         run: |
-          curl -fL --retry 3 --retry-delay 10 -o polish_trains.zip https://mkuran.pl/gtfs/polish_trains.zip
-          unzip -tq polish_trains.zip
-          date -u +%FT%TZ > updated.txt
-          ls -la polish_trains.zip
+          ok=0
+          for i in 1 2 3 4 5; do
+            rm -f polish_trains.zip
+            if curl -fsSL --http1.1 --connect-timeout 20 --max-time 240 -o polish_trains.zip "$SRC"; then
+              if unzip -tq polish_trains.zip; then ok=1; break; fi
+              echo "próba $i: archiwum uszkodzone"
+            else
+              echo "próba $i: curl zakończył się kodem $?"
+            fi
+            if [ "$i" -lt 5 ]; then sleep $((i*${WAIT:-20})); fi
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          if [ "$ok" = 1 ]; then date -u +%FT%TZ > updated.txt; ls -la polish_trains.zip; exit 0; fi
+          old=$(curl -fsSL --max-time 30 "$OLD" 2>/dev/null | head -c 40 || true)
+          age=$(python3 -c "import sys,datetime;s=sys.argv[1].strip();print(int((datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(s.replace('Z','+00:00'))).total_seconds()//3600) if s else -1)" "$old" 2>/dev/null || echo -1)
+          echo "opublikowany rozkład: '$old' (wiek w godzinach: $age)"
+          if [ "$age" -ge 0 ] && [ "$age" -lt 72 ]; then
+            echo "::warning title=Źródło rozkładu nie odpowiada::Pięć prób pobrania nie powiodło się – zostaje rozkład sprzed $age h. Jutro kolejna próba."
+            exit 0
+          fi
+          echo "::error title=Rozkład jazdy się nie odświeża::Źródło (mkuran.pl) nie odpowiada, a opublikowany rozkład ma ponad 3 dni albo nie da się ustalić jego wieku."
+          exit 1
       - name: Opublikuj w gałęzi gtfs-data (bez narastania historii)
+        if: steps.dl.outputs.ok == '1'
+        env:
+          PUSH_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           git init -q -b gtfs-data
           git config user.name "gtfs-bot"
           git config user.email "gtfs-bot@users.noreply.github.com"
           git add polish_trains.zip updated.txt
           git commit -qm "GTFS $(date -u +%F)"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gtfs-data
+          for i in 1 2 3; do
+            if git push -q -f "$PUSH_URL" gtfs-data; then exit 0; fi
+            echo "wysyłka: próba $i nieudana"; sleep $((i*${WAIT:-10}))
+          done
+          echo "::error title=Rozkład niewysłany::Nie udało się zapisać rozkładu w gałęzi gtfs-data (3 próby)."
+          exit 1

@@ -30,14 +30,41 @@ jobs:
           python-version: '3.12'
       - name: Biblioteka pyosmium
         run: pip install "osmium>=4.0"
+      # Pobieranie z ponawianiem i wznawianiem (plik ma ok. 2 GB): zerwane połączenie nie zaczyna od zera i nie kończy zadania błędem.
+      # Gdy Geofabrik nie odpowiada, a baza w repozytorium ma mniej niż 3 tygodnie, zadanie kończy się ostrzeżeniem (za tydzień kolejna próba);
+      # błąd – i mail – dopiero, gdy baza naprawdę się starzeje.
       - name: Wyciąg OSM dla Polski (Geofabrik)
+        id: dl
+        env:
+          PBF: https://download.geofabrik.de/europe/poland-latest.osm.pbf
+          POLY: https://download.geofabrik.de/europe/poland.poly
         run: |
-          curl -fsSL --retry 3 -o poland.osm.pbf https://download.geofabrik.de/europe/poland-latest.osm.pbf
-          curl -fsSL --retry 3 -o poland.poly https://download.geofabrik.de/europe/poland.poly
-          ls -la poland.osm.pbf poland.poly
+          get(){   # get <adres> <plik>: do 6 prób, każda wznawia przerwane pobieranie
+            for i in 1 2 3 4 5 6; do
+              if curl -fsSL --http1.1 --connect-timeout 20 -C - -o "$2" "$1"; then return 0; fi
+              echo "$2: próba $i nieudana (curl: $?)"
+              if [ "$i" -lt 6 ]; then sleep $((i*${WAIT:-20})); fi
+            done
+            return 1
+          }
+          ok=1
+          get "$PBF" poland.osm.pbf || ok=0
+          if [ "$ok" = 1 ]; then get "$POLY" poland.poly || ok=0; fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          if [ "$ok" = 1 ]; then ls -la poland.osm.pbf poland.poly; exit 0; fi
+          age=$(python3 -c "import json,datetime;t=json.load(open('przejazdy/meta.json'))['t'];print((datetime.date.today()-datetime.date.fromisoformat(t[:10])).days)" 2>/dev/null || echo -1)
+          echo "baza w repozytorium: wiek w dniach: $age"
+          if [ "$age" -ge 0 ] && [ "$age" -lt 21 ]; then
+            echo "::warning title=Geofabrik nie odpowiada::Nie udało się pobrać wyciągu OSM – zostaje baza przejazdów sprzed $age dni. Za tydzień kolejna próba."
+            exit 0
+          fi
+          echo "::error title=Baza przejazdów się nie odświeża::Nie udało się pobrać wyciągu OSM, a baza ma ponad 3 tygodnie albo nie da się ustalić jej wieku."
+          exit 1
       - name: Liczenie przejazdów
+        if: steps.dl.outputs.ok == '1'
         run: python tools/przejazdy_pl.py poland.osm.pbf poland.poly przejazdy
       - name: Zapis do repozytorium
+        if: steps.dl.outputs.ok == '1'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
