@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 174</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 175</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1994,7 +1994,9 @@ function xAheadOf(p,c,d){
   }
   if(n)xBN.set(c.id,n);else xBN.delete(c.id);
   if(rel==null)return d<150;   // kierunek nieznany – tylko najbliższa okolica
-  if(p.speed>1.5)return rel<45;
+  // Wersja 175: bez trasy liczył się każdy przejazd w stożku ±45° do 1,2 km – także te na sąsiednich ulicach (700 m w bok przy 1 km), stąd ostrzeżenia o pociągach
+  // przy przejazdach, przez które kierowca wcale nie jedzie. Teraz dalej niż 150 m przejazd musi leżeć w pasie na wprost: 40 m + 12% odległości w bok (ok. 100 m przy 500 m).
+  if(p.speed>1.5)return rel<45&&(d<150||d*Math.sin(rad(rel))<=40+.12*d);
   return d<150&&n<2&&(d<20||rel<90);   // powoli: przed autem (półpłaszczyzna), a w promieniu 20 m, gdzie kąt jest przypadkowy, decyduje zatrzask
 }
 let lastEvalP=null;   // Wersja 169: ostatnia pozycja przekazana do evaluate – pasek z komunikatem odświeżamy też bez nowego odczytu GPS
@@ -2041,7 +2043,7 @@ function evaluate(p){
   setDist(fmtD(n));
   // zagrożenie pociągiem dla każdego przejazdu przed nami
   let threat=null, maybe=null, recent=null, nearestTd=Infinity;
-  const nowS=nowT();
+  const nowS=nowT(),onR=!!(route&&!demo&&route.off<100),thrMax=onR||demo?240:150;   // Wersja 175
   for(const a of ahead){
     for(const t of trains){
       const td=dist(t.lat,t.lon,a.c.lat,a.c.lon);
@@ -2052,7 +2054,7 @@ function evaluate(p){
           // auto dojedzie dopiero po przejechaniu pociągu (z zapasem na to, że pociąg się spóźni) – bez alarmu
           const carEta=p.speed>2?a.d/p.speed:0;
           if(p.speed>2&&carEta>r.eta+30+(xGate(a.c).k==='full'?20:0)+r.unc)continue;
-          if(!r.passed){if(r.eta<240&&(!threat||r.eta<threat.eta))threat={eta:Math.max(0,r.eta),a,t,td:r.along,r}}
+          if(!r.passed){if(r.eta<thrMax&&(!threat||r.eta<threat.eta))threat={eta:Math.max(0,r.eta),a,t,td:r.along,r}}
           else if(r.eta>=-(30+r.unc)&&a.d<100+20*(p.speed||0)&&(!recent||r.eta>recent.r.eta))recent={a,t,r};   // wg danych już minął, ale mógł się spóźnić
         }
         continue;
@@ -2063,7 +2065,7 @@ function evaluate(p){
         if(sp<1.5){if(route&&td<60&&a.d>120&&a.d<1500)detour(p,a.c);continue} // stoi
         if(angDiff(bear(t.lat,t.lon,a.c.lat,a.c.lon),t.heading)>35)continue; // oddala się / inna linia
         const eta=td/sp;
-        if(eta<240&&(!threat||eta<threat.eta))threat={eta,a,t,td};
+        if(eta<thrMax&&(!threat||eta<threat.eta))threat={eta,a,t,td};
       }else if(td<1500&&(!maybe||td<maybe.td))maybe={a,t,td}; // kierunek nieznany
     }
   }
@@ -2080,16 +2082,20 @@ function evaluate(p){
     if(s<=45&&threat.a.d<400&&!((p.speed||0)<1&&threat.a.d<120))showAlarm(s,m,threat.a.c.id);
     const R=threat.r,weak=R&&R.q==='sched',old=R&&(R.q==='old'||R.q==='stale');
     setBanner('bad','Nadjeżdża pociąg',`Pociąg ${fmtTE(s)}${bar}${(p.speed||0)<2&&threat.a.d<250&&G.k!=='none'?' · otwarcie ok. '+fmtS(xOpenIn(threat,s)):''}${threat.a.c.nb?' · przejazd bez zapór':''}${threat.t.rt===false&&!threat.t.tr?' · wg rozkładu':''}${R?dataNote(R):''}${nTr>=2?' · drugi pociąg: sprawdź drugi tor':''}`);
+    // Wersja 175: dotąd to samo ostrzeżenie wracało co 20 s przez cały czas dojazdu pociągu (do 4 minut, czyli nawet 12 razy). Teraz: raz, gdy pociąg się pojawia,
+    // raz, gdy zostaje mu ok. 1,5 minuty, i co 20 s dopiero w ostatnich 45 sekundach blisko przejazdu.
+    const tst=s<=45&&threat.a.d<400?'now':s<=100?'soon':'far';
+    if(tst==='now'||annOnce('t',threat.a.c.lat,threat.a.c.lon,tst))
     say('t'+threat.a.c.id,`${weak?'Proszę uważać, według rozkładu jazdy nadjeżdża pociąg.':'Proszę uważać, nadjeżdża pociąg.'} Przejazd kolejowy za ${m} metrów. Proszę zwolnić.${old?' Dane o opóźnieniach nie są aktualne.':''}`,[300,120,300],'Nadjeżdża pociąg, proszę zwolnić');
   }else if(recent){
     const ago=Math.max(5,Math.round(-recent.r.eta/5)*5);
     if((p.speed||0)<1&&recent.a.d<120)showWait(recent,0,0,ago);
     setBanner('warn','Pociąg powinien już minąć',`Według danych minął go ok. ${ago} s temu, ale rogatki mogą być jeszcze opuszczone${dataNote(recent.r)}`);
-    say('p'+recent.a.c.id,'Pociąg powinien już minąć przejazd, ale dane mogą się spóźniać. Proszę uważać na rogatki.',[200,100,200],'Proszę uważać na rogatki');
+    if(annOnce('p',recent.a.c.lat,recent.a.c.lon,'x'))say('p'+recent.a.c.id,'Pociąg powinien już minąć przejazd, ale dane mogą się spóźniać. Proszę uważać na rogatki.',[200,100,200],'Proszę uważać na rogatki');
   }else if(maybe){
     const m=Math.round(maybe.a.d/10)*10, td=Math.round(maybe.td/10)*10;
     setBanner(maybe.td<800?'bad':'warn','Pociąg w pobliżu',`Pociąg ok. ${td} m od przejazdu (kierunek nieznany)`);
-    say('m'+maybe.a.c.id,`Proszę uważać, w pobliżu przejazdu kolejowego może być pociąg. Przejazd za ${m} metrów.`,[250,120,250],'W pobliżu przejazdu może być pociąg');
+    if(annOnce('m',maybe.a.c.lat,maybe.a.c.lon,maybe.a.d>150?'far':'near'))say('m'+maybe.a.c.id,`Proszę uważać, w pobliżu przejazdu kolejowego może być pociąg. Przejazd za ${m} metrów.`,[250,120,250],'W pobliżu przejazdu może być pociąg');
   }else if(near.d<warnDist+(xNearId===near.c.id?60:0)){   // histereza: raz zapowiedziany przejazd nie „odskakuje” do „w oddali” przy drżeniu pozycji na granicy zasięgu
     xNearId=near.c.id;
     let tn;   // informacja o pociągach przy najbliższym przejeździe
