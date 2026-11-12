@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 176</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 177</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2017,9 +2017,17 @@ function evaluate(p){
 
   const warnDist=Math.max(400,p.speed*20); // m
   let ahead=[];
+  const trc=(!route||demo||route.off>=100)&&p.speed>1.5&&p.heading!=null&&vec?roadTrace(p,1500):null;lastTrace=trc;   // Wersja 177
   crossings.forEach(c=>{
-    const d=dist(p.lat,p.lon,c.lat,c.lon);
-    if(xAheadOf(p,c,d)&&d<Math.max(warnDist,1200))ahead.push({c,d});
+    const d=dist(p.lat,p.lon,c.lat,c.lon),fw=xAheadOf(p,c,d);
+    if(trc&&(trc.len>=40||trc.end==='junction')){   // tuż przed skrzyżowaniem, na którym trzeba skręcić, liczą się odnogi (nie pas na wprost)
+      if(d>trc.len+80)return;
+      const h=traceHit(trc,c);
+      if(h){const al=Math.max(d,h.al);if(al<Math.max(warnDist,1200))ahead.push({c,d:al,via:h.br?'b':'m'})}
+      else if(fw&&(d<40||(trc.end==='edge'&&d>trc.len-20)))ahead.push({c,d,via:d<40?'n':'e'});   // tuż przed autem (przesunięcie GPS) albo za końcem danych mapy – jak dotąd
+      return;
+    }
+    if(fw&&d<Math.max(warnDist,1200))ahead.push({c,d});
   });
   const wide=(route&&!demo&&route.off<100)||(p.speed>1.5&&p.heading!=null);   // zasięg sprawdzania: z trasą lub w ruchu – przed nami, w postoju bez trasy – tylko najbliższa okolica
   if(route&&!demo&&route.off<100){ // z trasą: liczą się tylko przejazdy leżące na trasie przed nami
@@ -5655,6 +5663,70 @@ function snapPoint(lat,lon,hr){
   }
   if(found)snapLv=blv;
   return found?[D.lat+by/111195,D.lon+bx/kx,bd]:null;
+}
+// ================= Wersja 177: bez trasy – droga, którą jedziemy =================
+// Dotąd (do 175) „przejazd przed nami” to był stożek, a potem pas na wprost auta – ostrzeżenia trafiały na przejazdy na sąsiednich ulicach, a przejazd za zakrętem
+// pojawiał się późno. Teraz aplikacja idzie po mapie wzdłuż drogi pod autem: na każdym rozwidleniu wybiera przedłużenie najbardziej na wprost (do 60°, tej samej klasy
+// i na tym samym poziomie), do 1,5 km. Gdy droga kończy się skrzyżowaniem, na którym trzeba skręcić, sprawdzane są wszystkie odnogi na 250 m, a skręty w pierwszych 90 m (kierowca zwykle już zwalnia do skrętu) – na 160 m. Przejazd liczy się, gdy
+// leży do 25 m od tej linii; jego odległość to droga po linii, nie w prostej. Gdy pod autem nie ma drogi z mapy (brak danych, parking) – zostaje pas na wprost (wersja 175).
+var lastTrace=null;   // ostatnio wyznaczona droga (do testów i okna stanu)
+function roadTrace(p,maxLen){
+  const D=vecData;if(!D||!D.RS||!D.RS.length||p.heading==null)return null;
+  const g=snapGrid(D),CS=40,kx=111195*Math.cos(rad(D.lat)),X=(p.lon-D.lon)*kx,Y=(p.lat-D.lat)*111195,hr=rad(p.heading),hx=Math.sin(hr),hy=Math.cos(hr);
+    const key=(ax,ay,bx,by)=>{const a=Math.round(ax*2)+':'+Math.round(ay*2),b=Math.round(bx*2)+':'+Math.round(by*2);return a<b?a+'|'+b:b+'|'+a};
+  // odcinek pod autem
+  let st=null,bs=1e9;const cx=Math.floor(X/CS),cy=Math.floor(Y/CS);
+  for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){const l=g.get(u+','+v);if(!l)continue;
+    for(let j=0;j<l.length;j+=4){let ax=l[j],ay=l[j+1],bx=l[j+2],by=l[j+3];const dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);if(L<.3)continue;
+      const cs=(dx*hx+dy*hy)/L;if(Math.abs(cs)<.77)continue;   // ±40°
+      let t=((X-ax)*dx+(Y-ay)*dy)/(L*L);t=t<0?0:t>1?1:t;const d=Math.hypot(ax+dx*t-X,ay+dy*t-Y);if(d>20)continue;
+      const sc=d+(1-Math.abs(cs))*30+((l.v&&l.v[j>>2])!==(snapLv||0)?6:0);if(sc>=bs)continue;
+      if(cs<0){[ax,ay,bx,by]=[bx,by,ax,ay];t=1-t}
+      bs=sc;st={ax,ay,bx,by,px:ax+(bx-ax)*t,py:ay+(by-ay)*t,c:l.c?l.c[j>>2]:'rs',lv:l.v?l.v[j>>2]:0}}}
+  if(!st)return null;
+  const used=new Set();
+  // przedłużenia w punkcie (x,y) przy kierunku (ux,uy): odcinki zaczynające się tu (do 3 m) albo przechodzące tędy (skrzyżowanie w kształcie T)
+  const cont=(x,y,ux,uy)=>{const out=[],seen=new Set(),gx=Math.floor(x/CS),gy=Math.floor(y/CS);
+    for(let u=gx-1;u<=gx+1;u++)for(let v=gy-1;v<=gy+1;v++){const l=g.get(u+','+v);if(!l)continue;
+      for(let j=0;j<l.length;j+=4){const ax=l[j],ay=l[j+1],bx=l[j+2],by=l[j+3],k=key(ax,ay,bx,by);if(used.has(k)||seen.has(k))continue;
+        const dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);if(L<.3)continue;
+        const c=l.c?l.c[j>>2]:'rs',lv=l.v?l.v[j>>2]:0,add=(sx,sy,ex,ey)=>{const ox=(ex-sx)/L,oy=(ey-sy)/L;out.push({ax:sx,ay:sy,bx:ex,by:ey,k,c,lv,an:Math.acos(Math.max(-1,Math.min(1,ox*ux+oy*uy)))})};
+        if(Math.hypot(ax-x,ay-y)<3){seen.add(k);add(ax,ay,bx,by)}
+        else if(Math.hypot(bx-x,by-y)<3){seen.add(k);add(bx,by,ax,ay)}
+        else{let t=((x-ax)*dx+(y-ay)*dy)/(L*L);if(t>.02&&t<.98&&Math.hypot(ax+dx*t-x,ay+dy*t-y)<3){seen.add(k);const mx=ax+dx*t,my=ay+dy*t;add(mx,my,bx,by);add(mx,my,ax,ay)}}
+      }}
+    return out};
+  // marsz: na każdym końcu odcinka – przedłużenie najbardziej na wprost
+  const side=[];
+  const walk=(s0,sx,sy,max,sd)=>{
+    const pts=[[sx,sy]],cum=[0];let len=0,cur=s0,end='len',jn=null;used.add(key(s0.ax,s0.ay,s0.bx,s0.by));
+    for(let it=0;it<800;it++){
+      const lx=pts[pts.length-1][0],ly=pts[pts.length-1][1],sl=Math.hypot(cur.bx-lx,cur.by-ly);
+      len+=sl;pts.push([cur.bx,cur.by]);cum.push(len);if(len>=max){end='len';break}
+      const L=Math.hypot(cur.bx-cur.ax,cur.by-cur.ay)||1,ux=(cur.bx-cur.ax)/L,uy=(cur.by-cur.ay)/L,cs=cont(cur.bx,cur.by,ux,uy);
+      if(!cs.length){end='edge';break}   // koniec danych mapy albo ślepa uliczka
+      let b=null,bsc=1e9;for(const q of cs){const sc=q.an+(q.c!==cur.c?.25:0)+(q.lv!==cur.lv?.5:0);if(sc<bsc){bsc=sc;b=q}}
+      if(sd&&len<sd)for(const q of cs)if(q!==b&&q.an>.35&&q.an<2.6)side.push({q,at:len});   // skręty tuż przed autem – sprawdzimy je krótko
+      // rozwidlenie, na którym inne przedłużenie jest prawie tak samo „na wprost” – zostajemy na tej samej klasie drogi, ale zapamiętujemy węzeł
+      const fwd=cs.filter(q=>q.an<2.6);   // bez zawracania
+      if(!b||(b.an>=1.05&&!(fwd.length===1&&b===fwd[0]))){end='junction';jn={x:cur.bx,y:cur.by,cs:fwd};break}   // jedyne przedłużenie (droga sama skręca, nawet o 90°) – jedziemy dalej
+      used.add(b.k);cur=b;   // zapamiętujemy tylko wybrany odcinek – inne „na wprost” (np. bardzo krótki odcinek obok) mogą być dalszym ciągiem
+    }
+    return {pts,cum,len,end,jn};
+  };
+  const main=walk(st,st.px,st.py,maxLen,90),br=[];
+  if(main.end==='junction'&&main.len<maxLen-250&&main.jn)for(const q of main.jn.cs){const w=walk(q,q.ax,q.ay,250);w.base=main.len;br.push(w)}
+  for(const s of side.slice(0,6)){if(used.has(s.q.k))continue;const w=walk(s.q,s.q.ax,s.q.ay,160);w.base=s.at;br.push(w)}   // skrzyżowanie tuż przed autem (do 90 m): odnogi na 160 m (skręt zaraz za autem, przejazd tuż za skrętem)
+  return {D,kx,main,br,len:main.len,end:main.end,X,Y};
+}
+// przejazd na śledzonej drodze: {al: odległość po drodze, off: odległość od linii} albo null
+function traceHit(T,c){
+  const x=(c.lon-T.D.lon)*T.kx,y=(c.lat-T.D.lat)*111195;let best=null;
+  const scan=(w,base)=>{const P=w.pts;for(let i=1;i<P.length;i++){const ax=P[i-1][0],ay=P[i-1][1],dx=P[i][0]-ax,dy=P[i][1]-ay,L2=dx*dx+dy*dy;if(L2<.01)continue;
+    let t=((x-ax)*dx+(y-ay)*dy)/L2;t=t<0?0:t>1?1:t;const d=Math.hypot(ax+dx*t-x,ay+dy*t-y);
+    if(d<25&&(!best||d<best.off-3||(Math.abs(d-best.off)<=3&&base+w.cum[i-1]+Math.sqrt(L2)*t<best.al)))best={al:base+w.cum[i-1]+Math.sqrt(L2)*t,off:d,br:w!==T.main}}};
+  scan(T.main,0);for(const w of T.br)scan(w,w.base);
+  return best;
 }
 function camFix(p,h){
   const now=performance.now(),d=vecCam0(now),sp=(p.speed||0)>1.5?p.speed:0,hr=rad(h||0);
