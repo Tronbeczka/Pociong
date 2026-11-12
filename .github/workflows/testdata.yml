@@ -20,7 +20,8 @@ jobs:
         run: |
           python3 - <<'PY'
           import json,math,os,urllib.request,time
-          tj=json.load(urllib.request.urlopen('https://tiles.openfreemap.org/planet',timeout=30))
+          UA={'User-Agent':'pociong-testdata (github.com/Tronbeczka/Pociong)'}
+          tj=json.load(urllib.request.urlopen(urllib.request.Request('https://tiles.openfreemap.org/planet',headers=UA),timeout=30))
           tpl=tj['tiles'][0];z=14;n=2**z
           def xy(lat,lon):return int((lon+180)/360*n),int((1-math.log(math.tan(math.radians(lat))+1/math.cos(math.radians(lat)))/math.pi)/2*n)
           x0,y1=xy(51.02,16.85);x1,y0=xy(51.20,17.20)
@@ -30,7 +31,7 @@ jobs:
                   u=tpl.replace('{z}',str(z)).replace('{x}',str(x)).replace('{y}',str(y))
                   for i in range(4):
                       try:
-                          b=urllib.request.urlopen(urllib.request.Request(u,headers={'User-Agent':'pociong-testdata'}),timeout=40).read()
+                          b=urllib.request.urlopen(urllib.request.Request(u,headers=UA),timeout=40).read()
                           open('wro/%d_%d_%d.pbf'%(z,x,y),'wb').write(b);ok+=1;break
                       except Exception as e:
                           print('ponawiam',x,y,repr(e)[:80]);time.sleep(3)
