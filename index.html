@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 175</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 176</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -3935,7 +3935,7 @@ fuelUI();
   fuelSave();fuelPlan();
 });
 $('fuelFull').onclick=()=>{fuel.lvl=100;fuelSave();fuelUI();fuelPlan()};
-const kmTxt=k=>k<1?Math.max(50,Math.round(k*20)*50)+' m':Math.round(k)+' km';
+const kmTxt=k=>k<.975?Math.max(50,Math.round(k*20)*50)+' m':Math.max(1,Math.round(k))+' km';   // wersja 176: 0,98 km to „1 km”, nie „1000 m”
 function fuelStations(){
   if(!route||!poi||!route.pts||route.pts.length<3)return[];const n=route.pts.length-2;
   return poi.filter(x=>x.kind===(fuel.ev?'charge':'fuel')&&x.lat!=null&&x.lon!=null).map(x=>{
@@ -9844,7 +9844,10 @@ async function liveProbeAll(){   // jednorazowy test źródeł: czy odpowiadają
   }
 }
 const lateOf=(tr,seg)=>tr.dly?Math.round(tr.dly.a[Math.max(0,Math.min(tr.st.length-1,(seg||0)+1))]/60):null;   // opóźnienie wg prognozy na następnej stacji
-let idbP=null;   // jedno połączenie z bazą na całą sesję (wcześniej każdy odczyt otwierał nowe)
+// Wersja 176: „var” bez przypisania zamiast „let”. Zapisane przejazdy, pola przejechanych ulic i pierwsze nagranie własne czytane są z pamięci urządzenia przy starcie,
+// wcześniej niż ta linia – z „let” każdy taki odczyt kończył się cichym błędem (zmienna przed inicjalizacją), więc historia nigdy się nie wczytywała,
+// a po 30 s jazdy była nadpisywana samą bieżącą jazdą.
+var idbP;   // jedno połączenie z bazą na całą sesję (wcześniej każdy odczyt otwierał nowe)
 function idb(){if(idbP)return idbP;idbP=new Promise((ok,no)=>{const r=indexedDB.open('przejazdy',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{const d=r.result;d.onclose=d.onversionchange=()=>{idbP=null;try{d.close()}catch(e){}};ok(d)};r.onerror=()=>{idbP=null;no(r.error)}});return idbP}
 // raz na tydzień: usuń stare dane z pamięci urządzenia i zostaw najwyżej tyle najnowszych, ile wolno w danej grupie – pamięć nie rośnie bez końca
 // (kafelki mapy 30 dni / 1500, zapytania Overpass: znaki, przejazdy 14 dni / 600, pasy ruchu 14 dni / 600, dane mapy zapasowej 14 dni / 40, kafelki wysokości terenu rok / 300)
