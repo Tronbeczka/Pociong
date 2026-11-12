@@ -1,7 +1,7 @@
-name: Dane testowe (kafelki mapy okolic Wrocławia)
+name: Dane testowe (Wrocław i okolice)
 
-# Uruchamiane ręcznie albo po zmianie tego pliku. Pobiera kafelki wektorowe (OpenFreeMap, z14) dla okolic Wrocławia
-# i zapisuje je w gałęzi test-data – służą wyłącznie do testów aplikacji na prawdziwych drogach i przejazdach.
+# Wyciąg OpenStreetMap z okolic Wrocławia do testów aplikacji (śledzenie drogi bez trasy, ostrzeżenia na prawdziwych przejazdach).
+# Uruchamia się tylko ręcznie albo po zmianie tego pliku – nie ma harmonogramu, nie wysyła maili przy zwykłej pracy.
 on:
   workflow_dispatch:
   push:
@@ -12,39 +12,35 @@ permissions:
   contents: write
 
 jobs:
-  tiles:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    env:
+      SRC: https://download.geofabrik.de/europe/poland/dolnoslaskie-latest.osm.pbf
+      BBOX: 16.70,50.95,17.35,51.25
     steps:
-      - name: Pobierz kafelki
+      - name: Narzędzia
+        run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+      - name: Pobierz województwo dolnośląskie (Geofabrik)
         run: |
-          python3 - <<'PY'
-          import json,math,os,urllib.request,time
-          UA={'User-Agent':'pociong-testdata (github.com/Tronbeczka/Pociong)'}
-          tj=json.load(urllib.request.urlopen(urllib.request.Request('https://tiles.openfreemap.org/planet',headers=UA),timeout=30))
-          tpl=tj['tiles'][0];z=14;n=2**z
-          def xy(lat,lon):return int((lon+180)/360*n),int((1-math.log(math.tan(math.radians(lat))+1/math.cos(math.radians(lat)))/math.pi)/2*n)
-          x0,y1=xy(51.02,16.85);x1,y0=xy(51.20,17.20)
-          os.makedirs('wro',exist_ok=True);ok=0
-          for x in range(x0,x1+1):
-              for y in range(y0,y1+1):
-                  u=tpl.replace('{z}',str(z)).replace('{x}',str(x)).replace('{y}',str(y))
-                  for i in range(4):
-                      try:
-                          b=urllib.request.urlopen(urllib.request.Request(u,headers=UA),timeout=40).read()
-                          open('wro/%d_%d_%d.pbf'%(z,x,y),'wb').write(b);ok+=1;break
-                      except Exception as e:
-                          print('ponawiam',x,y,repr(e)[:80]);time.sleep(3)
-          json.dump({'z':z,'x0':x0,'x1':x1,'y0':y0,'y1':y1,'ok':ok,'tpl':tpl},open('wro/meta.json','w'))
-          print('kafelków',ok,'z',(x1-x0+1)*(y1-y0+1))
-          PY
-          tar czf wro_tiles.tar.gz wro && ls -la wro_tiles.tar.gz
-      - name: Zapisz w gałęzi test-data
+          for i in 1 2 3 4 5; do
+            if curl -fsSL --http1.1 --connect-timeout 20 -C - -o dl.osm.pbf "$SRC"; then break; fi
+            echo "próba $i nieudana"; sleep $((i*20))
+          done
+          ls -la dl.osm.pbf
+      - name: Wytnij okolice Wrocławia
+        run: |
+          osmium extract -b "$BBOX" --strategy=smart -o box.osm.pbf dl.osm.pbf
+          osmium tags-filter box.osm.pbf nwr/highway nwr/railway w/building nwr/natural=water w/waterway nwr/landuse nwr/leisure=park nwr/place nwr/bridge nwr/tunnel -o wroclaw.osm.pbf
+          ls -la box.osm.pbf wroclaw.osm.pbf
+          osmium fileinfo -e wroclaw.osm.pbf | head -30
+          date -u +%FT%TZ > updated.txt
+      - name: Opublikuj w gałęzi testdata
         env:
           PUSH_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
-          mkdir out && mv wro_tiles.tar.gz out/ && cd out
-          git init -q -b test-data
+          mkdir out && mv wroclaw.osm.pbf updated.txt out/ && cd out
+          git init -q -b testdata
           git config user.name "gtfs-bot"; git config user.email "gtfs-bot@users.noreply.github.com"
-          git add . && git commit -qm "kafelki testowe $(date -u +%F)"
-          git push -q -f "$PUSH_URL" test-data
+          git add . && git commit -qm "Wrocław OSM $(date -u +%F)"
+          git push -q -f "$PUSH_URL" testdata
