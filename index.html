@@ -1366,7 +1366,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
 </div>
 <div id="bar">
   <button id="closeNav" aria-label="Zakończ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  <div id="bmid"><div id="bmain">Gotowy</div><div id="bsub">Ustawienia: ikona ⚙ na mapie</div></div>
+  <div id="bmid"><div id="bmain">–</div><div id="bsub">Bez trasy</div></div>
   <button id="ovBtn" type="button" aria-label="Pokaż całą trasę" title="Cała trasa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div>
 <button id="tilt" aria-label="Widok 2D lub 3D">2D</button>
@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 177</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 178</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1708,11 +1708,25 @@ function nbsp(t){return String(t).replace(/(\d) (?=(km\/h|km|m|min|s|h|godz\.)(?
 let bannerLv='ok';
 function syncBanner(){const h=!(route||window.preview)&&bannerLv==='ok';if(document.body.classList.contains('noBanner')!==h){document.body.classList.toggle('noBanner',h);try{window.fitUI&&setTimeout(window.fitUI,0)}catch(e){}}}
 setInterval(()=>{try{syncBanner()}catch(e){}},400);
-function setBanner(level,big,sub){bannerLv=level;try{syncBanner()}catch(e){}sub=nbsp(sub);const b=$('banner');b.className=level==='ok'?'':level;$('carIcon').classList.toggle('bad',level==='bad');$('bar').className=level==='ok'?'':level;$('bmain').textContent=big;$('big').textContent=big;{const lg=big.length>17;$('bmain').style.fontSize=lg?'.8em':'';$('big').style.fontSize=lg?'.84em':''}   // długi tytuł (np. „0 przejazdów kolejowych”) mieści się w jednej linii
+function setBanner(level,big,sub){bannerLv=level;try{syncBanner()}catch(e){}sub=nbsp(sub);const b=$('banner');b.className=level==='ok'?'':level;$('carIcon').classList.toggle('bad',level==='bad');$('bar').className=level==='ok'?'':level;$('bar').dataset.ban=big;$('big').textContent=big;{const lg=big.length>17;$('big').style.fontSize=lg?'.84em':''}barTrip();   // długi tytuł (np. „0 przejazdów kolejowych”) mieści się w jednej linii
   $('sub').textContent=sub;
   if(level==='ok'&&nav){$('bicon').innerHTML=nav.icon;$('big').textContent=nav.txt;$('sub').textContent=nav.then||sub;$('dist').textContent=nav.dist}
   else $('bicon').innerHTML=ICON_X}
 var nav=null,navSaid={},rerouting=false;
+// Wersja 178: dolny pasek pokazuje czas potrzebny na pokonanie trasy (duży napis), pod nim drogę do celu i godzinę przyjazdu. Dotąd duży napis powtarzał stan
+// przejazdów („0 przejazdów kolejowych”), który i tak jest na górnym banerze. Bez trasy: godzina i podpowiedź; kolor paska nadal mówi o ostrzeżeniu (żółty / czerwony).
+function barTrip(){try{barTrip0()}catch{}}   // przy starcie (przed deklaracją trasy) po prostu nic nie robi
+function barTrip0(){
+  if(window.preview)return;
+  const m=$('bmain'),sb=$('bsub');if(!m||!sb)return;
+  if(arrivedAt&&!route&&Date.now()-arrivedAt<12000){m.textContent='Dojechaliśmy';sb.textContent=arrivedSub;return}
+  if(route&&route.len>0){
+    const al=route.along||0,rem=Math.max(0,route.len-al),mins=Math.max(1,Math.round(routeRem(route,al)/60));
+    const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+    m.textContent=fmtMin(mins);sb.textContent=fmtD(rem)+' · przyjazd '+eta+(route.jamD!=null?' · korek za '+fmtD(route.jamD):'');return}
+  m.textContent=new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+  sb.textContent='Bez trasy';
+}
 function fillVoices(){
   const sel=$('vsel'),vs=plVoices();if(!sel)return;
   sel.innerHTML='<option value="">Głos: automatycznie (męski)</option>'+vs.map(v=>'<option value="'+v.name.replace(/"/g,'&quot;')+'">'+v.name+'</option>').join('');
@@ -2396,7 +2410,7 @@ function follow(p){
    if(v<pv-.6&&v>.3||v<.5&&pv>1.5)follow.bt=Date.now()+900;   // hamowanie: światła stop
    ci.classList.toggle('brk',Date.now()<(follow.bt||0));
    if(!follow.popped){follow.popped=true;ci.classList.add('pop');setTimeout(()=>ci.classList.remove('pop'),800)}}
-  const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;$('bsub').textContent=window.preview?(window.pvTxt||''):kmh+' km/h · '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+  const kmh=Math.round((p.speed||0)*3.6);$('spd').textContent=kmh;if(window.preview)$('bsub').textContent=window.pvTxt||'';else barTrip();
   updLimit(p);
   scaleBase=kmh>110?.85:kmh>80?1.1:kmh>50?1.5:kmh>25?2.05:2.8;if(nav&&nav.i>0&&nav.d<170&&nav.d>5)scaleBase*=1.25;   // przed skrętem kamera zbliża się do skrzyżowania
   dmSp=kmh;dmTurn=!!(nav&&nav.i>0&&nav.d<170&&nav.d>5);   // dane dla widoku kierowcy (nachylenie kamery)
@@ -2834,9 +2848,8 @@ function routeUpdate(p){
     route.jamGone=0;
     if(jamD<1500&&!route.jamSaid){route.jamSaid=Date.now();say('jam','Na trasie przed nami jest korek. Proszę zachować ostrożność.',[120,80,120],'Korek na trasie')}
   }else if(route.jamSaid){route.jamGone=route.jamGone||Date.now();if(Date.now()-route.jamGone>90000){route.jamSaid=0;route.jamGone=0}}
-  const rem=Math.max(0,route.len-r.along),mins=Math.max(1,Math.round(routeRem(route,r.along)/60));
-  const eta=new Date(Date.now()+mins*60000).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
-  $('bsub').textContent=fmtMin(mins)+' · '+fmtD(rem)+' · '+eta+(jamD!=null?' · korek za '+fmtD(jamD):'');
+  const rem=Math.max(0,route.len-r.along);
+  barTrip();
   if(rem<40){const cmp=finishTrip();try{arriveSay()}catch(e){}arrivedAt=Date.now();arrivedSub='Jesteśmy u celu'+cmp;setBanner('ok','Dojechaliśmy',arrivedSub);clearRoute();setTimeout(()=>{try{evToast('🅿️ Dojechałeś na miejsce','Zapisać, gdzie zaparkowałeś?',[['Zapisz',saveParking],['Nie',()=>{}]],20000)}catch(e){}},2500);return}
   // zjechanie z trasy (zły skręt): po ~3 s poza trasą liczymy nową, najszybszą od bieżącej pozycji
   // równoległa droga tuż obok trasy (do ~100 m) i jazda zgodnie z jej kierunkiem to nie zjechanie z trasy (błąd GPS, inny pas, dojazd do skrzyżowania)
@@ -3447,7 +3460,7 @@ $('logon').onchange=()=>{logOn=OWNER&&$('logon').checked;LSput('logon',logOn)};
 async function logSample(p){
   if(!logOn||demo||sim)return;const now=Date.now();if(now-logLast<2000)return;logLast=now;
   drivelog.push({t:now,lat:+p.lat.toFixed(6),lon:+p.lon.toFixed(6),v:p.speed!=null?+(p.speed*3.6).toFixed(1):null,h:p.heading!=null?Math.round(p.heading):null,
-    thr:window._thr||null,ban:$('bmain').textContent,tr:trains.length});window._thr=null;
+    thr:window._thr||null,ban:$('bar').dataset.ban||'',tr:trains.length});window._thr=null;
   if(drivelog.length>20000)drivelog.shift();
   if(drivelog.length%20===0)try{await idbSet('drivelog',drivelog)}catch(e){}
 }
@@ -8258,6 +8271,12 @@ function drawZebras(){
 }
 
 const xU=k=>Math.max(15,Math.min(30,17*k));
+function drawXDot(o,big){   // Wersja 178: przejazd jako mała kropka (mapa oddalona albo znak nakładałby się na bliższy)
+  const r=big?5:3.2;mx.beginPath();mx.arc(o.p.x,o.p.y,r,0,6.2832);
+  mx.globalAlpha=big?.95:.75;mx.fillStyle=o.c.nb?'#f9a825':'#d32f2f';mx.fill();
+  if(big){mx.lineWidth=1.6;mx.strokeStyle=night?'#1b1f27':'#fff';mx.stroke()}
+  mx.globalAlpha=1;
+}
 // znak przejazdu kolejowego: kropka w miejscu przejazdu + trójkąt ostrzegawczy z krzyżem św. Andrzeja
 const xNC={};
 function xNext(c){const n=Date.now(),e=xNC[c.id];if(e&&n-e.at<15000)return e.v;let v=null;
@@ -8351,13 +8370,21 @@ function drawMarkers(){
   if(pinPt){const p=P(pinPt.lat,pinPt.lon);if(p)list.push({p,t:3})}
   list.sort((a,b)=>a.p.y-b.p.y); // dalsze najpierw
   XLAB.length=0;
-  const xRank=new Set(list.filter(o=>o.t===0&&o.d<1800).sort((a,b)=>a.d-b.d).slice(0,3).map(o=>o.c.id));   // etykiety z odległością tylko dla trzech najbliższych
+  // Wersja 178: po oddaleniu mapy (poniżej ok. 0,6 px/m – ponad ok. 700 m na szerokość ekranu) pełny znak z trójkątem i etykietą ma tylko najbliższy przejazd przed autem,
+  // pozostałe są małymi kropkami. Przy każdym powiększeniu znaki, które nachodziłyby na siebie (np. kilka przejazdów przy stacji), łączą się: zostaje bliższy, dalsze – kropki.
+  const xCmp=!!vf&&vf.s<.6;
+  const xRank=new Set(list.filter(o=>o.t===0&&o.d<1800).sort((a,b)=>a.d-b.d).slice(0,xCmp?1:3).map(o=>o.c.id));   // etykiety z odległością tylko dla najbliższych
+  const xK=new Map();{const acc=[];
+    for(const o of list.filter(o=>o.t===0).sort((a,b)=>(xRank.has(b.c.id)-xRank.has(a.c.id))||a.d-b.d)){
+      const full=!xCmp||xRank.has(o.c.id),sep=full?Math.max(38,xU(o.p.k)*2.6):14;let ok=true;
+      for(const q of acc)if(Math.abs(q.x-o.p.x)<Math.max(sep,q.s)&&Math.abs(q.y-o.p.y)<Math.max(sep,q.s)*1.4){ok=false;break}
+      xK.set(o.c.id,ok?(full?2:1):0);if(ok)acc.push({x:o.p.x,y:o.p.y,s:sep})}}
   for(const o of list){
     const {x,y,k}=o.p;if(x<-40||x>W+40||y<-40||y>H+40)continue;
     if(o.t===2){pin(x,y,k);continue}
     if(o.t===4){startMark(x,y,k);continue}
     if(o.t===3){pin(x,y,k,'#7c4dff');continue}
-    if(o.t===0){drawXMark(o,xRank);continue}
+    if(o.t===0){const m=xK.get(o.c.id);if(m===2)drawXMark(o,xRank);else drawXDot(o,m===1);continue}
     const r=Math.max(7,Math.min(28,11*k));
     if(trainSkin!=='classic'&&o.hd!=null&&!isNaN(o.hd))drawTrainSkin(x,y,r,o);
     else{mx.beginPath();mx.arc(x,y,r,0,6.2832);
@@ -10427,7 +10454,7 @@ function bbSnapshot(why){
     signs:signs?{list:signs.list.length,lights:signs.lights.length,haz:signs.haz.length,cells:sgCells.size}:null,lanes:LANEW.size,screen:window.innerWidth+'x'+window.innerHeight,ua:navigator.userAgent};
   return {kind:'przejazd-zgloszenie',v:2,t:now,iso:new Date(now).toISOString(),tz:Intl.DateTimeFormat().resolvedOptions().timeZone,why:why||'',
     pos:last?{lat:+last.lat.toFixed(6),lon:+last.lon.toFixed(6)}:null,heading:Math.round(lastH||0),cfg,
-    banner:$('bmain').textContent+' | '+$('bsub').textContent,nav:nav?{txt:nav.txt,dist:nav.dist}:null,
+    banner:($('bar').dataset.ban||'')+' | '+$('bmain').textContent+' · '+$('bsub').textContent,nav:nav?{txt:nav.txt,dist:nav.dist}:null,
     routeNow:r?{along:Math.round(r.along),off:Math.round(r.off),len:Math.round(r.len),jam:Math.round(jamAheadM(r)),steps:(r.steps||[]).slice(0,40).map(x=>({t:x.type,m:x.mod||'',off:Math.round(x.off||0),n:x.name||''}))}:null,
     route:BB.rt,samples:BB.s.filter(x=>x[0]>=cut),events:BB.e.filter(x=>x.t>=now-40*60000).slice(-300),
     errors:(typeof errLog!=='undefined'?errLog.slice(-8).map(e=>({t:e.t,s:e.s,m:String(e.m).slice(0,200)})):[])};
