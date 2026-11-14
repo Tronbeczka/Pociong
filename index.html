@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 179</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 180</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2340,7 +2340,7 @@ function applyRot(){document.body.classList.toggle('flat',!tiltDeg)}
 var freeCam=false,panE=0,panN=0,savedTilt=50,zoomMul=1,rotOff=0,scaleBase=1,zoomBase=17;
 const MINS=.0004;   // najmniejsza skala (px na metr): ok. 1000 km na szerokość ekranu – mieści się cała trasa na drugi koniec kraju (tło z kafelków z-5/z-6/z-8/z-10/z-12)
 const clampS=v=>Math.max(MINS,Math.min(5,v));
-function updRecenter(){$('recenter').style.display=(freeCam||Math.abs(rotOff)>3)?'flex':'none'}
+function updRecenter(){$('recenter').style.display=(freeCam||Math.abs(rotOff)>3||(!window.preview&&Math.abs(Math.log(zoomMul))>.2))?'flex':'none'}   // wersja 180: także po zmianie przybliżenia (+/−, dwa palce, kółko) – przycisk przywraca przybliżenie jazdy
 function enterFree(){
   if(freeCam)return;freeCam=true;tgtRot=curRot;   // przesuwanie nie zmienia widoku: nachylenie i obrót zostają
   camHold();
@@ -2363,7 +2363,10 @@ function recenter(){
     if(!vec&&last)map.setView([last.lat,last.lon],map.getZoom(),{animate:false});
     vd=null;
     setZoom(1);   // powrót do auta przywraca też odpowiednie przybliżenie (zależne od prędkości), a nie zostawia zbliżenia z przeglądania mapy
-  }else if(window.glideStart&&window.glideStart(true))return;   // mapa tylko obrócona: kierunek jazdy wraca łagodnie, tą samą krzywą
+  }else{   // mapa nieprzesunięta – tylko obrócona i/lub przybliżona: kierunek jazdy i przybliżenie (zależne od prędkości) wracają łagodnie, tą samą krzywą
+    if(window.glideStart&&window.glideStart(true))return;
+    setZoom(1);   // bez lotu (ograniczony ruch, mapa rastrowa) – od razu
+  }
   updRecenter();
 }
 function setZoom(z){
@@ -2373,8 +2376,8 @@ function setZoom(z){
 }
 $('recenter').onclick=recenter;
 const userZoom=()=>{if(panGlide&&panGlide.keep)glideStop();ovwOff()};   // ręczne zbliżanie przerywa lot do widoku całej trasy i zdejmuje przypięcie kamery
-$('zin').onclick=()=>{userZoom();setZoom(zoomMul*1.45)};
-$('zout').onclick=()=>{userZoom();setZoom(zoomMul/1.45)};
+$('zin').onclick=()=>{userZoom();setZoom(zoomMul*1.45);updRecenter()};
+$('zout').onclick=()=>{userZoom();setZoom(zoomMul/1.45);updRecenter()};
 $('compass').onclick=()=>{rotOff=0;tgtRot=freeCam?0:-lastH;updRecenter()};   // kompas: powrót do kierunku jazdy (przy przesuniętej mapie – północ u góry)
 const tiltLbl=()=>{$('tilt').textContent=tiltDeg>=60?'2D':tiltDeg?'3D+':'3D'};
 $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltDyn=0;tiltOv=tiltGo=null;ovTilt=null;tiltLbl();applyRot()};
@@ -2401,7 +2404,7 @@ $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltDyn=0;tiltOv=t
     if(vec){panE-=cx/scaleCur;panN+=cy/scaleCur}else map.panBy([-cx,-cy],{animate:false});
   });
   ['pointerup','pointercancel'].forEach(t=>vw.addEventListener(t,e=>{clearTimeout(lpT);const tap=t==='pointerup'&&pan&&!pan.moved&&!pan.held&&ptrs.size===1;ptrs.delete(e.pointerId);g0=null;pan=null;if(ptrs.size===2)g0=pair();if(tap&&window.mapTap)window.mapTap(e.clientX,e.clientY)}));
-  vw.addEventListener('wheel',e=>{e.preventDefault();glideStop();ovwOff();setZoom(zoomMul*Math.exp(-e.deltaY*.0015))},{passive:false});
+  vw.addEventListener('wheel',e=>{e.preventDefault();glideStop();ovwOff();setZoom(zoomMul*Math.exp(-e.deltaY*.0015));updRecenter()},{passive:false});
   vw.addEventListener('contextmenu',e=>e.preventDefault());   // przytrzymanie wybiera miejsce – bez menu systemowego
 }
 function follow(p){
@@ -8715,12 +8718,12 @@ function glideStep(now){
 window.glideStart=function(rotOnly,tq){   // rotOnly: mapa nie jest przesunięta, tylko obrócona – wraca sam obrót; tq: nachylenie, od którego startuje powrót z płaskiego widoku całej trasy
   const still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(!vec||still)return false;
-  if(!rotOnly)setZoom(1);
+  setZoom(1);   // wersja 180: także przy powrocie samego obrotu – „wyśrodkuj” przywraca przybliżenie jazdy
   // kamera ma dojechać do auta wraz z jego przesunięciem na pas ruchu (camOff) – o tyle krótsza jest droga
   const cE=vf&&vf.car?camOff.lon*111195*Math.cos(rad(vf.car.lat)):0,cN=camOff.lat*111195;
   const s0=scaleCur,s1=Math.max(MINS,scaleTgt),dr=angD(curRot,-lastH),dz=Math.abs(Math.log(s1/s0)),dist=rotOnly?0:Math.hypot(panE-cE,panN-cN);
   const px=dist*Math.max(s0,s1),eff=px+8*Math.abs(dr)+450*dz;   // „wysiłek” ruchu w pikselach: przesunięcie + obrót (8 px na stopień) + zbliżenie
-  if(rotOnly?Math.abs(dr)<=3:(px<=3&&Math.abs(dr)<=3&&dz<.03))return false;
+  if(rotOnly?(Math.abs(dr)<=3&&dz<.03):(px<=3&&Math.abs(dr)<=3&&dz<.03))return false;
   const far=dist*Math.min(s0,s1);   // przy dalekim powrocie (ponad ok. 1100 px przy mniejszym z zoomów) kamera na środku drogi oddala się nawet 2-krotnie
   let vw=null;
   if(!rotOnly&&dist>40){   // czy liniowe przesunięcie i wykładnicze zbliżenie wyrzuciłyby auto daleko poza ekran (powrót z mocno oddalonego widoku)? wtedy lecimy po krzywej lotu
