@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 180</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 181</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -8064,6 +8064,219 @@ function bldConvex(p){   // czy obrys budynku (metry lokalne, x,y,x,y…) jest w
     if(Math.abs(c)<1e-6)continue;const v=c>0?1:-1;if(!sg)sg=v;else if(v!==sg)return false}
   return true;
 }
+// ---- Wersja 181: charakterystyczne budowle (Sky Tower, wieża Eiffla…) jako własne modele 3D ----
+// Dane mapy mają tylko obrys i wysokość, więc wieżowiec czy wieża wychodziły jako zwykłe pudełko (a wieży Eiffla nie było wcale). Dla znanych budowli rysujemy własną bryłę:
+// model to lista części, każda część to „stos” przekrojów (wielokąt na danej wysokości); ściany między przekrojami są cieniowane jak ściany budynków.
+// la/lo – położenie, m – rodzaj modelu, az – obrót (stopnie; oś „do przodu” modelu), hr – promień, w którym zwykłe bryły z mapy są pomijane, fr – spodziewany rozmiar obrysu z mapy (wtedy model stoi na prawdziwym obrysie)
+const LMK=[
+  {n:'Sky Tower',la:51.094677,lo:17.018953,m:'sky',hr:20,fr:50},
+  {n:'Hala Stulecia',la:51.10688,lo:17.077299,m:'hala',hr:45,fr:150},
+  {n:'Iglica',la:51.107537,lo:17.075414,m:'igl',hr:9},
+  {n:'Katedra św. Jana Chrzciciela',la:51.11422,lo:17.046676,m:'kat',az:76.5,hr:30},
+  {n:'Pałac Kultury i Nauki',la:52.23177,lo:21.00607,m:'step',hr:70,c:'#cdbfa6',t:[[86,86,22],[46,46,118],[38,38,138],[30,30,160],[20,20,176,13,13]],sp:[[176,6],[196,4.4],[205,2.6],[237,.3]],sn:8},
+  {n:'Wieża Eiffla',la:48.85837,lo:2.29448,m:'eif',az:45,hr:70},
+  {n:'Tokyo Tower',la:35.65858,lo:139.74543,m:'eif',kh:.66,hr:45,c:'#d8552f',c2:'#eeeeea',alt:1,nc:'#f0803a'},
+  {n:'Big Ben',la:51.50073,lo:-.12463,m:'step',hr:10,c:'#c8a96a',t:[[12,12,55],[13.8,13.8,67,0,0,null,'',1],[13.8,13.8,75,8,8,'#5b6068',''],[7,7,80,0,0,null,'']],sp:[[80,4.6],[96,.2]],sn:4,sc:'#5b6068'},
+  {n:'Berliner Fernsehturm',la:52.52082,lo:13.40942,m:'tv',hr:22,pr:[[0,16],[18,9],[100,6],[203,4.5]],pod:['s',219,16],pc:'#aeb9c4',mt:[235,368,2.6],mc2:'#c8483c'},
+  {n:'CN Tower',la:43.64257,lo:-79.38706,m:'tv',hr:35,pr:[[0,33],[60,16],[200,9],[338,6]],pod:['d',338,23,28],pc:'#b9c2cc',mt:[366,553,5.5]},
+  {n:'Space Needle',la:47.62051,lo:-122.34928,m:'tv',hr:22,c:'#e6e4dc',pr:[[0,13],[55,5],[105,4.2],[150,7]],pod:['d',150,21,13],pc:'#d9cfb4',mt:[163,184,1.6]},
+  {n:'Empire State Building',la:40.74844,lo:-73.98566,m:'step',az:29,hr:60,c:'#bcae9c',t:[[57,129,24],[48,86,92],[40,60,262],[30,44,300],[22,30,320,16,22]],sp:[[320,7],[373,5.5],[381,2],[443,.3]],sn:8},
+  {n:'Burdż Chalifa',la:25.1972,lo:55.27438,m:'burj',hr:70},
+  {n:'Krzywa Wieża w Pizie',la:43.72295,lo:10.3966,m:'pisa',hr:10},
+  {n:'Pomnik Waszyngtona',la:38.88948,lo:-77.03527,m:'step',hr:12,c:'#e4e0d6',t:[[16.8,16.8,152,10.5,10.5,null,''],[10.5,10.5,169,.3,.3,null,'']]}
+];
+const lmN=(n,rx,ry,cx,cy,a0)=>{const r=[];for(let i=0;i<n;i++){const a=(a0||0)+i*6.283185307/n;r.push((cx||0)+rx*Math.cos(a),(cy||0)+(ry||rx)*Math.sin(a))}return r};   // wielokąt foremny / elipsa (obieg przeciwny do wskazówek zegara)
+const lmR=(w,d,cx,cy)=>{cx=cx||0;cy=cy||0;d=d||w;return [cx-w/2,cy-d/2,cx+w/2,cy-d/2,cx+w/2,cy+d/2,cx-w/2,cy+d/2]};   // prostokąt
+const lmS=(r,k)=>r.map(v=>v*k);
+const LM_M={
+  sky(e,fp){   // wieżowiec o owalnym rzucie ze ściętym, pochyłym szczytem i masztem
+    const r=fp||lmN(20,17.5,25),top=[];for(let i=0;i<r.length;i+=2)top.push(r[i+1]*.34);
+    return [{L:0,c:'#7fa6cc',st:'g',cc:fp?1:0,s:[[0,lmS(r,.95)],[36,r],[150,lmS(r,.99)],[188,lmS(r,.93),top]]},{L:1,c:'#aeb6be',s:[[189,lmN(6,1.3,1.3,0,6)],[212,lmN(6,.3,.3,0,6)]]}];
+  },
+  hala(e,fp){   // kopuła schodkowa: pierścienie coraz mniejszej średnicy i latarnia
+    const P=[{L:0,c:'#d6ccb6',st:'w',cc:1,s:[[0,fp||lmN(28,66)],[14,fp||lmN(28,66)]]}];let i=1;
+    for(const [r,a,b] of [[41,14,23],[34,23,29],[26,29,34],[17,34,38],[7,38,42]])P.push({L:i++,c:i%2?'#d6ccb6':'#cfc4ac',st:'w',s:[[a,lmN(28,r)],[b,lmN(28,r*.97)]]});
+    return P;
+  },
+  igl(){   // iglica na trzech nogach
+    const P=[];for(const [x,y] of [[0,7],[-6,-3.7],[6.3,-3.5]])P.push({L:0,c:'#a9b0b8',cap:0,s:[[0,lmN(4,.9,.9,x,y)],[11,lmN(4,.8,.8,x*.1,y*.1)]]});
+    P.push({L:1,c:'#b4bac1',cap:0,s:[[8,lmN(6,1.2)],[18,lmN(6,1.7)],[90.3,lmN(6,.15)]]});return P;
+  },
+  kat(){   // katedra gotycka: nawa z dachem dwuspadowym i dwie wieże z hełmami od zachodu (oś „do przodu” = prezbiterium)
+    const br='#ad6a52',cu='#6b9486',P=[{L:0,c:br,st:'w',g:[0,4],s:[[0,lmR(34,72,0,6)],[13,lmR(34,72,0,6)]]},{L:1,c:br,st:'w',g:[0,4],s:[[0,lmR(21,86,0,4)],[27,lmR(21,86,0,4)]]},
+      {L:2,c:cu,g:[0,4],cap:0,s:[[27,lmR(21,86,0,4)],[39,lmR(.4,86,0,4)]]}];
+    for(const x of [-9.5,9.5]){P.push({L:0,c:br,st:'w',g:[x,-41],s:[[0,lmR(11.5,11.5,x,-41)],[58,lmR(10.5,10.5,x,-41)]]});
+      P.push({L:1,c:'#4f6f66',g:[x,-41],cap:0,s:[[58,lmN(8,6.6,6.6,x,-41,.3927)],[63,lmN(8,4.4,4.4,x,-41,.3927)],[98,lmN(8,.2,.2,x,-41,.3927)]]})}
+    return P;
+  },
+  eif(e){   // wieża kratownicowa na czterech nogach: dwa tarasy, wysoki trzon, maszt
+    const kh=e.kh||1,c=e.c||'#8d6b50',c2=e.c2||'#73563f',nc=e.nc||'#e3aa4c',P=[],sq=(z,h,o,sx,sy)=>[z,lmR(2*h*kh,2*h*kh,sx*o*kh,sy*o*kh)];
+    for(const [sx,sy] of [[1,1],[-1,1],[-1,-1],[1,-1]]){
+      P.push({L:0,c,nc,st:'l',cap:0,s:[[0,50,12.5],[14,44.5,11],[28,39.5,9.6],[43,34.5,8.4],[57,30,7.5]].map(([z,o,h])=>sq(z,h,o,sx,sy))});
+      P.push({L:2,c,nc,st:'l',cap:0,alt:e.alt,c2,s:[[62,29,7],[75,24.5,6.2],[88,21,5.6],[101,17.8,5],[115,15,4.6]].map(([z,o,h])=>sq(z,h,o,sx,sy))});
+      const a=[];for(let t=-1;t<=1.001;t+=.125)a.push(sx?t*36*kh*(sx===sy?1:0)+(sx!==sy?sx*46*kh:0):0,sx===sy?sy*46*kh:t*36*kh,18+33*Math.cos(t*1.5708));
+      P.push({L:.5,c,nc,ln:[a]});
+    }
+    P.push({L:1,c:c2,nc,s:[[57,lmR(70*kh)],[62,lmR(70*kh)]]});
+    P.push({L:3,c:c2,nc,s:[[115,lmR(37*kh)],[120,lmR(37*kh)]]});
+    P.push({L:4,c,nc,st:'l',cap:0,alt:e.alt,c2:e.alt?c2:c,s:[[120,13],[138,10.4],[158,8.4],[180,6.8],[204,5.5],[228,4.5],[252,3.7],[276,3.1]].map(([z,h])=>[z,lmR(2*h*kh)])});
+    P.push({L:5,c:c2,nc,s:[[276,lmR(10*kh)],[282,lmR(10*kh)]]});
+    P.push({L:6,c,nc,cap:0,s:[[282,lmN(8,3.2*kh)],[300,lmN(8,1.6*kh)],[330,lmN(8,.25)]]});
+    return P;
+  },
+  tv(e){   // wieża telewizyjna: trzon, kula albo talerz, maszt
+    const c=e.c||'#cfccc4',P=[{L:0,c,cap:0,s:e.pr.map(([z,r])=>[z,lmN(14,r)])}],pd=e.pod,s=[];
+    if(pd[0]==='s')for(let a=-75;a<=75.01;a+=15)s.push([pd[1]+pd[2]*Math.sin(rad(a)),lmN(16,pd[2]*Math.cos(rad(a)))]);
+    else for(const [f,k] of [[0,.5],[.4,1],[.68,1],[1,.5]])s.push([pd[1]+pd[3]*f,lmN(16,pd[2]*k)]);
+    P.push({L:1,c:e.pc||c,st:pd[0]==='s'?'':'g',s});
+    const m=e.mt,ms=[];for(let i=0;i<=6;i++)ms.push([m[0]+(m[1]-m[0])*i/6,lmN(6,m[2]*(1-i/6)+.3*i/6)]);
+    P.push({L:2,c:'#e2e2e2',c2:e.mc2||'#e2e2e2',alt:e.mc2?1:0,cap:0,s:ms});return P;
+  },
+  step(e){   // bryła schodkowa: kolejne piętra [szer., gł., wys. górna, szer. u góry, gł. u góry, kolor, rodzaj ścian, zegar] i opcjonalna iglica [wys., promień]
+    const P=[];let z0=0,i=0;
+    for(const t of e.t){P.push({L:i++,c:t[5]||e.c,st:t[6]===undefined?'w':t[6],ck:t[7],s:[[z0,lmR(t[0],t[1])],[t[2],lmR(t[3]||t[0],t[4]||t[1])]]});z0=t[2]}
+    if(e.sp){const n=e.sn||8;P.push({L:i,c:e.sc||e.c,cap:0,s:e.sp.map(([z,r])=>[z,lmN(n,r,r,0,0,Math.PI/n)])})}
+    return P;
+  },
+  burj(){   // wieżowiec o rzucie trójlistnym, zwężający się schodkami
+    const ring=R=>{const r=[];for(let i=0;i<24;i++){const a=i*.2617994,q=R*(.62+.38*Math.cos(3*a));r.push(q*Math.cos(a),q*Math.sin(a))}return r};
+    return [{L:0,c:'#a9b9c9',st:'g',cc:1,s:[[0,52],[110,45],[230,36],[350,27],[470,19],[580,12],[690,6],[760,3],[828,.4]].map(([z,R])=>[z,ring(R)])}];
+  },
+  pisa(){   // pochylony walec z dzwonnicą
+    const l=[.02,-.068];return [{L:0,c:'#ebe6da',st:'w',lean:l,s:[[0,lmN(16,7.7)],[48,lmN(16,7.7)]]},{L:1,c:'#e3ddcf',st:'w',lean:l,s:[[48,lmN(16,6.2)],[56,lmN(16,6.2)]]}];
+  }
+};
+const lmCC=new Map();
+function lmShd(c,glow){   // pięć odcieni koloru części (od strony zacienionej do oświetlonej), stonowane z kolorem zwykłych budynków
+  const k=(night?'n':'d')+c+(glow?'g':'');let v=lmCC.get(k);
+  if(!v){const base=night?(glow?mixC(PAL.night.bld,c,.82):mixC(PAL.night.bld,dkHex(c,.6),.7)):mixC(PAL.day.bld,c,.8),lo=shadeC(base,night?.6:.66),hi=shadeC(base,night?1.12:1.08);
+    v=[0,1,2,3,4].map(i=>rgbMix(lo,hi,i/4));lmCC.set(k,v)}
+  return v;
+}
+function lmBuild(e,x,y,fp){
+  const parts=LM_M[e.m](e,fp),az=rad(fp?0:(e.az||0)),ca=Math.cos(az),sa=Math.sin(az);
+  let hm=0,rb=0;
+  for(const p of parts)if(p.s)for(const s of p.s){let z=s[0];if(s[2])z+=Math.max.apply(null,s[2]);if(z>hm)hm=z}
+  const vf=Math.min(1,300/hm),wx=(u,v)=>x+u*ca+v*sa,wy=(u,v)=>y-u*sa+v*ca;   // bardzo wysokie budowle są spłaszczane do 300 m (inaczej szczyt „wychodzi” z perspektywy mapy)
+  let top=null;
+  for(const p of parts){
+    const gq=p.g||[0,0];p.gx=wx(gq[0],gq[1]);p.gy=wy(gq[0],gq[1]);
+    if(p.ln){p.W=p.ln.map(l=>{const o=[];for(let i=0;i<l.length;i+=3)o.push(wx(l[i],l[i+1]),wy(l[i],l[i+1]),l[i+2]*vf);return o});p.px=p.gx;p.py=p.gy;continue}
+    const n=p.s[0][1].length/2;p.n=n;
+    p.W=p.s.map(s=>{const r=s[1],xy=new Float32Array(2*n),z=new Float32Array(n);
+      for(let i=0;i<n;i++){const zz=s[0]+(s[2]?s[2][i]:0),u=r[2*i]+(p.lean?p.lean[0]*zz:0),v=r[2*i+1]+(p.lean?p.lean[1]*zz:0);xy[2*i]=wx(u,v);xy[2*i+1]=wy(u,v);z[i]=zz*vf;
+        if(!top||z[i]>top[2])top=[xy[2*i],xy[2*i+1],z[i]]}
+      return {xy,z}});
+    p.N=[];
+    for(let k=0;k<p.W.length-1;k++){
+      const A=p.W[k],B=p.W[k+1],a=[];
+      for(let i=0;i<n;i++){
+        const j=(i+1)%n;let ex=A.xy[2*j]-A.xy[2*i],ey=A.xy[2*j+1]-A.xy[2*i+1],ez=A.z[j]-A.z[i];
+        if(ex*ex+ey*ey<1e-4){ex=B.xy[2*j]-B.xy[2*i];ey=B.xy[2*j+1]-B.xy[2*i+1];ez=B.z[j]-B.z[i]}
+        const ux=(B.xy[2*i]+B.xy[2*j]-A.xy[2*i]-A.xy[2*j])/2,uy=(B.xy[2*i+1]+B.xy[2*j+1]-A.xy[2*i+1]-A.xy[2*j+1])/2,uz=(B.z[i]+B.z[j]-A.z[i]-A.z[j])/2;
+        let nx=ey*uz-ez*uy,ny=ez*ux-ex*uz,nz=ex*uy-ey*ux;const l=Math.hypot(nx,ny,nz)||1;a.push(nx/l,ny/l,nz/l);
+      }
+      p.N.push(a);
+    }
+    let sx=0,sy=0;const f=p.W[0].xy;for(let i=0;i<n;i++){sx+=f[2*i];sy+=f[2*i+1]}p.px=sx/n;p.py=sy/n;
+    if(p.L===0)for(let i=0;i<n;i++)rb=Math.max(rb,Math.hypot(f[2*i]-x,f[2*i+1]-y));
+  }
+  const sr=[];{const r=Math.max(2,rb*(e.sw||.45));for(let i=0;i<8;i++)sr.push(x+r*Math.cos(i*.7853982),y+r*Math.sin(i*.7853982))}   // uproszczony obrys do cienia (smuklejszy niż podstawa)
+  return {e,x,y,parts,vf,hv:hm*vf,top,sr,seed:Math.round(Math.abs(e.la*7919+e.lo*104729))%4096};
+}
+// budowle w zasięgu danych mapy; zwykłe bryły w ich miejscu są pomijane (b.lm), a model staje na prawdziwym obrysie, jeśli mapa go ma
+function lmFor(D,cl){
+  D.LM=[];
+  for(const e of LMK){
+    if(Math.abs(e.la-D.lat)>.03)continue;
+    const x=(e.lo-D.lon)*111195*cl,y=(e.la-D.lat)*111195;if(!(x*x+y*y<1500*1500))continue;
+    let fp=null,fd=0;const hr=e.hr||20;
+    for(const b of D.B||[]){
+      const dx=b.cx-x,dy=b.cy-y,ins=Math.abs(dx)<400&&Math.abs(dy)<400&&pip(b.p,x,y);
+      if(!ins&&dx*dx+dy*dy>=hr*hr)continue;
+      b.lm=1;
+      if(ins&&e.fr&&!(b.m>0)&&b.p.length<=260){
+        let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const p=b.p,m=p.length/2;for(let i=0;i<m;i++){if(p[2*i]<x0)x0=p[2*i];if(p[2*i]>x1)x1=p[2*i];if(p[2*i+1]<y0)y0=p[2*i+1];if(p[2*i+1]>y1)y1=p[2*i+1]}
+        const dim=Math.max(x1-x0,y1-y0);
+        if(dim>e.fr*.5&&dim<e.fr*1.6&&dim>fd){fd=dim;fp=[];for(let i=0;i<m;i++){const k=b.o>0?i:m-1-i;fp.push(p[2*k]-x,p[2*k+1]-y)}}
+      }
+    }
+    try{D.LM.push(lmBuild(e,x,y,fp))}catch(err){errNote('budowla',err)}
+  }
+}
+function lmDraw(M,g,hs,S){
+  const c0=g(M.x,M.y,0),t1=g(M.x+2,M.y,0),t2=g(M.x,M.y+2,0);if(!c0||!t1||!t2)return 0;
+  let fa=1;if(S.fog){const a=skyA(c0.y);if(a>=.97)return 0;fa=1-a}
+  const fs=((t1.x-c0.x)*(t2.y-c0.y)-(t1.y-c0.y)*(t2.x-c0.x))>0?1:-1;   // znak pola ściany zwróconej do kamery
+  const FC=c=>fa<.98?bfog(c,fa):c,det=S.dl>=1&&fa>.3,ord=[];
+  for(const p of M.parts){const a=g(p.gx,p.gy,0),b=g(p.px,p.py,0);if(a&&b)ord.push({p,g:a.y,y:b.y})}
+  ord.sort((a,b)=>(a.g-b.g)||(a.p.L-b.p.L)||(a.y-b.y));   // grupy części od najdalszej, w grupie od dołu, równorzędne części (nogi wieży) od najdalszej
+  const quad=(a,b,c,d)=>{mx.moveTo(a.x,a.y);mx.lineTo(b.x,b.y);mx.lineTo(c.x,c.y);mx.lineTo(d.x,d.y);mx.closePath()};
+  const lc=mx.lineCap;mx.lineCap='butt';
+  for(const o of ord){
+    const p=o.p,glow=night&&p.nc,cA=lmShd(glow?p.nc:p.c,glow),cB=p.alt?lmShd(glow?p.nc:p.c2,glow):cA;
+    if(p.ln){
+      mx.beginPath();
+      for(const l of p.W){let pen=false;for(let i=0;i<l.length;i+=3){const q=g(l[i],l[i+1],l[i+2]*hs);if(!q){pen=false;continue}if(pen)mx.lineTo(q.x,q.y);else{mx.moveTo(q.x,q.y);pen=true}}}
+      mx.strokeStyle=FC(cA[glow?4:1]);mx.lineWidth=Math.max(1.2,2.2*S.s*c0.k);mx.stroke();continue;
+    }
+    const n=p.n,ns=p.W.length,P=[];
+    for(let k=0;k<ns;k++){const w=p.W[k],a=new Array(n);let ok=true;for(let i=0;i<n;i++){const q=g(w.xy[2*i],w.xy[2*i+1],w.z[i]*hs);if(!q){ok=false;break}a[i]=q}P.push(ok?a:null)}
+    let lastOk=-1;
+    for(let k=0;k<ns-1;k++){
+      const A=P[k],B=P[k+1];if(!A||!B)break;
+      lastOk=k+1;
+      const shd=p.alt&&(k&1)?cB:cA,N=p.N[k],vis=[];
+      for(let i=0;i<n;i++){
+        const j=(i+1)%n,a=A[i],b=A[j],c=B[j],d=B[i],ar=(b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)+(c.x-a.x)*(d.y-a.y)-(d.x-a.x)*(c.y-a.y);
+        if(Math.abs(ar)<.4||(ar>0?1:-1)!==fs)continue;
+        vis.push(i);
+      }
+      if(!vis.length)continue;
+      const col=i=>{const d=N[3*i]*S.sx+N[3*i+1]*S.sy+N[3*i+2]*S.sz;return FC(shd[Math.round((.5+.5*Math.max(-1,Math.min(1,d/.8)))*4)])};
+      if(p.st==='l')mx.globalAlpha=night?.8:.66;
+      if(p.cc){   // rzut wklęsły: ściany od najdalszej, każda osobno
+        if(vis.length>1)vis.sort((u,v)=>(A[u].y+A[(u+1)%n].y)-(A[v].y+A[(v+1)%n].y));
+        for(const i of vis){const j=(i+1)%n;mx.beginPath();quad(A[i],A[j],B[j],B[i]);mx.fillStyle=col(i);mx.fill()}
+      }else{
+        const grp=new Map();for(const i of vis){const c=col(i);let a=grp.get(c);if(!a)grp.set(c,a=[]);a.push(i)}
+        for(const [c,a] of grp){mx.beginPath();for(const i of a){const j=(i+1)%n;quad(A[i],A[j],B[j],B[i])}mx.fillStyle=c;mx.fill()}
+      }
+      mx.globalAlpha=1;
+      if(det){
+        const Hm=(p.W[k+1].z[0]-p.W[k].z[0])/M.vf;
+        if(p.st==='l'){   // kratownica: krzyżulce i krawędzie
+          mx.beginPath();for(const i of vis){const j=(i+1)%n,a=A[i],b=A[j],c=B[j],d=B[i];quad(a,b,c,d);mx.moveTo(a.x,a.y);mx.lineTo(c.x,c.y);mx.moveTo(b.x,b.y);mx.lineTo(d.x,d.y)}
+          mx.strokeStyle=FC(shd[glow?4:0]);mx.lineWidth=.9;mx.globalAlpha=fa;mx.stroke();mx.globalAlpha=1;
+        }else if(p.st==='g'){   // szkło: poziome linie pięter; w nocy część pięter świeci
+          const hl=Math.hypot(B[vis[0]].x-A[vis[0]].x,B[vis[0]].y-A[vis[0]].y),nl=Math.max(1,Math.min(Math.round(Hm/4),Math.floor(hl/3.5)));
+          if(nl>1){mx.beginPath();
+            for(let l=1;l<nl;l++){if(night&&hh(M.seed+l*17,k*29+l)>.42)continue;const t=l/nl;for(const i of vis){const j=(i+1)%n;mx.moveTo(A[i].x+(B[i].x-A[i].x)*t,A[i].y+(B[i].y-A[i].y)*t);mx.lineTo(A[j].x+(B[j].x-A[j].x)*t,A[j].y+(B[j].y-A[j].y)*t)}}
+            mx.strokeStyle=night?'rgba(255,212,122,.55)':'rgba(255,255,255,.34)';mx.lineWidth=night?1.1:.7;mx.globalAlpha=fa;mx.stroke();mx.globalAlpha=1}
+        }else if((p.st==='w'||p.st==='g')&&S.dl>=2){
+          for(const i of vis){const j=(i+1)%n,w=p.W[k].xy;drawWindows(A[i],A[j],B[i],B[j],Math.hypot(w[2*j]-w[2*i],w[2*j+1]-w[2*i+1]),Hm,M.seed+k*131+i*977,fa,night)}
+        }
+        if(p.ck){   // tarcze zegara
+          for(const i of vis){const j=(i+1)%n,a=A[i],b=A[j],c=B[j],d=B[i];mx.beginPath();
+            for(let q=0;q<16;q++){const u=.5+.36*Math.cos(q*.3927),v=.5+.36*Math.sin(q*.3927),X=(a.x*(1-u)+b.x*u)*(1-v)+(d.x*(1-u)+c.x*u)*v,Y=(a.y*(1-u)+b.y*u)*(1-v)+(d.y*(1-u)+c.y*u)*v;if(q)mx.lineTo(X,Y);else mx.moveTo(X,Y)}
+            mx.closePath();mx.fillStyle=night?'rgba(255,233,168,.95)':FC('rgb(244,240,226)');mx.fill();mx.strokeStyle=FC('rgb(70,62,50)');mx.lineWidth=.8;mx.stroke()}
+        }
+      }
+      if(n<=8&&p.st!=='l'){mx.beginPath();for(const i of vis){const j=(i+1)%n;quad(A[i],A[j],B[j],B[i])}mx.strokeStyle=S.wl;mx.lineWidth=.7;mx.globalAlpha=fa;mx.stroke();mx.globalAlpha=1}
+    }
+    if(p.cap!==0&&lastOk===ns-1){   // górna płaszczyzna części
+      const T=P[ns-1];let ar=0;for(let i=0;i<n;i++){const j=(i+1)%n;ar+=T[i].x*T[j].y-T[j].x*T[i].y}
+      if(Math.abs(ar)>.8&&(ar>0?1:-1)===fs){mx.beginPath();mx.moveTo(T[0].x,T[0].y);for(let i=1;i<n;i++)mx.lineTo(T[i].x,T[i].y);mx.closePath();
+        mx.fillStyle=FC(cA[night?4:3]);mx.fill();mx.strokeStyle=S.wl;mx.lineWidth=.8;mx.globalAlpha=fa;mx.stroke();mx.globalAlpha=1}
+    }
+  }
+  if(night&&M.hv>=80&&M.top&&fa>.3){   // czerwone światło przeszkodowe na szczycie
+    const q=g(M.top[0],M.top[1],M.top[2]*hs);
+    if(q){mx.beginPath();mx.arc(q.x,q.y,5,0,6.2832);mx.fillStyle='rgba(255,70,50,.28)';mx.fill();mx.beginPath();mx.arc(q.x,q.y,2,0,6.2832);mx.fillStyle='rgb(255,96,72)';mx.fill()}
+  }
+  mx.lineCap=lc;
+  return 1;
+}
 function drawBuildings3D(){
   if(ecoOn||lite||!(vec&&vf&&vecData&&vecData.B&&tiltDeg>8&&scaleCur>=.7))return;
   const t0=performance.now();
@@ -8073,7 +8286,7 @@ function bld3Draw(){
   const D=vecData,pal=PAL[night?'night':'day'],s=vf.s,dl=d3Lvl();
   const W=window.innerWidth,H=window.innerHeight;
   const cl=Math.cos(rad(D.lat)),ox=(vf.cam.lon-D.lon)*111195*cl,oy=(vf.cam.lat-D.lat)*111195;
-  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];wallCC.clear();roofCC.clear();TCOL.clear();const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
+  const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];wallCC.clear();roofCC.clear();TCOL.clear();lmCC.clear();const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
   const sunDir=rad(-35);   // bez Słońca (noc, zmierzch): stałe „światło” z lewej-góry
   const hs=Math.min(1.6,.9+tiltDeg/90);
   const fogOn=skyY>=0,fq=skyQ,fe=skyQ+skyL;
@@ -8084,16 +8297,18 @@ function bld3Draw(){
   if(real){const e=rad(sp.el),a=rad(sp.az);sh=Math.cos(e);sx=sh*Math.sin(a);sy=sh*Math.cos(a);sz=Math.sin(e)}
   let lst,far=null;
   const g=projLoc(D,cl);
+  if(D.LM===undefined){lmFor(D,cl);bldCache=null}
   if(bldCache&&bldCache.D===D&&bldCache.dl===dl&&(bldTick++%5)&&Math.abs(bldCache.rot-curRot)<2&&Math.abs(bldCache.s-s)<.05*s){lst=bldCache.lst;far=bldCache.far}   // kolejność rysowania liczymy co kilka klatek
   else{
     lst=[];const cull=lnCull(D),KP=bldKeepPts(D,cl);
     for(const b of D.B){
-      if(cull&&cull.has(b))continue;
+      if(b.lm||(cull&&cull.has(b)))continue;
       if(KP&&!(b.m>0)&&bldOver(b,KP))continue;   // budynek, pod którym jest auto albo trasa tuż przed nim (hala dworca nad torami i ulicą, garaż), zostaje płaski – dach nie zasłania auta ani drogi
       const q=g(b.cx,b.cy,0);
       if(!q||q.x<-160||q.x>W+160||q.y<-220||q.y>H+160)continue;
       lst.push({b,y:q.y,k:q.k});
     }
+    for(const M of D.LM){const q=g(M.x,M.y,0);if(q&&q.x>-320&&q.x<W+320&&q.y>-120&&q.y<H+700)lst.push({lm:M,y:q.y,k:q.k})}
     if(dl>=2&&D.TR&&D.TR.n){   // drzewa wokół kamery: te same co w mapie (las, park, cmentarz), najbliższe TR_CAP
       const TR=D.TR,GR=D.TG||(D.TG=treeGrid(TR)),Rt=Math.min(380,120+260/s),C=48,trl=[];
       for(let u=Math.floor((ox-Rt)/C);u<=Math.floor((ox+Rt)/C);u++)for(let v=Math.floor((oy-Rt)/C);v<=Math.floor((oy+Rt)/C);v++){
@@ -8131,7 +8346,14 @@ function bld3Draw(){
     const dirE=Math.sin(rad(sp.az+180)),dirN=Math.cos(rad(sp.az+180)),tn=Math.tan(rad(Math.max(sp.el,6)));
     for(let n=Math.max(start,lst.length-260);n<lst.length;n++){
       if(fogOn&&lst[n].y<fe)continue;   // w pasie mgły cieni nie rysujemy
-      const b=lst[n].b;if(!b)continue;
+      const b=lst[n].b;
+      if(!b){   // cień budowli: uproszczony obrys rzucony na ziemię
+        const M=lst[n].lm;
+        if(M){const r=M.sr,L=Math.min(M.hv/tn,M.hv*1.5,260),G=[],Sd=[];let ok=true;
+          for(let i=0;i<r.length;i+=2){const a=g(r[i],r[i+1],0),c2=g(r[i]+dirE*L,r[i+1]+dirN*L,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
+          if(ok)for(let i=0;i<G.length;i++){const j=(i+1)%G.length;quad(G[i],G[j],Sd[j],Sd[i])}}
+        continue;
+      }
       const p=b.p,m=p.length/2,L=Math.min((b.h+(b.rf&&dl>=1?b.rf.rh*.6:0))*hs/(tn*hs),b.h*3.2),ex=dirE*L,ny=dirN*L,G=[],Sd=[];let ok=true;
       const Lm=b.m>0?Math.min(b.m/tn,b.m*3.2):0,bx=dirE*Lm,by=dirN*Lm;   // część wisząca rzuca cień dopiero od swojej podstawy
       for(let i=0;i<m;i++){const a=g(p[2*i]+bx,p[2*i+1]+by,0),c2=g(p[2*i]+ex,p[2*i+1]+ny,0);if(!a||!c2){ok=false;break}G.push(a);Sd.push(c2)}
@@ -8159,7 +8381,7 @@ function bld3Draw(){
       if(!GS.length)GS=null;
     }
   }
-  let winB=2600,winN=0,roofN=0,trN=0,ghN=0;const lc0=mx.lineCap;
+  let winB=2600,winN=0,roofN=0,trN=0,ghN=0,lmN_=0;const LS={sx,sy,sz,dl,fog:fogOn,s,wl:wallCol.line};const lc0=mx.lineCap;
   if(far&&far.length&&D.TR){   // dalsze drzewa: same korony, po jednym wypełnieniu na rodzaj (iglaste ciemniejsze)
     const TR=D.TR;
     for(let v=0;v<2;v++){
@@ -8192,6 +8414,12 @@ function bld3Draw(){
       }
       if(al<.98)mx.globalAlpha=1;
       trN++;
+      continue;
+    }
+    if(it.lm){   // budowla może sięgać ponad horyzont (zwykłe bryły są tam przycinane)
+      if(fogOn)mx.restore();
+      lmN_+=lmDraw(it.lm,g,Math.max(hs,.75*Math.min(s,2.4)),LS);   // wysokość w skali mapy (z bliska budowla nie wychodzi przysadzista)
+      if(fogOn){mx.save();mx.beginPath();mx.rect(0,fq,W,H-fq);mx.clip()}
       continue;
     }
     const b=it.b,p=b.p,m=p.length/2,rf=dl>=1?b.rf:null,E=rf?b.e:b.h,H3=E*hs,M3=(b.m||0)*hs;
@@ -8296,7 +8524,7 @@ function bld3Draw(){
     }
     if(gh)mx.globalAlpha=1;
   }
-  d3St.win=winN;d3St.roof=roofN;d3St.tr=trN;d3St.gh=ghN;d3St.n++;mx.lineCap=lc0;
+  d3St.lm=lmN_;d3St.win=winN;d3St.roof=roofN;d3St.tr=trN;d3St.gh=ghN;d3St.n++;mx.lineCap=lc0;
   if(fogOn)mx.restore();
 }
 
