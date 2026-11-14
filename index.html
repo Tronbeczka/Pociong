@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 178</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 179</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1712,7 +1712,7 @@ function setBanner(level,big,sub){bannerLv=level;try{syncBanner()}catch(e){}sub=
   $('sub').textContent=sub;
   if(level==='ok'&&nav){$('bicon').innerHTML=nav.icon;$('big').textContent=nav.txt;$('sub').textContent=nav.then||sub;$('dist').textContent=nav.dist}
   else $('bicon').innerHTML=ICON_X}
-var nav=null,navSaid={},rerouting=false;
+var nav=null,navSaid={},rerouting=false,routeSeq=0;   // routeSeq: numer kolejnej trasy – klucz komunikatu „za … metrów” zawiera go, więc po nowej trasie (zjazd z trasy, szybsza trasa) wskazówka nie jest wyciszona przez wskazówkę o tym samym numerze kroku z poprzedniej trasy (blokada 20 s)
 // Wersja 178: dolny pasek pokazuje czas potrzebny na pokonanie trasy (duży napis), pod nim drogę do celu i godzinę przyjazdu. Dotąd duży napis powtarzał stan
 // przejazdów („0 przejazdów kolejowych”), który i tak jest na górnym banerze. Bez trasy: godzina i podpowiedź; kolor paska nadal mówi o ostrzeżeniu (żółty / czerwony).
 function barTrip(){try{barTrip0()}catch{}}   // przy starcie (przed deklaracją trasy) po prostu nic nie robi
@@ -2034,7 +2034,7 @@ function evaluate(p){
   const trc=(!route||demo||route.off>=100)&&p.speed>1.5&&p.heading!=null&&vec?roadTrace(p,1500):null;lastTrace=trc;   // Wersja 177
   crossings.forEach(c=>{
     const d=dist(p.lat,p.lon,c.lat,c.lon),fw=xAheadOf(p,c,d);
-    if(trc&&(trc.len>=40||trc.end==='junction')){   // tuż przed skrzyżowaniem, na którym trzeba skręcić, liczą się odnogi (nie pas na wprost)
+    if(trc&&(trc.len>=40||trc.end==='junction'||trc.end==='ring')){   // tuż przed skrzyżowaniem, na którym trzeba skręcić, liczą się odnogi (nie pas na wprost)
       if(d>trc.len+80)return;
       const h=traceHit(trc,c);
       if(h){const al=Math.max(d,h.al);if(al<Math.max(warnDist,1200))ahead.push({c,d:al,via:h.br?'b':'m'})}
@@ -2502,7 +2502,7 @@ function setRoute(coords,dur,steps,jam,delay,inc){
   arrivedAt=0;
   if(ovw&&!window.preview)recenter();   // nowa trasa (np. po zboczeniu z drogi) – stary przegląd całej trasy przestaje pasować, kamera wraca do auta
   document.body.classList.add('navr');
-  route=makeRoute(coords,dur);route.inc=inc||[];route.jam0=(jam&&jam.length>=route.pts.length-1)?jam:null;route.jam=route.jam0;route.fsAt=0;route.fsTo=0;route.delay=delay||0;routeSeg=route.pts;routeSegI=0;navSaid={};
+  route=makeRoute(coords,dur);route.sid=++routeSeq;route.inc=inc||[];route.jam0=(jam&&jam.length>=route.pts.length-1)?jam:null;route.jam=route.jam0;route.fsAt=0;route.fsTo=0;route.delay=delay||0;routeSeg=route.pts;routeSegI=0;navSaid={};
   let o=0;route.steps=(steps||[]).map(x=>{const y={...x,off:o};o+=x.dist;return y});
   routeProfile(route,steps);
   // Wersja 173: po przeliczeniu trasy w czasie jazdy prognoza znikała z mapy aż do odświeżenia co 25 min – teraz nowa trasa dostaje ją po kilku sekundach (planer pobiera ją sam, od razu)
@@ -2653,14 +2653,14 @@ function navUpdate(){
   if(d<300&&!navSaid[i]){navSaid[i]=1;
     const t=navSay(st[i]),dm=Math.max(50,Math.round(d/50)*50),sl=navSlot(st[i]);
     if(st[i].type==='arrive'){   // do celu jeszcze kawałek drogi: „dojechaliśmy” mówimy dopiero na miejscu (arriveSay)
-      say('n'+i,'Za '+dm+' metrów dojedziemy do '+(i<st.length-1?'przystanku':'celu'),[120],'Cel za '+dm+' metrów');return}
+      say('n'+i+'.'+route.sid,'Za '+dm+' metrów dojedziemy do '+(i<st.length-1?'przystanku':'celu'),[120],'Cel za '+dm+' metrów');return}
     if(clips[sl]&&$('voice').checked&&!voiceMuted&&!navOff()&&!window.preview){   // własne nagranie manewru
-      spoken['n'+i]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}
+      spoken['n'+i+'.'+route.sid]=Date.now();if(navigator.vibrate)try{navigator.vibrate([120])}catch(e){}
       const a=[];if(st[i].type!=='depart')a.push({tts:'Za '+dm+' metrów'});
       a.push({clip:sl});if(st[i].name&&st[i].type!=='depart')a.push({tts:st[i].name});
       speakSeq(a,volNav);return;
     }
-    say('n'+i,'Za '+dm+' metrów '+t.charAt(0).toLowerCase()+t.slice(1),[120],t);
+    say('n'+i+'.'+route.sid,'Za '+dm+' metrów '+t.charAt(0).toLowerCase()+t.slice(1),[120],t);
   }
 }
 // dojazd na miejsce (do 40 m od celu): własne nagranie „arrive”, a bez niego głos
@@ -5683,6 +5683,11 @@ function snapPoint(lat,lon,hr){
 // i na tym samym poziomie), do 1,5 km. Gdy droga kończy się skrzyżowaniem, na którym trzeba skręcić, sprawdzane są wszystkie odnogi na 250 m, a skręty w pierwszych 90 m (kierowca zwykle już zwalnia do skrętu) – na 160 m. Przejazd liczy się, gdy
 // leży do 25 m od tej linii; jego odległość to droga po linii, nie w prostej. Gdy pod autem nie ma drogi z mapy (brak danych, parking) – zostaje pas na wprost (wersja 175).
 var lastTrace=null;   // ostatnio wyznaczona droga (do testów i okna stanu)
+// Wersja 179: ronda. Dotąd śledzenie drogi wjeżdżało na rondo i krążyło po nim („najbardziej na wprost” na rondzie to dalej rondo), więc przejazd tuż za
+// zjazdem z ronda pojawiał się dopiero po przejechaniu ronda. Teraz rondo (zamknięta pętla skręcająca w lewo – ruch prawostronny) jest rozpoznawane
+// i sprawdzane są jego wyloty: wylot na wprost (względem kierunku, z którego wjeżdżamy) – dalej, do 1 km, pozostałe – na 250 m (jak odnogi skrzyżowania); zawracanie pomijamy.
+// Na samym rondzie: wyloty, które są jeszcze przed nami (kierunek wjazdu – zapamiętany sprzed ronda).
+var ringMem=null;
 function roadTrace(p,maxLen){
   const D=vecData;if(!D||!D.RS||!D.RS.length||p.heading==null)return null;
   const g=snapGrid(D),CS=40,kx=111195*Math.cos(rad(D.lat)),X=(p.lon-D.lon)*kx,Y=(p.lat-D.lat)*111195,hr=rad(p.heading),hx=Math.sin(hr),hy=Math.cos(hr);
@@ -5699,9 +5704,9 @@ function roadTrace(p,maxLen){
   if(!st)return null;
   const used=new Set();
   // przedłużenia w punkcie (x,y) przy kierunku (ux,uy): odcinki zaczynające się tu (do 3 m) albo przechodzące tędy (skrzyżowanie w kształcie T)
-  const cont=(x,y,ux,uy)=>{const out=[],seen=new Set(),gx=Math.floor(x/CS),gy=Math.floor(y/CS);
+  const cont=(x,y,ux,uy,ex)=>{const U=ex||used,out=[],seen=new Set(),gx=Math.floor(x/CS),gy=Math.floor(y/CS);
     for(let u=gx-1;u<=gx+1;u++)for(let v=gy-1;v<=gy+1;v++){const l=g.get(u+','+v);if(!l)continue;
-      for(let j=0;j<l.length;j+=4){const ax=l[j],ay=l[j+1],bx=l[j+2],by=l[j+3],k=key(ax,ay,bx,by);if(used.has(k)||seen.has(k))continue;
+      for(let j=0;j<l.length;j+=4){const ax=l[j],ay=l[j+1],bx=l[j+2],by=l[j+3],k=key(ax,ay,bx,by);if(U.has(k)||seen.has(k))continue;
         const dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);if(L<.3)continue;
         const c=l.c?l.c[j>>2]:'rs',lv=l.v?l.v[j>>2]:0,add=(sx,sy,ex,ey)=>{const ox=(ex-sx)/L,oy=(ey-sy)/L;out.push({ax:sx,ay:sy,bx:ex,by:ey,k,c,lv,an:Math.acos(Math.max(-1,Math.min(1,ox*ux+oy*uy)))})};
         if(Math.hypot(ax-x,ay-y)<3){seen.add(k);add(ax,ay,bx,by)}
@@ -5709,15 +5714,64 @@ function roadTrace(p,maxLen){
         else{let t=((x-ax)*dx+(y-ay)*dy)/(L*L);if(t>.02&&t<.98&&Math.hypot(ax+dx*t-x,ay+dy*t-y)<3){seen.add(k);const mx=ax+dx*t,my=ay+dy*t;add(mx,my,bx,by);add(mx,my,ax,ay)}}
       }}
     return out};
+  // rondo zaczynające się odcinkiem q0: idziemy zawsze najbardziej w lewo (do 77°, w prawo najwyżej 17°), aż wrócimy na q0; wynik: pętla od punktu q0 i jej wyloty
+  const NOX=new Set(),C=D.ringC||(D.ringC=new Map());
+  const ringFrom=(q0,nc,dir)=>{   // nc: bez zapamiętywania (pozycja auta zmienia się co odczyt); dir=-1: pętla w drugą stronę (droga dojazdowa bez kierunku – mapa nie mówi, który wlot jest wjazdem), wynik i tak przeciwnie do wskazówek zegara
+    dir=dir||1;const ck=Math.round(q0.ax)+':'+Math.round(q0.ay)+'>'+Math.round(q0.bx)+':'+Math.round(q0.by)+(dir<0?'-':'');
+    if(!nc&&C.has(ck))return C.get(ck);
+    let R=null,cur=q0,len=0,turn=0;const P=[[q0.ax,q0.ay]],cum=[0],loc=new Set([q0.k]);
+    for(let it=0;it<150;it++){
+      const lx=P[P.length-1][0],ly=P[P.length-1][1];
+      // zamknięcie pętli: ten odcinek przechodzi przez punkt startu (do 3 m) – także gdy to kopia odcinka z sąsiedniego kafelka (inny klucz)
+      let shut=false;if(len>12&&turn>4.2){const dx=cur.bx-lx,dy=cur.by-ly,L2=dx*dx+dy*dy||1e-9;let t=((q0.ax-lx)*dx+(q0.ay-ly)*dy)/L2;t=t<0?0:t>1?1:t;shut=Math.hypot(lx+dx*t-q0.ax,ly+dy*t-q0.ay)<3}
+      let cs=null,ux=0,uy=0;
+      if(!shut){
+        len+=Math.hypot(cur.bx-lx,cur.by-ly);P.push([cur.bx,cur.by]);cum.push(len);
+        if(len>600||(len>30&&turn<(len-30)/110))break;   // to nie rondo: za długo albo za mało skręca
+        const sx=cur.ox!=null?cur.ox:cur.ax,sy=cur.oy!=null?cur.oy:cur.ay,L=Math.hypot(cur.bx-sx,cur.by-sy)||1;ux=(cur.bx-sx)/L;uy=(cur.by-sy)/L;cs=cont(cur.bx,cur.by,ux,uy,NOX);   // ox,oy: początek całego odcinka (auto bywa tuż przy jego końcu)
+        shut=len>12&&turn>4.2&&cs.some(q=>q.k===q0.k);   // wróciliśmy na odcinek startu
+      }
+      let b=null,bs=-9;if(!shut)for(const q of cs){if(loc.has(q.k)||q.an>1.35)continue;const sg=(ux*(q.by-q.ay)-uy*(q.bx-q.ax)<0?-q.an:q.an)*dir;if(sg<(Math.hypot(q.bx-q.ax,q.by-q.ay)<3.5?-.8:-.3))continue;/* bardzo krótkie odcinki (kafelki zaokrąglają współrzędne) mogą się załamać mocniej */if(sg>bs){bs=sg;b=q}}
+      if(!shut&&!b&&len>12&&turn>4.2&&Math.hypot(P[P.length-1][0]-q0.ax,P[P.length-1][1]-q0.ay)<12)shut=true;   // brak dalszego odcinka tuż przed punktem startu (krótkie odcinki, ostre załamania) – też pętla
+      if(shut){
+        if(turn>7.8)break;
+        len+=Math.hypot(q0.ax-P[P.length-1][0],q0.ay-P[P.length-1][1]);P.push([q0.ax,q0.ay]);cum.push(len);
+        if(dir<0){P.reverse();cum.length=1;for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]))}
+        let cx=0,cy=0;for(let i=1;i<P.length;i++){cx+=P[i][0];cy+=P[i][1]}cx/=P.length-1;cy/=P.length-1;
+        let r=0;for(let i=1;i<P.length;i++)r+=Math.hypot(P[i][0]-cx,P[i][1]-cy);r/=P.length-1;
+        if(r<4||r>90||len<20)break;
+        {let mn=1e9,mx=0;for(let i=1;i<P.length;i++){const L=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);for(let t=0;t<=L;t+=2){const d=Math.hypot(P[i-1][0]+(P[i][0]-P[i-1][0])*t/(L||1)-cx,P[i-1][1]+(P[i][1]-P[i-1][1])*t/(L||1)-cy);if(d<mn)mn=d;if(d>mx)mx=d}}
+          if(mx>2.5*Math.max(mn,1))break}   // pętla mocno niekolista (kwartał ulic, długi zawijas) – to nie rondo; prawdziwe ronda z wlotami: do ok. 2,2
+        // wyloty: odcinki, które jednym końcem dotykają pętli (do 3 m), a drugim od niej odchodzą na zewnątrz
+        const near=(x,y)=>{let bd=1e9,ba=0;for(let i=1;i<P.length;i++){const ax=P[i-1][0],ay=P[i-1][1],dx=P[i][0]-ax,dy=P[i][1]-ay,L2=dx*dx+dy*dy||1e-9;
+          let t=((x-ax)*dx+(y-ay)*dy)/L2;t=t<0?0:t>1?1:t;const d=Math.hypot(ax+dx*t-x,ay+dy*t-y);if(d<bd){bd=d;ba=cum[i-1]+Math.sqrt(L2)*t}}return [bd,ba]};
+        const sp=[],sk=new Set(),R0=r+6;
+        for(let u=Math.floor((cx-R0)/CS);u<=Math.floor((cx+R0)/CS);u++)for(let v=Math.floor((cy-R0)/CS);v<=Math.floor((cy+R0)/CS);v++){const l=g.get(u+','+v);if(!l)continue;
+          for(let j=0;j<l.length;j+=4){const ax=l[j],ay=l[j+1],bx=l[j+2],by=l[j+3],k=key(ax,ay,bx,by);if(loc.has(k)||sk.has(k))continue;
+            for(const e of [[ax,ay,bx,by],[bx,by,ax,ay]]){const n0=near(e[0],e[1]);if(n0[0]>3)continue;const n1=near(e[2],e[3]);if(n1[0]<n0[0]+2)continue;
+              if(Math.hypot(e[2]-cx,e[3]-cy)<Math.hypot(e[0]-cx,e[1]-cy))continue;
+              sk.add(k);sp.push({a:n0[1],q:{ax:e[0],ay:e[1],bx:e[2],by:e[3],k,c:l.c?l.c[j>>2]:'rs',lv:l.v?l.v[j>>2]:0,an:0}});break}}}
+        sp.sort((a,b)=>a.a-b.a);
+        R={P,cum,len,cx,cy,r,keys:loc,sp};break;
+      }
+      if(!b)break;
+      turn+=bs;loc.add(b.k);cur=b;
+    }
+    if(!nc)C.set(ck,R);return R};
   // marsz: na każdym końcu odcinka – przedłużenie najbardziej na wprost
-  const side=[];
+  const side=[],br=[];
   const walk=(s0,sx,sy,max,sd)=>{
-    const pts=[[sx,sy]],cum=[0];let len=0,cur=s0,end='len',jn=null;used.add(key(s0.ax,s0.ay,s0.bx,s0.by));
+    const pts=[[sx,sy]],cum=[0];let len=0,cur=s0,end='len',jn=null,rg=null,ru=null;used.add(key(s0.ax,s0.ay,s0.bx,s0.by));
     for(let it=0;it<800;it++){
       const lx=pts[pts.length-1][0],ly=pts[pts.length-1][1],sl=Math.hypot(cur.bx-lx,cur.by-ly);
       len+=sl;pts.push([cur.bx,cur.by]);cum.push(len);if(len>=max){end='len';break}
       const L=Math.hypot(cur.bx-cur.ax,cur.by-cur.ay)||1,ux=(cur.bx-cur.ax)/L,uy=(cur.by-cur.ay)/L,cs=cont(cur.bx,cur.by,ux,uy);
       if(!cs.length){end='edge';break}   // koniec danych mapy albo ślepa uliczka
+      if(sd&&cs.length>=2){   // wjazd na rondo? (tylko główna droga; kandydaci: w prawo albo prawie na wprost – rondo objeżdża się w lewo)
+        for(const q of cs){if(q.an>2.3)continue;const lf=ux*(q.by-q.ay)-uy*(q.bx-q.ax)>0;const R=(!lf||q.an<.35?ringFrom(q):null)||(lf||q.an<.35?ringFrom(q,0,-1):null);if(R){rg=R;break}}
+        if(rg){let k=pts.length-1;while(k>0&&cum[k]>len-60)k--;const dx=pts[pts.length-1][0]-pts[k][0],dy=pts[pts.length-1][1]-pts[k][1],dl=Math.hypot(dx,dy);ru=dl>5?[dx/dl,dy/dl]:[ux,uy]}   // kierunek wjazdu: z ostatnich 60 m (wlot bywa skośny)
+        if(rg){end='ring';break}
+      }
       let b=null,bsc=1e9;for(const q of cs){const sc=q.an+(q.c!==cur.c?.25:0)+(q.lv!==cur.lv?.5:0);if(sc<bsc){bsc=sc;b=q}}
       if(sd&&len<sd)for(const q of cs)if(q!==b&&q.an>.35&&q.an<2.6)side.push({q,at:len});   // skręty tuż przed autem – sprawdzimy je krótko
       // rozwidlenie, na którym inne przedłużenie jest prawie tak samo „na wprost” – zostajemy na tej samej klasie drogi, ale zapamiętujemy węzeł
@@ -5725,9 +5779,35 @@ function roadTrace(p,maxLen){
       if(!b||(b.an>=1.05&&!(fwd.length===1&&b===fwd[0]))){end='junction';jn={x:cur.bx,y:cur.by,cs:fwd};break}   // jedyne przedłużenie (droga sama skręca, nawet o 90°) – jedziemy dalej
       used.add(b.k);cur=b;   // zapamiętujemy tylko wybrany odcinek – inne „na wprost” (np. bardzo krótki odcinek obok) mogą być dalszym ciągiem
     }
-    return {pts,cum,len,end,jn};
+    return {pts,cum,len,end,jn,ring:rg,ru};
   };
-  const main=walk(st,st.px,st.py,maxLen,90),br=[];
+  // wyloty ronda: base – droga do punktu wjazdu (albo do auta na rondzie), u – kierunek wjazdu
+  const ringBr=(R,base,u,on)=>{   // on: auto już na rondzie – wylot tuż za autem (do 12 m; opóźnienie GPS) też się liczy
+    for(const k of R.keys)used.add(k);
+    br.push({pts:R.P,cum:R.cum,len:R.len,end:'ring',base});
+    let best=null,bc=-2,reach=base;const ok=[];
+    for(const s0 of R.sp){const s=on&&s0.a>R.len-12?{a:0,q:s0.q}:s0;if(s.a<(on?0:2)||s.a>R.len-2)continue;
+      if(u){const rx=s.q.ax-R.cx,ry=s.q.ay-R.cy,c=(rx*u[0]+ry*u[1])/(Math.hypot(rx,ry)||1);if(c<-.77)continue;if(c>bc){bc=c;best=s}}   // zawracanie (wylot obok wjazdu) – pomijamy
+      else if(s.a>R.len-8)continue;
+      ok.push(s)}
+    for(const s of ok){if(used.has(s.q.k))continue;const w=walk(s.q,s.q.ax,s.q.ay,s===best?Math.max(300,Math.min(1000,maxLen-base-s.a)):250);w.base=base+s.a;br.push(w);reach=Math.max(reach,w.base+w.len)}
+    return reach};
+  // auto na rondzie: pętla od miejsca auta
+  const R0=ringFrom({ax:st.px,ay:st.py,bx:st.bx,by:st.by,ox:st.ax,oy:st.ay,k:key(st.ax,st.ay,st.bx,st.by),c:st.c,lv:st.lv,an:0},1);
+  if(R0){
+    const m=ringMem&&ringMem.D===D&&Date.now()-ringMem.t<60000&&Math.hypot(ringMem.cx-R0.cx,ringMem.cy-R0.cy)<8?ringMem.u:null;
+    const main={pts:[[st.px,st.py]],cum:[0],len:0,end:'ring',jn:null,ring:R0,ru:m};used.add(key(st.ax,st.ay,st.bx,st.by));
+    const reach=ringBr(R0,0,m,1);
+    return {D,kx,main,br,len:reach,end:'ring',X,Y,rb:2};
+  }
+  const main=walk(st,st.px,st.py,maxLen,90);
+  if(main.end==='ring'){
+    // tuż przy rondzie albo już na nim (pozycja auta nie trafiła na pętlę): kierunek wjazdu z pamięci – ostatnie 60 m drogi leżą wtedy na samym rondzie
+    const mm=main.len<40&&ringMem&&ringMem.D===D&&Date.now()-ringMem.t<60000&&Math.hypot(ringMem.cx-main.ring.cx,ringMem.cy-main.ring.cy)<8,u=mm?ringMem.u:main.ru;
+    if(mm)ringMem.t=Date.now();else ringMem={D,cx:main.ring.cx,cy:main.ring.cy,u,t:Date.now()};
+    const reach=ringBr(main.ring,main.len,u,mm);
+    return {D,kx,main,br,len:Math.max(main.len,reach),end:'ring',X,Y,rb:1};
+  }
   if(main.end==='junction'&&main.len<maxLen-250&&main.jn)for(const q of main.jn.cs){const w=walk(q,q.ax,q.ay,250);w.base=main.len;br.push(w)}
   for(const s of side.slice(0,6)){if(used.has(s.q.k))continue;const w=walk(s.q,s.q.ax,s.q.ay,160);w.base=s.at;br.push(w)}   // skrzyżowanie tuż przed autem (do 90 m): odnogi na 160 m (skręt zaraz za autem, przejazd tuż za skrętem)
   return {D,kx,main,br,len:main.len,end:main.end,X,Y};
