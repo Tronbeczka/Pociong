@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 182</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 183</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -8622,7 +8622,7 @@ function bld3Draw(){
   const cl=Math.cos(rad(D.lat)),ox=(vf.cam.lon-D.lon)*111195*cl,oy=(vf.cam.lat-D.lat)*111195;
   const key=(night?'n':'d')+pal.bld;if(key!==wallKey){wallKey=key;wallH=[];wallCC.clear();roofCC.clear();TCOL.clear();lmCC.clear();const roof=night?shadeC(pal.bld,1.35):shadeC(pal.bld,1.03);wallCol={roof,a:night?shadeC(pal.bld,.95):shadeC(pal.bld,.84),b:night?shadeC(pal.bld,.7):shadeC(pal.bld,.7),line:night?'rgba(255,255,255,.08)':'rgba(60,55,45,.28)'}}
   const sunDir=rad(-35);   // bez Słońca (noc, zmierzch): stałe „światło” z lewej-góry
-  const hs=Math.min(1.6,.9+tiltDeg/90);
+  const hs=Math.min(1.6,.9+tiltDeg/90)*s/2;   // wysokość brył rośnie i maleje razem z mapą (wcześniej była stała w pikselach – przy oddalaniu budynki „rosły”, przy przybliżaniu „malały”); ok. 3/4 prawdziwej wysokości, żeby nie zasłaniały drogi
   const fogOn=skyY>=0,fq=skyQ,fe=skyQ+skyL;
   if(fogOn){const bg=themePal(PAL[night?'night':'day']).bg;if(/^#[0-9a-f]{6}$/i.test(bg))bfBg=hx3(bg)}
   // Słońce: kierunek (wschód, północ, góra) – ściany i dachy są oświetlone tak samo, jak wynika z rzucanych cieni
