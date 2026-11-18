@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 183</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 184</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -8013,23 +8013,31 @@ function treeGrid(TR){const G=new Map(),C=48;for(let i=0;i<TR.n;i++){const k=Mat
 const GH_T=['turn','fork','roundabout','rotary','off ramp','on ramp','end of road','merge'],GH_A=.26;   // rodzaje manewrów, przed którymi zasłaniające budynki blakną; GH_A: krycie „ducha”
 const pipS=(P,x,y)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){if((P[i].y>y)!==(P[j].y>y)&&x<(P[j].x-P[i].x)*(y-P[i].y)/(P[j].y-P[i].y)+P[i].x)c=!c}return c};
 const TR_CAP=420,TR_FAR=2800;   // TR_CAP drzew z bliska (pień, korona, cień), dalsze TR_FAR jako same korony (jedno wypełnienie na rodzaj drzew)
-// okna: dla każdej widocznej ściany rzędy okien (piętra co ok. 3 m, okno co ok. 3,3 m); w nocy część okien świeci. Zwraca liczbę narysowanych okien
-const WQ1=[],WQ2=[];
+// okna: dla każdej widocznej ściany rzędy okien (piętra co ok. 3,1 m, okno co ok. 3,3 m, siatka przypięta do ściany); w nocy część okien świeci. Zwraca liczbę narysowanych okien
+const WQ1=[],WQ2=[],WIN_MAX=5000;
 function drawWindows(Gi,Gj,Ti,Tj,Lw,Hw,seed,alpha,lit){
+  if(Lw<3.4)return 0;
   const wl=Math.hypot(Gj.x-Gi.x,Gj.y-Gi.y),hl=Math.hypot(Ti.x-Gi.x,Ti.y-Gi.y);
-  if(Lw<3.4||wl<12||hl<9)return 0;
-  // przy oddaleniu okna są „grubsze” niż w rzeczywistości (jeden rząd = kilka pięter), żeby nie powstawał szum: wiersz ma co najmniej ok. 5 px
-  const nf=Math.max(1,Math.min(16,Math.round(Hw/3.1),Math.floor(hl/5.4))),nc=Math.max(1,Math.min(26,Math.round(Lw/3.3),Math.floor(wl/7)));
-  const ax=[],ay=[],dx=[],dy=[];
+  // Wersja 184: siatka okien zależy tylko od wymiarów ściany w metrach (piętra co ok. 3,1 m, okno co ok. 3,3 m) – nie od jej wielkości na ekranie.
+  // Dotąd liczba rzędów i kolumn wynikała z pikseli, więc przy każdym ruchu, obrocie i zbliżeniu okna przeskakiwały. Za małe okna nie „grubieją”, tylko płynnie znikają.
+  const nf=Math.max(1,Math.min(16,Math.round(Hw/3.1))),nc=Math.max(1,Math.min(26,Math.round(Lw/3.3)));
+  const vis=Math.min((hl/nf-2.4)/2.6,(wl/nc-3)/3);
+  if(vis<=0)return 0;
+  alpha*=Math.min(1,vis);
+  // perspektywa: równe odstępy na ścianie nie są równe na ekranie (bliższa część ściany jest większa) – inaczej okna „pływają” po ścianie przy ruchu kamery
+  const ki=Gi.k||1,kj=Gj.k||1,ti=Ti.k||ki,tj=Tj.k||kj,pc=(u,a,b)=>u*b/((1-u)*a+u*b);
+  const ax=[],ay=[],dx=[],dy=[],kb=[],kt=[];
   for(let c=0;c<nc;c++)for(const u of [(c+.24)/nc,(c+.76)/nc]){
-    const x0=Gi.x+(Gj.x-Gi.x)*u,y0=Gi.y+(Gj.y-Gi.y)*u,x1=Ti.x+(Tj.x-Ti.x)*u,y1=Ti.y+(Tj.y-Ti.y)*u;ax.push(x0);ay.push(y0);dx.push(x1-x0);dy.push(y1-y0);
+    const ub=pc(u,ki,kj),ut=pc(u,ti,tj),x0=Gi.x+(Gj.x-Gi.x)*ub,y0=Gi.y+(Gj.y-Gi.y)*ub,x1=Ti.x+(Tj.x-Ti.x)*ut,y1=Ti.y+(Tj.y-Ti.y)*ut;
+    ax.push(x0);ay.push(y0);dx.push(x1-x0);dy.push(y1-y0);kb.push(1/((1-u)/ki+u/kj));kt.push(1/((1-u)/ti+u/tj));
   }
   WQ1.length=0;WQ2.length=0;let n=0;
   for(let f=0;f<nf;f++){
     const v0=(f+.3)/nf,v1=(f+.76)/nf;
     for(let c=0;c<nc;c++){
-      const a=2*c,b=2*c+1,q=lit&&hh(seed+f*31+c*7,f*13+c)<.4?WQ1:WQ2;
-      q.push(ax[a]+dx[a]*v0,ay[a]+dy[a]*v0,ax[b]+dx[b]*v0,ay[b]+dy[b]*v0,ax[b]+dx[b]*v1,ay[b]+dy[b]*v1,ax[a]+dx[a]*v1,ay[a]+dy[a]*v1);n++;
+      const a=2*c,b=2*c+1,q=lit&&hh(seed+f*31+c*7,f*13+c)<.4?WQ1:WQ2,
+        a0=pc(v0,kb[a],kt[a]),a1=pc(v1,kb[a],kt[a]),b0=pc(v0,kb[b],kt[b]),b1=pc(v1,kb[b],kt[b]);
+      q.push(ax[a]+dx[a]*a0,ay[a]+dy[a]*a0,ax[b]+dx[b]*b0,ay[b]+dy[b]*b0,ax[b]+dx[b]*b1,ay[b]+dy[b]*b1,ax[a]+dx[a]*a1,ay[a]+dy[a]*a1);n++;
     }
   }
   const fill=(Q,col)=>{if(!Q.length)return;mx.beginPath();for(let i=0;i<Q.length;i+=8){mx.moveTo(Q[i],Q[i+1]);mx.lineTo(Q[i+2],Q[i+3]);mx.lineTo(Q[i+4],Q[i+5]);mx.lineTo(Q[i+6],Q[i+7]);mx.closePath()}mx.fillStyle=col;mx.globalAlpha=alpha;mx.fill()};
@@ -8662,7 +8670,7 @@ function bld3Draw(){
     bldCache={D,lst,far,rot:curRot,s,dl};
   }
   const cap=Math.min(lst.length,520+(dl>=2?TR_CAP:0)),start=lst.length-cap;   // przy nadmiarze pomijamy najdalsze
-  let nearFrom=lst.length;{let c=0;for(let n=lst.length-1;n>=start;n--)if(lst[n].b){if(++c>150)break;nearFrom=n}}   // okna tylko w ok. 150 najbliższych budynkach
+  let nearFrom=lst.length;{let c=0,e=0;for(let n=lst.length-1;n>=start;n--){const b=lst[n].b;if(!b)continue;if(b.we===undefined){let P=0;const p=b.p,m=p.length/2;for(let i=0;i<m;i++){const j=(i+1)%m;P+=Math.min(26,Math.round(Math.hypot(p[2*j]-p[2*i],p[2*j+1]-p[2*i+1])/3.3))}b.we=P*.55*Math.max(1,Math.min(16,Math.round((b.h-(b.m||0))/3.1)))}e+=b.we;if(++c>150||(c>8&&e>WIN_MAX*.9))break;nearFrom=n}}   // okna tylko w najbliższych budynkach (do ok. 150), tyle, ile zmieści się w limicie okien – limit nie może zabrać okien najbliższym budynkom (rysowane są na końcu)
   mx.lineJoin='round';
   if(fogOn){mx.save();mx.beginPath();mx.rect(0,fq,W,H-fq);mx.clip()}   // nad horyzontem nie ma mapy, więc i budynków
   // cienie budynków i drzew wg położenia Słońca (rysowane do osobnej warstwy i nakładane półprzezroczyście)
@@ -8715,7 +8723,7 @@ function bld3Draw(){
       if(!GS.length)GS=null;
     }
   }
-  let winB=2600,winN=0,roofN=0,trN=0,ghN=0,lmN_=0;const LS={sx,sy,sz,dl,fog:fogOn,s,wl:wallCol.line};const lc0=mx.lineCap;
+  let winB=WIN_MAX,winN=0,roofN=0,trN=0,ghN=0,lmN_=0;const LS={sx,sy,sz,dl,fog:fogOn,s,wl:wallCol.line};const lc0=mx.lineCap;
   if(far&&far.length&&D.TR){   // dalsze drzewa: same korony, po jednym wypełnieniu na rodzaj (iglaste ciemniejsze)
     const TR=D.TR;
     for(let v=0;v<2;v++){
