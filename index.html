@@ -1422,7 +1422,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 184</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 185</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -6920,7 +6920,7 @@ async function loadWide(cam,sc){   // sc: skala, dla której ładujemy tło (dom
 // Płótno mapy ma skończony rozmiar, więc jego daleki brzeg leży na ekranie wyżej lub niżej – zależnie od przesunięcia kamery od środka płótna, skali i obrotu.
 // Co klatkę liczymy z geometrii (te same wzory co w CSS: perspective 900 px, rotateX, rotate), gdzie ten brzeg jest widoczny na ekranie, i dokładnie tam mgła osiąga pełne krycie – brzegu mapy nigdy nie widać.
 var skyY=-1,skyT=0,skyKey='',skyQ=0,skyL=0,skyE=NaN;
-const SKYF=[.1,.2,.35,.5,.7,.85],SKYP=1.9,SKYTOP={day:[188,211,236],night:[7,10,20]};
+const SKYF=[.1,.2,.35,.5,.7,.85],SKYP=1.9,SKYTOP={day:[188,211,236],night:[30,38,60]};   // Wersja 185: nocne niebo nie jest już ciemniejsze od mapy (było prawie czarne, #070a14 przy tle mapy #141926) – górna część ekranu wyglądała na przyciemnioną; teraz to lekko rozjaśnione światłami miasta granatowe niebo
 function skyEdge(tx,ty,k,S){   // najniżej położony (na ekranie) widoczny punkt dalszego brzegu płótna: y w px od góry ekranu albo NaN
   const W=window.innerWidth,H=window.innerHeight,P=900,th=rad(tiltE()),sn=Math.sin(th),cs=Math.cos(th),ph=rad(curRot),cp=Math.cos(ph),sp=Math.sin(ph),h=k*S/2;
   const Y0=(cyCur-.45)*H,cut=Math.min(300,(P-200)/Math.max(.1,sn));
