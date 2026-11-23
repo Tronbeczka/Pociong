@@ -1306,6 +1306,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="eco"> Tryb oszczędny baterii</label>
   <label style="font-size:.9rem"><input type="checkbox" id="dmCb" checked> Widok kierowcy podczas trasy (szersze drogi, mgła, strzałki na trasie)</label>
   <label style="font-size:.9rem"><input type="checkbox" id="laneCb" checked> Pasy ruchu na drogach i na trasie (dane z OpenStreetMap)</label>
+  <label style="font-size:.9rem"><input type="checkbox" id="leCb" checked> Auto na pasie, którym jedziesz (z GPS; przy słabym GPS – pas z trasy albo prawy)</label>
   <select id="sigDens" class="sec"><option value="all">Znaki na mapie: wszystkie</option><option value="main">Znaki na mapie: światła i STOP</option><option value="route">Znaki na mapie: tylko na trasie</option><option value="off">Znaki na mapie: ukryte</option></select>
   <select id="terrSel" class="sec"><option value="soft">Rzeźba terenu: delikatna</option><option value="strong">Rzeźba terenu: wyraźna</option><option value="off">Rzeźba terenu: wyłączona</option></select>
   <select id="det3Sel" class="sec"><option value="full">Szczegóły 3D: pełne (dachy, okna, drzewa)</option><option value="basic">Szczegóły 3D: podstawowe (dachy)</option><option value="off">Szczegóły 3D: same bryły</option></select>
@@ -1428,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 186</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 187</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2183,6 +2184,7 @@ function onPos(g){window.gpsErr=false;
     heading=(deg(Math.atan2(w*Math.sin(a)+(1-w)*Math.sin(b),w*Math.cos(a)+(1-w)*Math.cos(b)))+360)%360;
     speed=.75*speed+.25*gpsOk.speed}
   gpsOk={lat:c.latitude,lon:c.longitude,t,h:heading,speed};
+  try{leObs(c.latitude,c.longitude,acc,heading,speed)}catch(e){}   // Wersja 187: pas ruchu z odczytu GPS
   if(t-(onPos.sv||0)>10000){onPos.sv=t;try{localStorage.setItem('lastpos',JSON.stringify({lat:c.latitude,lon:c.longitude,t:Date.now()}))}catch(e){}}
   last={lat:c.latitude,lon:c.longitude,t};
   evaluate({lat:c.latitude,lon:c.longitude,speed,heading});
@@ -3946,7 +3948,7 @@ function snapGrid(D){
   const g=new Map(),CS=40;
   for(const ra of D.RS||[])for(let i=0;i+3<ra.length;i+=2){
     const x1=ra[i],y1=ra[i+1],x2=ra[i+2],y2=ra[i+3],ax=Math.floor(Math.min(x1,x2)/CS),bx=Math.floor(Math.max(x1,x2)/CS),ay=Math.floor(Math.min(y1,y2)/CS),by=Math.floor(Math.max(y1,y2)/CS);
-    for(let a=ax;a<=bx;a++)for(let b=ay;b<=by;b++){const k=a+','+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(x1,y1,x2,y2);(l.v||(l.v=[])).push(ra.lv||0);(l.c||(l.c=[])).push(ra.k||'rs')}   // l.v: poziom odcinka (0 = na ziemi, 1 = most/wiadukt), l.c: klasa drogi
+    for(let a=ax;a<=bx;a++)for(let b=ay;b<=by;b++){const k=a+','+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(x1,y1,x2,y2);(l.v||(l.v=[])).push(ra.lv||0);(l.c||(l.c=[])).push(ra.k||'rs');(l.o||(l.o=[])).push(ra.o||0)}   // l.v: poziom odcinka (0 = na ziemi, 1 = most/wiadukt), l.c: klasa drogi
   }
   return D.grid=g;
 }
@@ -4105,7 +4107,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
 {
   const G=k=>document.querySelector('#settings .sc[data-g="'+k+'"]');
   const mv=(g,ids)=>ids.forEach(id=>{const e=$(id);if(!e)return;const n=e.tagName==='LABEL'||e.tagName==='SELECT'||e.tagName==='BUTTON'||e.tagName==='DIV'?e:(e.closest('label')||e);G(g).appendChild(n)});
-  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens','terrSel','det3Sel']);
+  mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','leCb','sigDens','terrSel','det3Sel']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
   mv('snd',['sndmode','vsel','vtest','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
@@ -6168,7 +6170,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
       }
       if(!cls)continue;
       // rysujemy wprost do ścieżek klas (bez osobnego Path2D na każdy obiekt i bez closePath – to był najdroższy fragment budowy mapy)
-      const isTr=f.l==='transportation',one=cls==='rs'&&isTr&&(pr.oneway==1||pr.oneway===true);   // jednokierunkowe ulice osiedlowe = jeden pas
+      const isTr=f.l==='transportation',one=cls==='rs'&&isTr&&(pr.oneway==1||pr.oneway===true),owT=isTr&&(pr.oneway==1||pr.oneway===true||pr.oneway==='1'||pr.oneway==-1||pr.oneway==='-1');   // jednokierunkowe ulice osiedlowe = jeden pas
       // most/wiadukt (brunnel=bridge): osobne ścieżki, rysowane później, od najniższego poziomu (layer), z cieniem i obwódką
       const lk=isTr&&cls==='mw'&&(pr.ramp==1||pr.ramp==='1'),cw=lk?'mwl':cls;   // lk: łącznik (zjazd/wjazd) – węższy, bez osi środkowej
       const brg=(!wide&&isTr&&pr.brunnel==='bridge'&&BRCLS[cls])?{cls:cw,L:Math.max(1,Math.min(4,Math.round(+pr.layer)||1)),pa:new Path2D(),pb:null,pbk:'',pc:null,ras:[],over:false}:null;
@@ -6193,7 +6195,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
             if((ax===bx&&(ax<=0||ax>=E))||(ay===by&&(ay<=0||ay>=E))){pen=false;continue}
             if(!pen){pe.moveTo((ox+ax*k-cx)*cl,(oy-ay*k-cy)*cl);pen=true}
             pe.lineTo((ox+bx*k-cx)*cl,(oy-by*k-cy)*cl)}}
-        if(ra&&ra.length>=4){ra.k=cls;if(brg){ra.lv=1;brg.ras.push(ra)}if(!rbr)RS.push(ra)}
+        if(ra&&ra.length>=4){ra.k=cls;ra.o=owT?1:0;if(brg){ra.lv=1;brg.ras.push(ra)}if(!rbr)RS.push(ra)}
       }
       if(brg)BF.push(brg);
       if(tfk){const rs=[];for(const rg of f.r){if(rg.length<6)continue;const a=[];for(let i=0;i+1<rg.length;i+=2)a.push((ox+rg[i]*k-cx)*cl,(oy-rg[i+1]*k-cy)*cl);rs.push(a)}if(rs.length)TF.push({k:tfk,r:rs})}
@@ -7460,7 +7462,7 @@ function projLoc(D,cl){
 // 1) dane pobieramy komórkami ok. 2,2 km (Overpass, pamięć urządzenia 14 dni), 2) droga z kilkoma pasami jest rysowana szerzej, z liniami między pasami
 // i strzałkami, 3) niebieska trasa i auto jadą pasem wynikającym z najbliższego manewru (prawy – domyślnie, lewy przed skrętem w lewo).
 function lnFail(e){window.__lnErr=String(e&&e.stack||e);errNote('pasy',e)}   // błąd w module pasów: pokazujemy w teście i zapisujemy w dzienniku błędów
-var laneOn=LSget('laneOn',true)!==false;
+var laneOn=LSget('laneOn',true)!==false,leOn=LSget('leOn',true)!==false;   // leOn (Wersja 187): auto na pasie wyznaczonym z odczytów GPS
 var LANEW=new Map(),laneVer=0,lnDirty=0,lnGrid=new Map(),lnCells=new Map(),lnQ=[],lnBusy=false,carAl=null;
 const LN_K=['tr','mw','pr','sc','rs','sv'],LN_CELL={y:.02,x:.03};
 // opis drogi z tagów OSM: liczba pasów w kierunku zgodnym z rysowaniem (nf), przeciwnym (nb), pasy środkowe (c), jednokierunkowość (ow), strzałki (tf/tb)
@@ -7500,7 +7502,7 @@ function lnWay0(w){
   };
   const xf=nf?ex('forward',nf):0,xb=nb?ex('backward',nb):0;
   const ga=new Array(g.length*2);for(let i=0;i<g.length;i++){ga[2*i]=Math.round(g[i].lat*1e6)/1e6;ga[2*i+1]=Math.round(g[i].lon*1e6)/1e6}
-  return {id:w.id,k,kc:Math.max(0,LN_K.indexOf(k)),nf,nb,c,ow,N,multi,tf,tb,xf,xb,z:(t.bridge&&t.bridge!=='no')||+t.layer>0?1:0,g:ga};
+  return {id:w.id,k,kc:Math.max(0,LN_K.indexOf(k)),nf,nb,c,ow,N,multi,tf,tb,xf,xb,rb:(t.junction==='roundabout'||t.junction==='circular')?1:0,z:(t.bridge&&t.bridge!=='no')||+t.layer>0?1:0,g:ga};
 }
 // siatka ok. 75 m do szybkiego szukania drogi przy punkcie (dopasowanie trasy do danych o pasach)
 function lnIdx(w){
@@ -7610,6 +7612,7 @@ function lnTick(){
   if(lnQ.length)lnPump();
 }
 setInterval(()=>{try{lnTick()}catch(e){}},2500);
+{const e=$('leCb');if(e){e.checked=leOn;e.onchange=()=>{leOn=e.checked;LSput('leOn',leOn);LE.w=null;LE.k=-1}}}
 {const e=$('laneCb');if(e){e.checked=laneOn;e.onchange=()=>{laneOn=e.checked;LSput('laneOn',laneOn);vd=null;laneVer++;if(route)route.lp=null;if(laneOn)lnTick()}}}
 // ---- plan pasa dla trasy ----
 // strona, po której trzeba jechać przed manewrem: 'L' / 'R' albo null (bez zmiany pasa)
@@ -7708,7 +7711,8 @@ function lnMetres(D,w){
   const kx=111195*Math.cos(rad(D.lat)),g=w.g,n=g.length/2,a=new Float64Array(n*2);
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   for(let i=0;i<n;i++){const x=(g[2*i+1]-D.lon)*kx,y=(g[2*i]-D.lat)*111195;a[2*i]=x;a[2*i+1]=y;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
-  r={a,b:[x0,y0,x1,y1]};mp.set(w.id,r);return r;
+  const cum=new Float64Array(n);for(let i=1;i<n;i++)cum[i]=cum[i-1]+Math.hypot(a[2*i]-a[2*i-2],a[2*i+1]-a[2*i-1]);   // długość wzdłuż drogi (Wersja 187: cięcie linii na skrzyżowaniach)
+  r={a,b:[x0,y0,x1,y1],cum};mp.set(w.id,r);return r;
 }
 // linia równoległa do drogi w odległości d (m, + = w prawo względem kierunku rysowania), z ostrymi narożnikami
 function lnOff(a,d){
@@ -7724,6 +7728,114 @@ function lnOff(a,d){
   return o;
 }
 function lnLine(P,o){P.moveTo(o[0],o[1]);for(let i=2;i<o.length;i+=2)P.lineTo(o[i],o[i+1])}
+// ================= Wersja 187: czytelne skrzyżowania =================
+// Dotąd linie pasów, linie krawędziowe i strzałki każdej drogi z pasami biegły aż do środka skrzyżowania (tam kończy się odcinek drogi w OSM), więc na skrzyżowaniu
+// krzyżowały się białe linie wszystkich wlotów, a strzałki stały w środku skrzyżowania. Teraz: w miejscu, gdzie drogę przecina albo do niej dochodzi inna droga
+// (drogi z pasami z OSM i drogi z mapy), linie są przerwane na szerokość tej drogi (tak jak na prawdziwej jezdni), na wlocie jest poprzeczna linia zatrzymania
+// (przed rondem – przerywana linia „ustąp pierwszeństwa”), a strzałki stoją tuż przed nią. Boczna uliczka przerywa tylko linię krawędziową po swojej stronie.
+const LN_RK={sv:0,rs:1,tr:2,sc:3,mwl:3,pr:4,mw:5};
+// fragment linii o (równoległej do osi a) między odległościami s0…s1 wzdłuż osi
+function lnSub(P,o,cum,s0,s1){
+  const n=cum.length;if(n<2)return;let i=0;while(i<n-2&&cum[i+1]<=s0)i++;
+  const pt=(x,j)=>{const L=cum[j+1]-cum[j],t=L>1e-9?Math.max(0,Math.min(1,(x-cum[j])/L)):0;return [o[2*j]+(o[2*j+2]-o[2*j])*t,o[2*j+1]+(o[2*j+3]-o[2*j+1])*t]};
+  let p=pt(s0,i);P.moveTo(p[0],p[1]);
+  while(i<n-2&&cum[i+1]<s1){P.lineTo(o[2*i+2],o[2*i+3]);i++}
+  p=pt(s1,i);P.lineTo(p[0],p[1]);
+}
+// linia z przerwami: cc = posortowane, scalone przedziały [od,do,od,do…] (m wzdłuż osi), w których linii nie ma
+function lnCutLine(P,o,cum,cc){
+  if(!cc||!cc.length){lnLine(P,o);return}
+  const L=cum[cum.length-1];let a=0;
+  for(let k=0;k<=cc.length;k+=2){
+    const b=Math.min(L,k<cc.length?cc[k]:L);
+    if(b-a>.3)lnSub(P,o,cum,a,b);
+    if(k<cc.length)a=Math.max(a,cc[k+1]);
+    if(a>=L)break;
+  }
+}
+// punkt i kierunek osi w odległości x wzdłuż drogi
+function lnPtDir(a,cum,x){
+  const n=cum.length;let i=0;while(i<n-2&&cum[i+1]<x)i++;
+  const dx=a[2*i+2]-a[2*i],dy=a[2*i+3]-a[2*i+1],L=Math.hypot(dx,dy)||1,t=Math.max(0,Math.min(1,(x-cum[i])/L));
+  return [a[2*i]+dx*t,a[2*i+1]+dy*t,dx/L,dy/L];
+}
+// miejsca skrzyżowań na każdej drodze z pasami (w metrach względem środka mapy D); liczone raz dla danych mapy i danych o pasach
+function lnJuncs(D){
+  const key=laneVer+'|'+(D.RS?D.RS.length:0);
+  if(D.LNJK===key&&D.LNJ)return D.LNJ;
+  const t0=performance.now(),J=new Map(),A=[],CS=40,G=new Map();
+  D.LNJK=key;D.LNJ=J;
+  if(!LANEW.size)return J;
+  for(const w of LANEW.values()){if(!w.multi)continue;const m=lnMetres(D,w);if(m.b[2]<-3100||m.b[0]>3100||m.b[3]<-3100||m.b[1]>3100)continue;A.push({w,m})}
+  for(let ai=0;ai<A.length;ai++){const a=A[ai].m.a;for(let i=0;i+3<a.length;i+=2){const x1=a[i],y1=a[i+1],x2=a[i+2],y2=a[i+3];
+    for(let u=Math.floor((Math.min(x1,x2)-3)/CS);u<=Math.floor((Math.max(x1,x2)+3)/CS);u++)for(let v=Math.floor((Math.min(y1,y2)-3)/CS);v<=Math.floor((Math.max(y1,y2)+3)/CS);v++){const k=u+','+v;let l=G.get(k);if(!l)G.set(k,l=[]);l.push(ai,i>>1)}}}
+  const seen=new Set();
+  const test=(b,lv,bk,lw)=>{
+    const nb=b.length/2;
+    for(let j=0;j<nb-1;j++){
+      const px=b[2*j],py=b[2*j+1],qx=b[2*j+2],qy=b[2*j+3],ex=qx-px,ey=qy-py,LB=Math.hypot(ex,ey);if(LB<.05)continue;
+      const first=j===0,last=j===nb-2,eb=2.5/LB;seen.clear();
+      for(let u=Math.floor((Math.min(px,qx)-3)/CS);u<=Math.floor((Math.max(px,qx)+3)/CS);u++)for(let v=Math.floor((Math.min(py,qy)-3)/CS);v<=Math.floor((Math.max(py,qy)+3)/CS);v++){
+        const l=G.get(u+','+v);if(!l)continue;
+        for(let z=0;z<l.length;z+=2){
+          const ai=l[z],i=l[z+1],kk=ai*1e6+i;if(seen.has(kk))continue;seen.add(kk);
+          const AW=A[ai];if(lw&&AW.w===lw)continue;if((AW.w.z?1:0)!==(lv?1:0))continue;   // most nad drogą / droga pod mostem – to nie skrzyżowanie
+          const a=AW.m.a,ax=a[2*i],ay=a[2*i+1],dx=a[2*i+2]-ax,dy=a[2*i+3]-ay,LA=Math.hypot(dx,dy);if(LA<.05)continue;
+          const cr=dx*ey-dy*ex,sn=Math.abs(cr)/(LA*LB);if(sn<.47)continue;   // prawie równoległe (ta sama droga na mapie, przedłużenie, łącznik pod małym kątem) – nie skrzyżowanie
+          const wx=px-ax,wy=py-ay,t=(wx*ey-wy*ex)/cr,uu=(wx*dy-wy*dx)/cr,na=a.length/2,ea=2.5/LA;
+          if(t<(i===0?-ea:0)||t>(i===na-2?1+ea:1))continue;
+          if(uu<(first?-eb:0)||uu>(last?1+eb:1))continue;
+          const tc=Math.max(0,Math.min(1,t)),sA=AW.m.cum[i]+tc*LA,Lt=AW.m.cum[na-1],bEnd=(first&&uu<eb)||(last&&uu>1-eb);
+          let sd=0;   // strona, po której dochodzi boczna droga: 1 – prawa (względem kierunku rysowania), -1 – lewa, 0 – przecina
+          if(bEnd){const fx=(uu<.5?qx:px)-(ax+dx*tc),fy=(uu<.5?qy:py)-(ay+dy*tc);sd=(fx*dy-fy*dx)>0?1:-1}
+          let l2=J.get(AW.w.id);if(!l2)J.set(AW.w.id,l2=[]);
+          l2.push({s:sA,sn,sd,bk,lw,ae:sA<3||sA>Lt-3,x:ax+dx*tc,y:ay+dy*tc});
+        }
+      }
+    }
+  };
+  for(const B of A)test(B.m.a,B.w.z,B.w.k,B.w);
+  for(const ra of D.RS||[]){if(!LN_RK[ra.k])continue;test(ra,ra.lv,ra.k,null)}
+  D.LNJms=Math.round(performance.now()-t0);
+  return J;
+}
+// sygnalizacja świetlna, STOP i „ustąp pierwszeństwa” z OSM (te same dane co znaki na trasie) przy skrzyżowaniu: 'l' / 's' / 'g' albo null
+var lnSgC=null;
+function lnCtl(D,x,y){
+  if(!signs)return null;
+  if(!lnSgC||lnSgC.v!==signs.v||lnSgC.D!==D){const G=new Map(),kx=111195*Math.cos(rad(D.lat)),put=(o,k)=>{const X=(o.lon-D.lon)*kx,Y=(o.lat-D.lat)*111195,c=Math.floor(X/50)+','+Math.floor(Y/50);let l=G.get(c);if(!l)G.set(c,l=[]);l.push(X,Y,k)};
+    for(const o of signs.lights||[])put(o,'l');for(const o of signs.list||[])put(o,o.kind==='stop'?'s':'g');lnSgC={v:signs.v,D,G}}
+  let best=null,bd=35,lt=false;const cx=Math.floor(x/50),cy=Math.floor(y/50);
+  for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){const l=lnSgC.G.get(u+','+v);if(!l)continue;
+    for(let i=0;i<l.length;i+=3){const d=Math.hypot(l[i]-x,l[i+1]-y);if(d>=35)continue;if(l[i+2]==='l')lt=true;if(d<bd){bd=d;best=l[i+2]}}}
+  return lt?'l':best;   // światła mają pierwszeństwo przed znakami
+}
+// przerwy w liniach jednej drogi przy obecnym zbliżeniu: a – wszystkie linie, l/r – linia krawędziowa z lewej/prawej, st – linie zatrzymania [x, kierunek, ustąp]
+function lnCuts(v,s,LWm){
+  const D=v.D;if(!D)return null;
+  const JJ=lnJuncs(D).get(v.w.id);if(!JJ||!JJ.length)return null;
+  const key=D.LNJK+'|'+Math.round(LWm*8)+'|'+dmK+'|'+(signs?signs.v:0);let C=v.m.cu;if(C&&C.key===key)return C;
+  const w=v.w,cum=v.m.cum,L=cum[cum.length-1],rA=LN_RK[w.k]||1,g=w.g,ring=w.rb||(g.length>=8&&g[0]===g[g.length-2]&&g[1]===g[g.length-1]);
+  const A=[],Lf=[],Rt=[],SP=[];
+  for(const j of JJ){
+    const hb=j.lw?j.lw.N*lnLanePx(j.lw.kc,s)/s/2:rw(j.bk,s)/s/2,c=hb/Math.max(.45,j.sn)+LWm*.22,rb=LN_RK[j.bk]||1;
+    const sig=j.ae||(j.lw&&j.lw.N>=3)||rb>=rA-(j.sd===0?2:1),iv=[j.s-c,j.s+c];
+    if(sig){A.push(iv);
+      // linia zatrzymania: przed drogą co najmniej tak samo ważną albo tam, gdzie OSM ma przy skrzyżowaniu światła / STOP / „ustąp pierwszeństwa” (boczna uliczka – bez linii)
+      const bRing=!!(j.lw&&(j.lw.rb||(j.lw.g.length>=8&&j.lw.g[0]===j.lw.g[j.lw.g.length-2]&&j.lw.g[1]===j.lw.g[j.lw.g.length-1]))),ct=(!ring&&(j.sd===0||j.ae))?lnCtl(D,j.x,j.y):null;
+      if(!ring&&(j.sd===0||j.ae)&&(rb>=rA||ct||bRing))SP.push([j.s,bRing||(ct==='g')])}
+    else{if(j.sd>=0)Rt.push(iv);if(j.sd<=0)Lf.push(iv)}
+  }
+  const mg=arr=>{arr.sort((p,q)=>p[0]-q[0]);const o=[];for(const [a,b] of arr){if(o.length&&a<=o[o.length-1]+.01)o[o.length-1]=Math.max(o[o.length-1],b);else o.push(a,b)}return o};
+  const a=mg(A),st=[];
+  for(let k=0;k<a.length;k+=2){
+    const s0=a[k],s1=a[k+1],inn=SP.filter(x=>x[0]>=s0-.01&&x[0]<=s1+.01);if(!inn.length)continue;
+    const gw=inn.some(x=>x[1]),pe=k>0?a[k-1]:null,ns=k+2<a.length?a[k+2]:null;
+    if(w.nf>0&&s0>0&&(pe==null?s0>=1.2*LWm:s0-pe>=2.2*LWm))st.push(s0,1,gw?1:0);   // wlot w kierunku rysowania
+    if(w.nb>0&&s1<L&&(ns==null?L-s1>=1.2*LWm:ns-s1>=2.2*LWm))st.push(s1,-1,gw?1:0);   // wlot w przeciwnym kierunku
+  }
+  return v.m.cu={key,a,l:mg(Lf.concat(A)),r:mg(Rt.concat(A)),st,L};
+}
 const lnLanePx=(kc,s)=>rw(LN_K[kc],s)/2;
 function lnVis(D,s,ox,oy,S){
   const out=[];if(!laneOn||!LANEW.size||s<.6)return out;
@@ -7732,7 +7844,7 @@ function lnVis(D,s,ox,oy,S){
     if(!w.multi)continue;
     const m=lnMetres(D,w),b=m.b;
     if(b[2]<ox-r||b[0]>ox+r||b[3]<oy-r||b[1]>oy+r)continue;
-    out.push({w,m});
+    out.push({w,m,D});
   }
   return out;
 }
@@ -7804,12 +7916,14 @@ function lnGlyph(S,F,cx,cy,ux,uy,u,dirs){
   }
 }
 // strzałki z turn:lanes na końcu drogi (przed skrzyżowaniem), osobno dla obu kierunków jazdy
-function lnArrows(S,F,v,LWm){
+function lnArrows(S,F,v,LWm,CU){
   const w=v.w,a=v.m.a,n=a.length/2;
   for(const fwd of [true,false]){
     const tag=fwd?w.tf:w.tb;if(!tag)continue;
     const nt=fwd?w.nf:w.nb,no=fwd?w.nb:w.nf;if(!nt)continue;
-    const sets=lnParse(tag),px=i=>a[2*(fwd?i:n-1-i)],py=i=>a[2*(fwd?i:n-1-i)+1],want=Math.max(5,LWm*1.7);   // punkty w kolejności jazdy
+    const sets=lnParse(tag),px=i=>a[2*(fwd?i:n-1-i)],py=i=>a[2*(fwd?i:n-1-i)+1];   // punkty w kolejności jazdy
+    let want=Math.max(5,LWm*1.7);
+    if(CU&&CU.a.length){const c=CU.a;if(fwd&&c[c.length-1]>=CU.L-.5)want=CU.L-c[c.length-2]+LWm*1.25;else if(!fwd&&c[0]<=.5)want=c[1]+LWm*1.25}   // koniec drogi na skrzyżowaniu: strzałki tuż przed linią zatrzymania
     let acc=0,got=null;
     for(let k=n-1;k>0;k--){   // od końca odcinka ku początkowi: miejsce ok. 1,7 szerokości pasa przed skrzyżowaniem
       const x1=px(k),y1=py(k),x0=px(k-1),y0=py(k-1),dx=x1-x0,dy=y1-y0,L=Math.hypot(dx,dy);
@@ -7853,18 +7967,25 @@ function lnBody(c,G,V,pal,s,dm,night,lite){
   const MK=new Map();
   for(const v of V){
     const w=v.w,a=v.m.a;if(a.length<4)continue;
-    let q=MK.get(w.kc);if(!q)MK.set(w.kc,q={DP:new Path2D(),SP:new Path2D(),EP:new Path2D(),BP:new Path2D(),AS:new Path2D(),AF:new Path2D(),lp:lnLanePx(w.kc,s)});
+    let q=MK.get(w.kc);if(!q)MK.set(w.kc,q={DP:new Path2D(),SP:new Path2D(),EP:new Path2D(),BP:new Path2D(),AS:new Path2D(),AF:new Path2D(),TP:new Path2D(),GP:new Path2D(),lp:lnLanePx(w.kc,s)});
     const LWm=q.lp/s,N=w.N,x0=-N*LWm/2;
+    let CU=null;try{CU=lnCuts(v,s,LWm)}catch(e){lnFail(e)}   // Wersja 187: przerwy na skrzyżowaniach
+    const cum=v.m.cum,LN=(P,o,cc)=>cum?lnCutLine(P,o,cum,cc):lnLine(P,o),ca=CU&&CU.a;
     for(let i=1;i<N;i++){
       const x=x0+i*LWm,med=w.ow===0&&(i===w.nb||i===w.nb+w.c);
-      if(!med)lnLine(q.DP,lnOff(a,x));
-      else if(w.c===0){const d=LWm*.075;lnLine(q.SP,lnOff(a,x-d));lnLine(q.SP,lnOff(a,x+d))}
-      else lnLine(q.SP,lnOff(a,x));
+      if(!med)LN(q.DP,lnOff(a,x),ca);
+      else if(w.c===0){const d=LWm*.075;LN(q.SP,lnOff(a,x-d),ca);LN(q.SP,lnOff(a,x+d),ca)}
+      else LN(q.SP,lnOff(a,x),ca);
     }
-    {const e=N*LWm/2-LWm*.09;lnLine(q.EP,lnOff(a,-e));lnLine(q.EP,lnOff(a,e))}   // ciągłe linie krawędziowe
-    if(w.xf)for(let k=0;k<w.nf;k++)if(w.xf>>k&1)lnLine(q.BP,lnOff(a,x0+(w.nb+w.c+k+.5)*LWm));   // buspasy (kolor)
-    if(w.xb)for(let k=0;k<w.nb;k++)if(w.xb>>k&1)lnLine(q.BP,lnOff(a,x0+(w.nb-1-k+.5)*LWm));
-    if(!lite)lnArrows(q.AS,q.AF,v,LWm);
+    {const e=N*LWm/2-LWm*.09;LN(q.EP,lnOff(a,-e),CU&&CU.l);LN(q.EP,lnOff(a,e),CU&&CU.r)}   // ciągłe linie krawędziowe (przerwane tam, gdzie dochodzi inna droga)
+    if(w.xf)for(let k=0;k<w.nf;k++)if(w.xf>>k&1)LN(q.BP,lnOff(a,x0+(w.nb+w.c+k+.5)*LWm),ca);   // buspasy (kolor)
+    if(w.xb)for(let k=0;k<w.nb;k++)if(w.xb>>k&1)LN(q.BP,lnOff(a,x0+(w.nb-1-k+.5)*LWm),ca);
+    if(CU&&cum)for(let k=0;k<CU.st.length;k+=3){   // linie zatrzymania: w poprzek pasów wjeżdżających na skrzyżowanie
+      const dir=CU.st[k+1],x=CU.st[k]-dir*LWm*.06,[px,py,ux,uy]=lnPtDir(a,cum,x),e=N*LWm/2-LWm*.09,
+        xa=dir>0?(w.nb+w.c>0?x0+(w.nb+w.c)*LWm+LWm*.12:-e):-e,xb=dir>0?e:(w.nf+w.c>0?x0+w.nb*LWm-LWm*.12:e),P=CU.st[k+2]?q.GP:q.TP;
+      P.moveTo(px+uy*xa,py-ux*xa);P.lineTo(px+uy*xb,py-ux*xb);
+    }
+    if(!lite)lnArrows(q.AS,q.AF,v,LWm,CU);
   }
   c.lineCap='butt';c.lineJoin='round';
   for(const q of MK.values()){
@@ -7873,10 +7994,13 @@ function lnBody(c,G,V,pal,s,dm,night,lite){
     if(ST.dashOut){   // ciemniejszy obrys: białe kreski są czytelne także na jasnej jezdni
       c.strokeStyle=ST.dashOut;c.lineWidth=(lw+1.8)/s;c.setLineDash([q.lp*.55/s,q.lp*.8/s]);c.stroke(q.DP);c.setLineDash([]);
       c.lineWidth=(lw*.78+1.8)/s;c.stroke(q.SP);
+      c.lineWidth=(Math.max(2.4,q.lp*.13)+1.8)/s;c.stroke(q.TP);
     }
     c.strokeStyle=ST.edge;c.lineWidth=Math.max(1.2,lw*.55)/s;c.stroke(q.EP);
     c.strokeStyle=ST.dash;c.lineWidth=lw/s;c.setLineDash([q.lp*.55/s,q.lp*.8/s]);c.stroke(q.DP);c.setLineDash([]);
     c.strokeStyle=ST.solid;c.lineWidth=Math.max(1.3,lw*.78)/s;c.stroke(q.SP);
+    c.lineWidth=Math.max(2.4,q.lp*.13)/s;c.stroke(q.TP);   // linie zatrzymania
+    c.setLineDash([q.lp*.22/s,q.lp*.16/s]);c.lineWidth=Math.max(2,q.lp*.1)/s;c.stroke(q.GP);c.setLineDash([]);   // „ustąp pierwszeństwa” przed rondem
     c.strokeStyle=ST.arrow;c.fillStyle=ST.arrow;c.lineWidth=Math.max(1.8,q.lp*.12)/s;c.stroke(q.AS);c.fill(q.AF);
   }
   c.lineCap='round';
@@ -7884,6 +8008,106 @@ function lnBody(c,G,V,pal,s,dm,night,lite){
 
 // auto na jezdni: na wyznaczonej trasie ikona jest „przyklejona” do drogi i jedzie prawym pasem
 var carSnap=null,laneCur=null,laneYaw=0;
+// ---- Wersja 187: pas, którym naprawdę jedzie auto (z odczytów GPS) ----
+// Dotąd na trasie auto stało na pasie z PLANU trasy (prawy, przed skrętem w lewo – lewy), a bez trasy – na osi drogi (na drodze dwukierunkowej: na linii środkowej).
+// Teraz każdy odczyt GPS daje odległość od osi drogi z OSM (w prawdziwych metrach, pas ok. 3,25 m), a z niej – który pas jest najbardziej prawdopodobny. Pojedynczy
+// odczyt GPS w telefonie ma błąd kilku metrów (pas ma ok. 3 m), więc pewność buduje się z kolejnych odczytów (filtr: każdy pas ma prawdopodobieństwo; zmiana pasa
+// jest możliwa, ale mało prawdopodobna w ciągu sekundy), a pokazywany pas zmienia się dopiero, gdy inny jest wyraźnie bardziej prawdopodobny. Słaby odczyt
+// (dokładność > 20 m) niczego nie zmienia. Po wjeździe na kolejny odcinek drogi auto zostaje na pasie o tej samej pozycji liczonej od prawej. Przy braku danych
+// (słaby GPS, brak pasów w OSM) – jak dotąd: pas z planu trasy, a bez trasy prawa połowa jezdni (dotąd: oś drogi).
+var LE={w:null,fwd:true,p:null,k:-1,nt:0,at:0,acc:99,d:null,n:0,wh:null};
+const leLW=k=>k==='mw'||k==='mwl'?3.6:3.25;   // szerokość pasa w rzeczywistości (m)
+function lePlanLane(w,nt,no){
+  try{if(!route||!route.lp||carAl==null)return null;const q=lnAt(route,carAl);if(!q)return null;const P=q[0],i=q[1];if(!P.kn[i]||P.nt[i]!==nt)return null;
+    return Math.max(0,Math.min(nt-1,Math.round(P.u[i]-(-w.N/2+no+w.c)-.5)))}catch(e){return null}
+}
+function leObs(lat,lon,acc,hd,sp){
+  if(!leOn||!laneOn||!LANEW.size||hd==null)return;
+  if(!(acc>0))acc=10;if(acc>20)return;
+  const now=performance.now(),m=lnMatch(lat,lon,hd,16,false);
+  if(!m||!m.w.multi){if(now-LE.at>5000){LE.w=null;LE.k=-1}return}
+  const w=m.w,fwd=m.fwd,nt=fwd?w.nf:w.nb,no=fwd?w.nb:w.nf,mk=(fwd?w.xf:w.xb)|0,W=leLW(w.k);
+  if(nt<1)return;
+  const g=w.g,i=m.i,kx=111195*Math.cos(rad(lat)),ax=(g[2*i+1]-lon)*kx,ay=(g[2*i]-lat)*111195,dx=(g[2*i+3]-lon)*kx-ax,dy=(g[2*i+2]-lat)*111195-ay,L2=dx*dx+dy*dy;
+  if(L2<.01)return;
+  let t=-(ax*dx+ay*dy)/L2;t=t<0?0:t>1?1:t;const L=Math.sqrt(L2),qx=ax+dx*t,qy=ay+dy*t;let ux=dx/L,uy=dy/L;if(!fwd){ux=-ux;uy=-uy}
+  const d=-qx*uy+qy*ux;   // odległość odczytu od osi drogi, + = w prawo od kierunku jazdy
+  const ctr=j=>(-w.N/2+no+w.c+j+.5)*W;
+  let p=LE.p;
+  if(LE.w!==w||LE.fwd!==fwd||!p||p.length!==nt||now-LE.at>8000){
+    let j0=nt-1;while(j0>0&&(mk>>j0&1))j0--;   // domyślnie: prawy pas dla zwykłych aut
+    const wh=Math.atan2(ux,uy)*180/Math.PI,dh=LE.wh==null?0:((wh-LE.wh+540)%360)-180;
+    if(LE.w&&LE.k>=0&&now-LE.at<5000){
+      if(Math.abs(dh)>45){if(dh<0){j0=0;while(j0<nt-1&&(mk>>j0&1))j0++}}   // po skręcie w lewo – lewy pas, w prawo – prawy (skręca się na najbliższy pas)
+      else{const fr=LE.nt-1-LE.k;j0=Math.max(0,nt-1-fr)}}   // dalej prosto: ten sam pas liczony od prawej
+    else{const pj=lePlanLane(w,nt,no);if(pj!=null)j0=pj}
+    p=new Float64Array(nt);for(let j=0;j<nt;j++)p[j]=Math.exp(-Math.abs(j-j0)*1.1)*((mk>>j&1)?.25:1);
+    LE.k=j0;
+  }else{
+    const dt=Math.min(5,Math.max(.2,(now-LE.at)/1000)),q=Math.min(.2,(sp>2?.012:.003)*dt),p2=new Float64Array(nt);
+    for(let j=0;j<nt;j++)p2[j]=p[j]*(1-q*((j>0?1:0)+(j<nt-1?1:0)))+(j>0?p[j-1]*q:0)+(j<nt-1?p[j+1]*q:0);
+    p=p2;
+  }
+  const sg=Math.max(1.8,Math.min(7,acc*.55)),tau=sp>2?.5:.2;   // kolejne odczyty GPS nie są niezależne (błąd zmienia się powoli) – każdy liczy się tylko w części
+  let S=0;for(let j=0;j<nt;j++){const e=(d-ctr(j))/sg;p[j]*=.04+Math.exp(-tau*e*e/2);S+=p[j]}
+  if(!(S>0))return;for(let j=0;j<nt;j++)p[j]=p[j]/S*(1-.005*nt)+.005;   // żaden pas nie jest wykluczony na zawsze (po zmianie pasa auto „przeskoczy” w rozsądnym czasie)
+  let b=0;for(let j=1;j<nt;j++)if(p[j]>p[b])b=j;
+  let k=LE.k;if(k<0||k>=nt||p[b]>p[k]*1.8)k=b;   // zmiana pokazywanego pasa dopiero przy wyraźnej przewadze
+  LE.w=w;LE.fwd=fwd;LE.p=p;LE.k=k;LE.nt=nt;LE.at=now;LE.acc=acc;LE.d=Math.round(d*10)/10;LE.n++;LE.wh=Math.atan2(ux,uy)*180/Math.PI;
+}
+// pas auta w jednostkach połowy szerokości drogi (jak plan trasy): z GPS, a bez pewnego odczytu – prawy pas dla zwykłych aut
+function leUnits(w,fwd){
+  const nt=fwd?w.nf:w.nb,no=fwd?w.nb:w.nf,mk=(fwd?w.xf:w.xb)|0;let k;
+  if(leOn&&LE.w===w&&LE.fwd===fwd&&LE.k>=0&&performance.now()-LE.at<6000)k=LE.k;
+  else{k=nt-1;while(k>0&&(mk>>k&1))k--}
+  return -w.N/2+no+w.c+Math.max(0,Math.min(nt-1,k))+.5;
+}
+// na trasie: przesunięcie auta (px od osi) wg pasa z GPS albo null (wtedy pas z planu trasy)
+function leAtPx(lat,lon,brg){
+  if(!leOn||!LE.w||LE.k<0||performance.now()-LE.at>6000)return null;
+  const m=lnMatch(lat,lon,brg,9,false);if(!m||m.w!==LE.w||m.fwd!==LE.fwd)return null;
+  return leUnits(m.w,m.fwd)*lnLanePx(m.w.kc,scaleCur);
+}
+// droga z mapy pod punktem (bez danych o pasach): punkt na osi względem zapytania (m), kierunek jazdy, klasa, jednokierunkowość
+function roadAt(lat,lon,hr){
+  const D=vecData;if(!D||!D.RS||!D.RS.length)return null;
+  const g=snapGrid(D),CS=40,kx=111195*Math.cos(rad(D.lat)),X=(lon-D.lon)*kx,Y=(lat-D.lat)*111195,hx=Math.sin(hr),hy=Math.cos(hr);
+  let best=15,r=null;const cx=Math.floor(X/CS),cy=Math.floor(Y/CS);
+  for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){
+    const l=g.get(u+','+v);if(!l)continue;
+    for(let j=0;j<l.length;j+=4){
+      const dx=l[j+2]-l[j],dy=l[j+3]-l[j+1],L=Math.hypot(dx,dy);if(L<.3)continue;
+      const cs=(dx*hx+dy*hy)/L;if(Math.abs(cs)<.82)continue;
+      let t=((X-l[j])*dx+(Y-l[j+1])*dy)/(L*L);t=t<0?0:t>1?1:t;
+      const px=l[j]+dx*t,py=l[j+1]+dy*t,d=Math.hypot(px-X,py-Y),lv=l.v?l.v[j>>2]:0,sc=d+(lv!==snapLv?5:0);if(sc>=best)continue;
+      best=sc;const sg=cs<0?-1:1;r={x:px-X,y:py-Y,ux:dx/L*sg,uy:dy/L*sg,c:l.c?l.c[j>>2]:'rs',o:l.o?l.o[j>>2]:0};
+    }
+  }
+  return r;
+}
+// bez trasy: miejsce auta na jego pasie (dotąd auto stało na osi drogi – na drodze dwukierunkowej na linii środkowej)
+var laneFree=null;
+function freeLanePos(){
+  if(!leOn)return null;
+  const p=vf.car,s=scaleCur;if(!p||s<.35)return null;
+  const h=(gpsOk&&gpsOk.h!=null)?gpsOk.h:lastH,kx=111195*Math.cos(rad(p.lat));
+  let Q=null,ux=0,uy=0,tgt=0;
+  const m=(laneOn&&LANEW.size)?lnMatch(p.lat,p.lon,h,14,false):null;
+  if(m&&m.w.multi){
+    const w=m.w,g=w.g,i=m.i,ax=(g[2*i+1]-p.lon)*kx,ay=(g[2*i]-p.lat)*111195,dx=(g[2*i+3]-p.lon)*kx-ax,dy=(g[2*i+2]-p.lat)*111195-ay,L2=dx*dx+dy*dy;
+    if(L2<.01)return null;
+    let t=-(ax*dx+ay*dy)/L2;t=t<0?0:t>1?1:t;const L=Math.sqrt(L2);
+    Q={x:ax+dx*t,y:ay+dy*t};ux=dx/L;uy=dy/L;if(!m.fwd){ux=-ux;uy=-uy}
+    tgt=leUnits(w,m.fwd)*lnLanePx(w.kc,s)/s;
+  }else{
+    const r=roadAt(p.lat,p.lon,rad(h));if(!r){laneFree=null;return null}
+    Q={x:r.x,y:r.y};ux=r.ux;uy=r.uy;
+    tgt=(r.o||r.c==='sv'||checkSingleLane())?0:rw(r.c,s)/4/s;
+  }
+  laneFree=laneFree==null?tgt:laneFree+(tgt-laneFree)*.07;
+  const off=laneFree;
+  return {lat:p.lat+(Q.y-ux*off)/111195,lon:p.lon+(Q.x+uy*off)/kx};
+}
 // docelowe położenie auta w poprzek jezdni (px od osi drogi, + = w prawo): domyślnie prawy pas; przed skrętem w lewo / przy zmianie pasa – przesunięcie w lewo
 function laneTarget(Rr){
   let tgt=Rr/4;
@@ -7949,8 +8173,19 @@ function updCarSnap(){
     el.style.transform='translate(calc(-50% + '+(q.x-(rc.left+rc.width*.5)).toFixed(1)+'px),calc(-80% + '+(q.y-(rc.top+rc.height*cyCur)).toFixed(1)+'px)) rotate('+a.toFixed(1)+'deg)';
     return true;
   };
-  if(window.preview||!onRt)setOff(0,0);
-  if(!onRt){
+  let fl=null;if(!onRt&&!window.preview&&!demo&&vec&&vf&&vf.car&&!(freeCam&&!free))try{fl=freeLanePos()}catch(e){fl=null}   // Wersja 187: bez trasy auto stoi na swoim pasie
+  if(window.preview||(!onRt&&!fl))setOff(0,0);
+  if(!onRt&&fl){
+    if(free){const ox=vf.car.lat+camOff.lat,oy=vf.car.lon+camOff.lon;setOff(camOff.lat+(fl.lat-ox),camOff.lon+(fl.lon-oy));if(!putFree(fl.lat,fl.lon,0))plain();return}
+    const a=angN(lastH+curRot);plain(a);
+    const q=proj(fl.lat,fl.lon),q0=proj(vf.cam.lat,vf.cam.lon);
+    if(!q||!q0){if(Math.abs(a)>2)el.style.transform=base+' rotate('+a.toFixed(1)+'deg)';return}
+    setOff(camOff.lat+(fl.lat-vf.cam.lat),camOff.lon+(fl.lon-vf.cam.lon));   // kamera dąży do auta na pasie – auto zostaje na środku ekranu
+    carGeo={lat:fl.lat,lon:fl.lon};
+    el.style.transform='translate(calc(-50% + '+(q.x-q0.x).toFixed(1)+'px),calc(-80% + '+(q.y-q0.y).toFixed(1)+'px))'+(Math.abs(a)>2?' rotate('+a.toFixed(1)+'deg)':'');
+    return;
+  }
+  if(!onRt){laneFree=null;
     if(free&&putFree(vf.car.lat,vf.car.lon,0))return;
     // bez trasy, mapa obrócona ręcznie (albo jeszcze dochodzi do kierunku jazdy): auto pokazuje prawdziwy kierunek jazdy względem mapy
     if(!free&&vec&&vf&&!window.preview&&!demo){const a=angN(lastH+curRot);plain(a);if(Math.abs(a)>2)el.style.transform='translate(-50%,-80%) rotate('+a.toFixed(1)+'deg)';return}
@@ -7962,7 +8197,8 @@ function updCarSnap(){
   const w=Math.max(0,Math.min(1,(30-m.off)/15)),c=dAt(route,m.along),a=dAt(route,Math.max(0,m.along-6)),b=dAt(route,Math.min(route.len,m.along+6));
   const brg=dist(a[0],a[1],b[0],b[1])>2?bear(a[0],a[1],b[0],b[1]):lastH;
   carAl=m.along;try{lnPlan(route)}catch(e){route.lp=null}
-  const tg=laneTarget(Rr);if(laneCur==null)laneCur=tg;
+  let tg=laneTarget(Rr);{const le=singleLane?null:leAtPx(c[0],c[1],brg);if(le!=null)tg=le}   // Wersja 187: pas z GPS (gdy pewny), inaczej pas z planu trasy
+  if(laneCur==null)laneCur=tg;
   const prev=laneCur;laneCur+=(tg-laneCur)*.07;laneYaw+=(Math.max(-9,Math.min(9,(laneCur-prev)*14))-laneYaw)*.2;   // płynna zmiana pasa + lekkie wychylenie auta
   const lanePx=laneCur,laneM=lanePx/scaleCur;
   const r=rad(brg+90),lat=c[0]+Math.cos(r)*laneM/111195,lon=c[1]+Math.sin(r)*laneM/(111195*Math.cos(rad(c[0])));
