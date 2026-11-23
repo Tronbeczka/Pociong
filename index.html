@@ -137,6 +137,9 @@ body.night #settings input[type=checkbox]{background:#4a5059}body.night #setting
 .clipRow button{padding:8px 11px;border-radius:10px;background:var(--bg);color:var(--tx);font-size:.85rem;font-weight:700;margin:0}
 .clipRow button.del{color:#d93025}
 .clipRow button.rc{color:#d93025}.clipRow button.rc.rec{background:#d93025;color:#fff;animation:alPulse 1s ease-in-out infinite}
+#sndfab{position:absolute;right:12px;top:calc(100% + 172px);z-index:900;width:46px;height:46px;padding:0;border-radius:50%;background:#fff;color:#3c4043;box-shadow:0 6px 20px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
+#sndfab svg{width:25px;height:25px;display:block;margin:0 auto}
+#sndfab.m2,body.night #sndfab.m2{color:#e5484d}
 #repfab{position:absolute;right:12px;top:calc(100% + 118px);z-index:900;width:46px;height:46px;padding:0;border-radius:50%;background:#fff;font-size:24px;box-shadow:0 6px 20px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
 body.night #repfab{background:#2d3139}body.preview #repfab{display:none}
 #repSheet{position:fixed;left:0;right:0;bottom:0;z-index:3300;background:#fff;color:#202124;border-radius:26px 26px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:0 -10px 40px rgba(0,0,0,.4);display:none;animation:sheetUp .3s cubic-bezier(.2,.8,.2,1)}
@@ -519,12 +522,12 @@ html,body{font-family:Barlow,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetic
 input,select,textarea,button{font-family:inherit}
 :focus-visible{outline:3px solid var(--u-acc);outline-offset:2px}
 .fld input:focus-visible,#srchIn:focus-visible{outline:none}
-#setfab:active,#repfab:active,#srchfab:active,#mic:active,#tilt:active,#recenter:active,#planfab:active,#bar button:active,#go:active,#zoomb button:active{transform:scale(.95)}
-#setfab,#repfab,#srchfab,#mic,#tilt,#recenter,#planfab,#bar button,#go{transition:transform .12s ease,background-color .15s,box-shadow .15s}
+#setfab:active,#repfab:active,#sndfab:active,#srchfab:active,#mic:active,#tilt:active,#recenter:active,#planfab:active,#bar button:active,#go:active,#zoomb button:active{transform:scale(.95)}
+#setfab,#repfab,#sndfab,#srchfab,#mic,#tilt,#recenter,#planfab,#bar button,#go{transition:transform .12s ease,background-color .15s,box-shadow .15s}
 
 /* górny pas przepuszcza dotyk do mapy (znaki przejazdów tuż pod banerem dają się dotknąć); reagują tylko baner i przyciski */
 #top{pointer-events:none}
-#banner,#compass,#setfab,#repfab{pointer-events:auto}
+#banner,#compass,#setfab,#repfab,#sndfab{pointer-events:auto}
 @media (max-height:700px){#sub{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}}
 /* --- baner: znak przejazdu z dwiema lampami (gasną, świecą ciągle albo mrugają na przemian) --- */
 .lmA,.lmB{transition:opacity .25s}
@@ -552,7 +555,7 @@ body.night #info.warn{background:#4a1f1d;color:#ffd7d3}
 #then,body.night #then{background:var(--u-surf);color:var(--u-ink);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1);border-radius:12px}
 
 /* --- przyciski na mapie --- */
-#setfab,#repfab,#srchfab,#mic,#compass,body.night #setfab,body.night #repfab,body.night #srchfab,body.night #mic,body.night #compass{background:var(--u-surf);color:var(--u-ink);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1)}
+#setfab,#repfab,#sndfab,#srchfab,#mic,#compass,body.night #setfab,body.night #repfab,body.night #sndfab,body.night #srchfab,body.night #mic,body.night #compass{background:var(--u-surf);color:var(--u-ink);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1)}
 #tilt,#recenter,body.night #tilt,body.night #recenter{background:var(--u-surf);color:var(--u-acc);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1)}
 #zoomb,body.night #zoomb{background:var(--u-surf);box-shadow:0 0 0 1px var(--u-hair),var(--u-sh1);border-radius:16px}
 #zoomb button,body.night #zoomb button{color:var(--u-acc)}
@@ -703,6 +706,8 @@ body.night #xBoard .xr.hot{background:#4a1f1d;color:#ffd7d3}
   #compass{top:8px;right:10px;width:40px;height:40px}
   #setfab{top:54px;right:10px;width:40px;height:40px}
   #repfab{top:100px;right:10px;width:40px;height:40px;font-size:20px}
+  #sndfab{top:146px;right:10px;width:40px;height:40px}
+  #sndfab svg{width:23px;height:23px}
   #nextStrip{top:calc(env(safe-area-inset-top,0px) + 98px);right:auto;max-width:58%;justify-content:flex-start}
   #nextStrip span{padding:3px 8px;font-size:.78rem}
   #bar{right:auto;width:min(58%,560px);left:10px;bottom:8px;padding:5px 8px;border-radius:22px}
@@ -1230,7 +1235,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
  <div id="strip"><div id="info">Pociągi w pobliżu: –</div><div id="then"></div></div>
  <div id="compass"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 5.5l6.4 16.5H15.6z" fill="#e5392b"/><path d="M22 38.5l6.4-16.5H15.6z" fill="#9aa4b2"/><circle cx="22" cy="22" r="2.6" fill="#fff" stroke="#6b7482" stroke-width="1.3"/></svg></div>
  <button id="setfab" aria-label="Ustawienia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
-<button id="repfab" aria-label="Zgłoś zdarzenie" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2c.5 0 1 .27 1.28.75l8.2 14.1c.55.95-.14 2.15-1.24 2.15H3.76c-1.1 0-1.79-1.2-1.24-2.15l8.2-14.1c.28-.48.78-.75 1.28-.75z" fill="#f5a524"/><path d="M12 9v5" stroke="#3a2a00" stroke-width="2.3" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.3" fill="#3a2a00"/></svg></button>
+<button id="sndfab" aria-label="Komunikaty głosowe: wszystkie" type="button"></button><button id="repfab" aria-label="Zgłoś zdarzenie" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2c.5 0 1 .27 1.28.75l8.2 14.1c.55.95-.14 2.15-1.24 2.15H3.76c-1.1 0-1.79-1.2-1.24-2.15l8.2-14.1c.28-.48.78-.75 1.28-.75z" fill="#f5a524"/><path d="M12 9v5" stroke="#3a2a00" stroke-width="2.3" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.3" fill="#3a2a00"/></svg></button>
 </div>
 <div id="intro"><div class="card"><div class="ih"><svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="14" fill="#fff" stroke="#d32f2f" stroke-width="3.5"/><path d="M15 15l18 18M33 15L15 33" stroke="#d32f2f" stroke-width="6" stroke-linecap="butt"/></svg><h2>Zanim ruszysz</h2></div><ul>
 <li data-ic="shield"><div><b>To wsparcie, nie zabezpieczenie.</b> Aplikacja ostrzega o pociągach, ale nie zastępuje Twojej uwagi. Zawsze rozejrzyj się przy przejeździe.</div></li>
@@ -1291,6 +1296,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="autonight" checked> Dzień/noc wg słońca</label>
   <select id="vsel" class="sec" style="max-width:100%"></select>
   <button id="vtest" class="sec" type="button">Sprawdź głos</button>
+  <select id="sndmode" class="sec"><option value="all">Komunikaty: wszystkie</option><option value="nonav">Komunikaty: bez nawigacji (ostrzeżenia zostają)</option><option value="off">Komunikaty: wyciszone (bez głosu i dźwięków)</option></select>
   <select id="vmode" class="sec"><option value="all">Zakres komunikatów: wszystkie</option><option value="hazard">Zakres: tylko pociągi i zagrożenia</option></select>
   <select id="vbose" class="sec"><option value="full">Komunikaty: szczegółowe</option><option value="short">Komunikaty: krótkie</option><option value="beep">Tylko dźwięki (bez mowy)</option></select>
   <label style="font-size:.9rem"><input type="checkbox" id="sigsnd" checked> Znaki STOP / ustąp</label>
@@ -1422,7 +1428,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 185</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 186</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -1585,7 +1591,7 @@ function icoDraw(g,k,x,y,sz,col,lw){   // ikona na canvasie: środek (x,y), rozm
       {const et=document.getElementById('evToast');uiTopLim=Math.max(tb,nb,et&&et.style.display==='block'?et.getBoundingClientRect().bottom:0)+4}
       const jq=document.getElementById('jp'),jb=jq&&jq.style.display==='block'&&!matchMedia('(orientation:landscape) and (max-height:540px)').matches?jq.getBoundingClientRect().bottom:0;
       fit(L,Math.max(tb,nb,jb)+8,['mic','srchfab']);
-      let tg=tb;for(const id of ['compass','setfab','repfab']){const e=document.getElementById(id);if(e&&!e.dataset.moved&&getComputedStyle(e).display!=='none')tg=Math.max(tg,e.getBoundingClientRect().bottom)}
+      let tg=tb;for(const id of ['compass','setfab','repfab','sndfab']){const e=document.getElementById(id);if(e&&!e.dataset.moved&&getComputedStyle(e).display!=='none')tg=Math.max(tg,e.getBoundingClientRect().bottom)}
       fit(R,tg+8,['tilt','recenter']);
     }catch(e){}
   };
@@ -1594,7 +1600,7 @@ function icoDraw(g,k,x,y,sz,col,lw){   // ikona na canvasie: środek (x,y), rozm
 })();
 // ---- przenoszenie ikon: przytrzymaj ikonę (ok. 0,5 s), przeciągnij w wybrane miejsce i puść ----
 (function(){
-  const IDS=['srchfab','planfab','mic','zoomb','recenter','tilt','setfab','repfab','compass'];
+  const IDS=['srchfab','planfab','mic','zoomb','recenter','tilt','setfab','repfab','sndfab','compass'];
   const KEY='ico_pos_v1',HOME={srchfab:'lfab',planfab:'lfab',mic:'lfab',zoomb:'rfab',recenter:'rfab',tilt:'rfab'};
   const ORDER={lfab:['srchfab','planfab','mic'],rfab:['zoomb','recenter','tilt']};
   let pos={};try{pos=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){pos={}}
@@ -1766,7 +1772,7 @@ function audioGo(fn){
     if(p&&p.then)p.then(go,()=>{});else go();
   }catch{}
 }
-function beep(cat){if(sndKind==='none')return;audioGo(()=>{
+function beep(cat){if(sndKind==='none'||voiceMuted)return;audioGo(()=>{
   const vol=(cat==='Train'?volTrain:catVol(cat)*.8/.9)/.8,tones=sndKind==='bell'?[[1100,0],[880,.16]]:[[660,0]];   // miękki, krótki dźwięk (gong albo dzwonek)
   for(const [f,dl] of tones){const t=audio.currentTime+dl,o=audio.createOscillator(),g=audio.createGain();
     o.type=sndKind==='bell'?'triangle':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09*vol,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+.5);
@@ -1779,7 +1785,7 @@ function pickVoice(){
   const vs=plVoices();if(!vs.length)return null;
   return vs.find(x=>x.name===voiceName)||vs.find(x=>V_MALE.test(x.name)&&!V_FEMALE.test(x.name))||vs.find(x=>!V_FEMALE.test(x.name))||vs[0];
 }
-let voiceMuted=false;
+let voiceMuted=(()=>{try{return localStorage.getItem('sndMode')==='off'}catch(e){return false}})();   // Wersja 186: całkowite wyciszenie (przycisk z głośnikiem na mapie, ustawienia, polecenie głosowe) – pamiętane po ponownym uruchomieniu
 // Wersja 172: Safari (iOS i macOS) odtwarza mowę i dźwięk dopiero wtedy, gdy pierwsza wypowiedź padła w reakcji na dotknięcie ekranu. Aplikacja mówiła dotąd wyłącznie z liczników i odczytów GPS,
 // więc w Safari nie odblokowywała się nigdy (widok w aplikacji Messenger/Facebook tego nie wymaga – stąd różnica). VX: stan odblokowania i dziennik zdarzeń do okna „Test głosu” i paska stanu.
 const VX={log:[],unl:0,unlAt:null,unlBy:'',tries:0,ok:0,okAt:0,err:'',errAt:0,uerr:'',cancelAt:-1e9,stuckMs:20000,clip:'',clipTry:0,clipBusy:0};
@@ -3301,7 +3307,39 @@ const hourKey=d=>{d=d||new Date();return String(d.getDay()*24+d.getHours())};
   else if(shown===1){$('via3w').style.display='flex';shown=2;$('addvia').style.display='none'}
 }}
 // --- kategorie głosu ---
-[['vcTrain','Train'],['vcNav','Nav'],['vcRoad','Road']].forEach(([id,c])=>{$(id).checked=!vcOff[c];$(id).onchange=()=>{vcOff[c]=!$(id).checked;LSput('vcOff',vcOff)}});
+[['vcTrain','Train'],['vcNav','Nav'],['vcRoad','Road']].forEach(([id,c])=>{$(id).checked=!vcOff[c];$(id).onchange=()=>{vcOff[c]=!$(id).checked;LSput('vcOff',vcOff);sndUi()}});
+// ---- Wersja 186: tryby komunikatów – wszystkie / bez nawigacji / wyciszone ----
+// „bez nawigacji” = wyłączone wskazówki skrętów, pasów, przeliczania trasy i dojazdu (to samo co „Głos: skręty i pasy”); ostrzeżenia o pociągach, znakach i korkach zostają.
+// „wyciszone” = żadnej mowy, gongów ani nagrań; zostają wibracje i komunikaty na ekranie (też alarm o przejeździe). Przycisk z głośnikiem na mapie przełącza tryby po kolei.
+const SNDM={all:['Komunikaty głosowe: wszystkie','wszystkie','Komunikaty: wszystkie',''],
+  nonav:['Komunikaty głosowe: bez nawigacji','bez nawigacji','Nawigacja wyciszona','Ostrzeżenia o pociągach i na drodze nadal będą słychać'],
+  off:['Komunikaty głosowe: wyciszone','cisza','Wszystkie komunikaty wyciszone','Bez głosu i dźwięków – zostają wibracje i ostrzeżenia na ekranie']};
+function sndMode(){return voiceMuted?'off':vcOff.Nav?'nonav':'all'}
+function sndUi(){
+  const m=sndMode(),b=$('sndfab'),sel=$('sndmode');if(sel)sel.value=m;
+  if(!b)return;
+  const spk=m==='nonav'?'<path d="M1.8 9.6h2.7L8.6 6.2v11.6l-4.1-3.4H1.8z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>':'<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>';   // „bez nawigacji”: mały głośnik i przekreślona strzałka skrętu
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+spk+
+    (m==='off'?'<path d="M16 9.5l5 5M21 9.5l-5 5"/>'
+    :m==='nonav'?'<path d="M15 20.5v-5.2a3 3 0 0 1 3-3h4.2M19.6 9.6l2.6 2.7-2.6 2.7" stroke="#f08a00" stroke-width="2.1"/><path d="M13.6 9.2l9 11.6" stroke="#e5484d" stroke-width="2.3"/>'
+    :'<path d="M15.2 9.6a3.6 3.6 0 0 1 0 4.8M17.8 7a7.3 7.3 0 0 1 0 10"/>')+'</svg>';
+  b.classList.toggle('m1',m==='nonav');b.classList.toggle('m2',m==='off');
+  b.setAttribute('aria-label',SNDM[m][0]);b.title=SNDM[m][0];
+}
+function setSndMode(m,quiet){
+  if(!SNDM[m])m='all';
+  const was=sndMode();
+  voiceMuted=m==='off';try{localStorage.setItem('sndMode',m)}catch(e){}
+  if(m!=='off'){vcOff.Nav=m==='nonav';LSput('vcOff',vcOff);const c=$('vcNav');if(c)c.checked=!vcOff.Nav}
+  if(m!=='all'&&m!==was)vCancel();   // przerwij to, co właśnie mówi
+  if(m==='off')try{clipAudio.pause()}catch(e){}
+  sndUi();
+  if(!quiet&&m!==was)try{evToast(SNDM[m][2],SNDM[m][3],[],2600)}catch(e){}
+}
+function sndCycle(){const m=sndMode();setSndMode(m==='all'?'nonav':m==='nonav'?'off':'all')}
+$('sndfab').addEventListener('click',()=>sndCycle());
+$('sndmode').onchange=()=>setSndMode($('sndmode').value);
+sndUi();
 // --- statystyki zamknięć przejazdów (tylko na tym urządzeniu) ---
 const cstat=LSget('cstat',{}),recAt={};
 function recCross(id){
@@ -4070,7 +4108,7 @@ var setCat;   // przełącza kategorię ustawień ('' = lista)
   mv('look',['night','mapmode','theme','uiSize','autonight','dimOn','dmCb','laneCb','sigDens','terrSel','det3Sel']);
   G('snd').prepend($('voice').closest('label'));
   mv('drive',['start']);
-  mv('snd',['vsel','vtest','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
+  mv('snd',['sndmode','vsel','vtest','vmode','vbose','sndsel','volTrain','volNav','volRoad','vcTrain','vcNav','vcRoad','sigsnd','alarmOn']);
   document.querySelectorAll('#cfg small').forEach(x=>{if(/^Samochód \(widok/.test(x.textContent))x.remove()});
   mv('car',['cars','carCols']);
   mv('drive',['hudBtn','eco']);
@@ -4361,15 +4399,15 @@ function dlg(o){
   });
 }
 {
-  const q=$('qs'),st={voice:()=>$('voice').checked,night:()=>night,dm:()=>dmPref},
-    lab={voice:['Głos','signal'],night:['Noc','bulb'],dm:['Widok kierowcy','nav'],set:['Ustawienia','sliders']};
+  const q=$('qs'),st={voice:()=>sndMode()!=='off',night:()=>night,dm:()=>dmPref},
+    lab={voice:['Komunikaty','signal'],night:['Noc','bulb'],dm:['Widok kierowcy','nav'],set:['Ustawienia','sliders']};
   let qt=0;
-  const draw=()=>{q.querySelectorAll('button').forEach(b=>{const k=b.dataset.q,on=st[k]?st[k]():false;b.classList.toggle('on',on);b.innerHTML=icoSvg(lab[k][1])+'<span>'+lab[k][0]+(st[k]?(on?': wł.':': wył.'):'')+'</span>';b.setAttribute('aria-pressed',st[k]?String(on):'false')})};
+  const draw=()=>{q.querySelectorAll('button').forEach(b=>{const k=b.dataset.q,on=st[k]?st[k]():false;b.classList.toggle('on',on);b.innerHTML=icoSvg(lab[k][1])+'<span>'+lab[k][0]+(k==='voice'?': '+SNDM[sndMode()][1]:st[k]?(on?': wł.':': wył.'):'')+'</span>';b.setAttribute('aria-pressed',st[k]?String(on):'false')})};
   const close=()=>{q.classList.remove('open');clearTimeout(qt)},arm=()=>{clearTimeout(qt);qt=setTimeout(close,8000)};
   $('speed').addEventListener('click',()=>{if(q.classList.contains('open')){close();return}draw();q.classList.add('open');arm()});
   q.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b)return;const k=b.dataset.q;arm();
-    if(k==='voice'){const v=$('voice');v.checked=!v.checked;v.dispatchEvent(new Event('change',{bubbles:true}))}
+    if(k==='voice'){sndCycle();draw()}
     else if(k==='night')$('night').click();
     else if(k==='dm'){const e2=$('dmCb');e2.checked=!e2.checked;e2.onchange()}
     else if(k==='set'){close();$('setfab').click();return}
@@ -5247,8 +5285,9 @@ try{
     }else if(/(gdzie zaparkowa|prowadź do auta|prowadz do auta|znajdź auto|znajdz auto)/.test(t)){
       const P=LSget('park',null);if(!P){reply('Nie zapisałem miejsca parkowania')}else{reply('Pokazuję zaparkowane auto');enterBrowse({title:'Zaparkowane auto',sub:'',label:'Zaparkowane auto',lat:P.lat,lon:P.lon})}
     }else if(/(zapamiętaj parking|zapamietaj parking|zaparkowałem|zaparkowalem)/.test(t)){saveParking();reply('Zapisałem miejsce parkowania')
-    }else if(/(wycisz|bez głosu|cisza|milcz)/.test(t)){reply('Dobrze, wyciszam');voiceMuted=true}
-    else if(/(włącz głos|odcisz|mów)/.test(t)){voiceMuted=false;reply('Głos włączony')}
+    }else if(/(wycisz|wyłącz) (nawigacj|wskaz|skręt|skret)|bez nawigacji|bez wskazówek|bez wskazowek/.test(t)){reply('Wyciszam nawigację, ostrzeżenia zostają');setSndMode('nonav',1)}
+    else if(/(wycisz|bez głosu|cisza|milcz)/.test(t)){reply('Dobrze, wyciszam wszystkie komunikaty');setSndMode('off',1)}
+    else if(/(włącz głos|odcisz|mów|włącz komunikaty|wlacz komunikaty|włącz nawigacj|wlacz nawigacj)/.test(t)){setSndMode('all',1);reply('Komunikaty włączone')}
     else if(/(tryb nocny|włącz noc|noc)/.test(t)){if(!night)$('night').click();reply('Tryb nocny')}
     else if(/(tryb dzienny|dzień|dzien)/.test(t)){if(night)$('night').click();reply('Tryb dzienny')}
     else if(/(kiedy|następny|nastepny|najbliższy|najblizszy).*(pociąg|pociag)/.test(t)){
@@ -5267,6 +5306,7 @@ try{
     else if(/(wyśrodkuj|wysrodkuj|samochód|samochod)/.test(t)){if($('recenter'))$('recenter').click()}
     else reply('Nie rozumiem polecenia');
   }
+  window.__vcmd=cmd;   // do testów poleceń głosowych
   mic.onclick=()=>{
     if(rec){try{rec.stop()}catch(e){}return}
     rec=new SR();rec.lang='pl-PL';rec.interimResults=false;rec.maxAlternatives=1;
@@ -5344,6 +5384,7 @@ async function loadSigns(lat,lon){   // pobiera jedną, najbliższą brakującą
   finally{signsBusy=false}
 }
 function chime(kind){   // dwie miękkie, ciche nutki
+  if(voiceMuted&&!speak.force)return;
   audioGo(()=>{
     const t=audio.currentTime;
     (kind==='stop'?[784,587]:[659,880]).forEach((f,i)=>{
@@ -9064,7 +9105,7 @@ let wxLt=0,wxStill=null,wxUiAt=0,wxUiR=[];
 function wxUi(now){   // przyciski i tabliczki przy brzegach ekranu (układ strony czytamy najwyżej co 0,6 s, nie w każdej klatce)
   if(wxUiAt&&now-wxUiAt<600&&now>=wxUiAt)return wxUiR;
   wxUiAt=now;const out=[];
-  for(const id of ['lfab','rfab','speed','lim','compass','setfab','repfab','tcard','jp']){
+  for(const id of ['lfab','rfab','speed','lim','compass','setfab','repfab','sndfab','tcard','jp']){
     const e=$(id);if(!e)continue;const r=e.getBoundingClientRect();
     if(r.width>0&&r.height>0&&r.bottom>0)out.push({x:r.left,y:r.top,w:r.width,h:r.height})}
   return wxUiR=out;
@@ -10519,7 +10560,7 @@ function vWhy(full){
   const prob=on&&(!!VX.err||!VX.unl);
   if(!full&&!prob){L.push(on?'Głos: działa'+(VX.okAt?' (ostatnio ruszył '+liveAgo(pn-VX.okAt)+' temu)':''):'Głos: wyłączony');return L}
   let all=0,pl=[],pv=null;try{all=ss.getVoices().length;pl=plVoices();pv=pickVoice()}catch{}
-  L.push('Głos: '+(on?'włączony':'wyłączony')+' · komunikaty: '+mode+(voiceMuted?' · chwilowo wyciszony':''));
+  L.push('Głos: '+(on?'włączony':'wyłączony')+' · komunikaty: '+mode+(voiceMuted?' · WYCISZONE (przycisk z głośnikiem)':vcOff.Nav?' · nawigacja wyciszona':''));
   L.push('• głosy: '+(pl.length?pl.length+' polskich, używany: '+(pv?pv.name:'?'):all?'brak polskiego (jest '+all+' innych)':'lista pusta (ładuje się albo brak głosów w systemie)'));
   L.push('• odblokowanie: '+(VX.unl?'tak ('+VX.unlBy+', '+VX.unlAt.toLocaleTimeString('pl-PL')+')':VX.tries?'brak potwierdzenia (prób: '+VX.tries+(VX.uerr?', błąd: '+VX.uerr:'')+')':'jeszcze nie było dotknięcia ekranu'));
   L.push('• sygnały: '+(audio?({running:'działają',suspended:'wstrzymane – dotknij ekranu',interrupted:'przerwane – dotknij ekranu',closed:'zamknięte'}[audio.state]||audio.state):'jeszcze nie uruchomione')+' · nagrania: '+(VX.clip==='ok'?'odblokowane':VX.clip||'jeszcze nie'));
