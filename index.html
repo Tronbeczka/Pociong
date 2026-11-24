@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 188</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 189</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -6821,9 +6821,9 @@ function drawBridges(c,BR,o,only){
       }
       const w=rwz(b.cls);
       c.lineCap='round';   // wypełnienie jezdni z zaokrąglonym końcem – zakrętów między osobnymi odcinkami mostu nie przecina szpara
-      c.strokeStyle=pal[b.cls==='mwl'?'mw':b.cls];c.lineWidth=w/s;c.stroke(b.pa);
+      c.strokeStyle=roadFill(b.cls,pal,night);c.lineWidth=w/s;c.stroke(b.pa);   // Wersja 189: ten sam asfalt co na drodze przed mostem
       c.lineCap='butt';
-      if(b.cls==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(b.pa)}
+      if(b.cls==='mw'&&!(laneOn&&ROAD_U.mw)){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(b.pa)}
       if(b.pb&&s>=(dm?.5:.7)){
         if(b.pbk==='cm'){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(b.pb)}
         else{c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):(night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)');c.lineWidth=Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash([9/s,11/s]);c.stroke(b.pb);c.setLineDash([])}
@@ -6893,16 +6893,26 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
     for(const k of order)if(P[k]){c.strokeStyle=k==='mw'||k==='mwl'?pal.csMw:k==='pr'?pal.csPr:k==='sc'?pal.csSc:pal.casing;c.lineWidth=(rwz(k)+cwz+(dm?1.2:0))/s;c.stroke(P[k])}
     if(LG)try{lnStroke(c,LG,g=>g.kc===1?pal.csMw:g.kc===2?pal.csPr:g.kc===3?pal.csSc:pal.casing,cwz+(dm?1.2:0),s)}catch(e){c.lineCap='round';lnFail(e)}   // obrysy dróg z pasami: pod wypełnieniem ulic bocznych (ich wloty zostają otwarte)
     const lm=night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)',le=night?'rgba(215,225,255,.32)':'rgba(105,95,75,.30)';
-    for(const k of order)if(P[k]){c.strokeStyle=pal[k==='mwl'?'mw':k];c.lineWidth=rwz(k)/s;c.stroke(P[k])
+    const STL=laneOn?lnStyle(pal,night):null;   // Wersja 189: wygląd jak na drogach z pasami
+    for(const k of order)if(P[k]){const fc=roadFill(k,pal,night),uni=!!(STL&&ROAD_U[k]);c.strokeStyle=fc;c.lineWidth=rwz(k)/s;c.stroke(P[k])
       const w=rwz(k);
-      if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
+      if(k==='mw'&&!uni){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
       if(w>=13&&k!=='sv'){   // linie krawędziowe: cienki pasek tuż przy brzegu jezdni
-        c.strokeStyle=le;c.lineWidth=(w-3)/s;c.stroke(P[k]);
-        c.strokeStyle=k==='mw'||k==='mwl'?pal.mw:pal[k];c.lineWidth=(w-5)/s;c.stroke(P[k]);
-        if(k==='mw'){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
+        c.strokeStyle=uni?STL.edgeOut:le;c.lineWidth=(w-3)/s;c.stroke(P[k]);
+        c.strokeStyle=fc;c.lineWidth=(w-5)/s;c.stroke(P[k]);
+        if(k==='mw'&&!uni){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
+        if(uni&&k!=='rs'&&s>=.6){   // białe linie krawędziowe w tym samym miejscu co na drogach z pasami (na skrzyżowaniach dróg tej samej klasy znikają same – obrys całej sieci)
+          const LW=w/2,el=Math.max(1.2,Math.max(1.7,Math.min(4.6,LW*.1))*STL.lw*.55),ins=LW*.09;
+          c.strokeStyle=STL.edge;c.lineWidth=(w-2*ins+el)/s;c.stroke(P[k]);c.strokeStyle=fc;c.lineWidth=(w-2*ins-el)/s;c.stroke(P[k]);
+        }
       }}
     if(s>=(dm?.5:.7)){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
-      if(P.cl){c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
+      if(P.cl&&STL&&s>=.6){   // Wersja 189: oś jezdni jak linie między pasami (biała przerywana, w dzień z ciemnym obrysem)
+        const lp=rw('sc',s)/2,lw=Math.max(1.7,Math.min(4.6,lp*.1))*STL.lw;c.lineCap='butt';c.setLineDash([lp*.55/s,lp*.8/s]);
+        if(STL.dashOut){c.strokeStyle=STL.dashOut;c.lineWidth=(lw+1.8)/s;c.stroke(P.cl)}
+        c.strokeStyle=STL.dash;c.lineWidth=lw/s;c.stroke(P.cl);c.setLineDash([]);c.lineCap='round';
+      }
+      else if(P.cl){c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
     const BO={pal,s,rwz,cwz,night,dm,rlw};
@@ -7807,7 +7817,7 @@ function lnJuncs(D){
     return false};
   for(const B of A){const a=B.m.a,n=a.length/2;if(n<2)continue;
     const d0x=a[0]-a[2],d0y=a[1]-a[3],L0=Math.hypot(d0x,d0y)||1,d1x=a[2*n-2]-a[2*n-4],d1y=a[2*n-1]-a[2*n-3],L1=Math.hypot(d1x,d1y)||1;
-    B.c0=goesOn(a[0],a[1],d0x/L0,d0y/L0);B.c1=goesOn(a[2*n-2],a[2*n-1],d1x/L1,d1y/L1)}
+    B.c0=goesOn(a[0],a[1],d0x/L0,d0y/L0);B.c1=goesOn(a[2*n-2],a[2*n-1],d1x/L1,d1y/L1);B.m.c0=B.c0;B.m.c1=B.c1}
   for(const B of A)test(B.m.a,B.w.z,B.w.k,B.w);
   for(const ra of D.RS||[]){if(!LN_RK[ra.k])continue;test(ra,ra.lv,ra.k,null)}
   D.LNJms=Math.round(performance.now()-t0);
@@ -7965,6 +7975,11 @@ function lnMix(a,b,t){
   const x=hx3(a),y=hx3(b);v='rgb('+x.map((q,i)=>Math.round(q+(y[i]-q)*t)).join(',')+')';
   if(LNM.size>200)LNM.clear();LNM.set(k,v);return v;
 }
+// Wersja 189: „jedna droga”. Odcinki z danymi o pasach (OSM) miały ciemniejszy asfalt, białe linie i inną szerokość niż zwykła droga z mapy obok, więc ulica
+// wyglądała jak pozszywana z plam. Teraz zwykłe drogi (od lokalnych w górę) mają ten sam asfalt co drogi z pasami, białe linie krawędziowe i białą
+// przerywaną oś, a tam, gdzie droga z pasami przechodzi w węższą, szerokość zmienia się łagodnie (klin) zamiast schodkiem.
+const ROAD_U={tr:1,sc:1,pr:1,mw:1,mwl:1};   // ulice osiedlowe zostają jasne (rzadko mają dane o pasach; hierarchia dróg pozostaje czytelna)
+function roadFill(k,pal,night){const kk=k==='mwl'?'mw':k;if(!laneOn||!ROAD_U[k])return pal[kk];const kc=LN_K.indexOf(kk);return kc<0?pal[kk]:lnStyle(pal,night).fill(kc)}
 function lnStyle(pal,night){
   if(window.__lnStyle)return window.__lnStyle(pal,night,lnMix);
   return night?{
@@ -7976,11 +7991,43 @@ function lnStyle(pal,night){
   };
 }
 // pasy na drodze: wypełnienie, krawędzie, linie między pasami, oś jezdni, strzałki
+// Wersja 189: kliny na końcach dróg z pasami, za którymi ulica biegnie dalej węższa (inna droga z pasami albo zwykła droga z mapy). Dotąd szeroka jezdnia
+// kończyła się prostym cięciem i obok zaczynał się wąski pasek – „schodek”. Teraz szerokość zmienia się na długości ok. 1,8× różnicy szerokości.
+function lnTapers(V,s){
+  const E=new Map(),key=(x,y)=>Math.round(x/2)+','+Math.round(y/2),out=[];
+  const end=(a,e)=>{const n=a.length/2,i=e?n-1:0,j=e?n-2:1,dx=a[2*i]-a[2*j],dy=a[2*i+1]-a[2*j+1],L=Math.hypot(dx,dy)||1;return [a[2*i],a[2*i+1],dx/L,dy/L]};
+  for(const v of V){const a=v.m.a;if(a.length<4)continue;for(const e of [0,1]){const p=end(a,e),k=key(p[0],p[1]);let l=E.get(k);if(!l)E.set(k,l=[]);l.push({v,e,p})}}
+  for(const v of V){const w=v.w,a=v.m.a;if(a.length<4)continue;
+    const lp=lnLanePx(w.kc,s),Wl=w.N*lp/s,LWm=lp/s;
+    for(const e of [0,1]){
+      const go=e?v.m.c1:v.m.c0;if(!go)continue;   // ulica tu się kończy (skrzyżowanie) – bez klina
+      {const CU=lnCuts(v,s,LWm),L=v.m.cum[v.m.cum.length-1];if(CU&&CU.a.length&&(e?CU.a[CU.a.length-1]>=L-.5:CU.a[0]<=.5))continue}   // koniec na skrzyżowaniu (linie i tak przerwane) – bez klina
+      const [x,y,ux,uy]=end(a,e);let Wc=null,junc=false;
+      const kx=Math.round(x/2),ky=Math.round(y/2);
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=E.get((kx+i)+','+(ky+j));if(!l)continue;
+        for(const o of l){if(o.v===v||Math.hypot(o.p[0]-x,o.p[1]-y)>1.5)continue;if(-(o.p[2]*ux+o.p[3]*uy)<.85)continue;   // dalszy ciąg w tym samym kierunku
+          const W2=o.v.w.N*lnLanePx(o.v.w.kc,s)/s;Wc=Wc==null?W2:Math.max(Wc,W2);
+          const C2=lnCuts(o.v,s,lnLanePx(o.v.w.kc,s)/s),L2=o.v.m.cum[o.v.m.cum.length-1];if(C2&&C2.a.length&&(o.e?C2.a[C2.a.length-1]>=L2-.5:C2.a[0]<=.5))junc=true}}   // dalszy ciąg zaczyna się na skrzyżowaniu – bez klina
+      if(junc)continue;
+      if(Wc==null)Wc=rw(LN_K[w.kc],s)/s;   // dalej zwykła droga z mapy
+      if(Wl-Wc<LWm*.3)continue;
+      const T=Math.max(4,Math.min(70,(Wl-Wc)*1.8)),fx=x+ux*T,fy=y+uy*T,nx=uy,ny=-ux;
+      out.push({kc:w.kc,x,y,fx,fy,nx,ny,a:Wl/2,b:Wc/2,ia:LWm*.09,ib:Math.min(LWm,Wc/2)*.09});
+    }}
+  return out;
+}
 function lnBody(c,G,V,pal,s,dm,night,lite){
   const ST=lnStyle(pal,night);
+  let TP=[];try{TP=lnTapers(V,s)}catch(e){lnFail(e)}
+  if(TP.length){   // obrys klina (jak obrys jezdni) – pod wypełnieniem
+    c.lineJoin='round';
+    for(const t of TP){c.strokeStyle=t.kc===1?pal.csMw:t.kc===2?pal.csPr:t.kc===3?pal.csSc:pal.casing;c.lineWidth=4.5/s;c.beginPath();
+      c.moveTo(t.x+t.nx*t.a,t.y+t.ny*t.a);c.lineTo(t.fx+t.nx*t.b,t.fy+t.ny*t.b);c.moveTo(t.x-t.nx*t.a,t.y-t.ny*t.a);c.lineTo(t.fx-t.nx*t.b,t.fy-t.ny*t.b);c.stroke()}
+  }
   for(const g of G)lnStroke(c,[g],ST.fill(g.kc),0,s);
   lnStroke(c,G,ST.edgeOut,-3,s);   // cienka krawędź tuż przy brzegu jezdni
   lnStroke(c,G,g=>ST.fill(g.kc),-5,s);
+  for(const t of TP){c.fillStyle=ST.fill(t.kc);c.beginPath();c.moveTo(t.x+t.nx*t.a,t.y+t.ny*t.a);c.lineTo(t.fx+t.nx*t.b,t.fy+t.ny*t.b);c.lineTo(t.fx-t.nx*t.b,t.fy-t.ny*t.b);c.lineTo(t.x-t.nx*t.a,t.y-t.ny*t.a);c.closePath();c.fill()}
   const MK=new Map();
   for(const v of V){
     const w=v.w,a=v.m.a;if(a.length<4)continue;
@@ -8004,6 +8051,8 @@ function lnBody(c,G,V,pal,s,dm,night,lite){
     }
     if(!lite)lnArrows(q.AS,q.AF,v,LWm,CU);
   }
+  for(const t of TP){const q=MK.get(t.kc);if(!q)continue;   // białe linie krawędziowe wzdłuż klina
+    for(const sg of [1,-1]){const ea=t.a-t.ia,eb=t.b-t.ib;q.EP.moveTo(t.x+sg*t.nx*ea,t.y+sg*t.ny*ea);q.EP.lineTo(t.fx+sg*t.nx*eb,t.fy+sg*t.ny*eb)}}
   c.lineCap='butt';c.lineJoin='round';
   for(const q of MK.values()){
     const lw=Math.max(1.7,Math.min(4.6,q.lp*.1))*ST.lw;
