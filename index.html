@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 187</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 188</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7789,11 +7789,25 @@ function lnJuncs(D){
           let sd=0;   // strona, po której dochodzi boczna droga: 1 – prawa (względem kierunku rysowania), -1 – lewa, 0 – przecina
           if(bEnd){const fx=(uu<.5?qx:px)-(ax+dx*tc),fy=(uu<.5?qy:py)-(ay+dy*tc);sd=(fx*dy-fy*dx)>0?1:-1}
           let l2=J.get(AW.w.id);if(!l2)J.set(AW.w.id,l2=[]);
-          l2.push({s:sA,sn,sd,bk,lw,ae:sA<3||sA>Lt-3,x:ax+dx*tc,y:ay+dy*tc});
+          l2.push({s:sA,sn,sd,bk,lw,ae:(sA<3&&!AW.c0)||(sA>Lt-3&&!AW.c1),x:ax+dx*tc,y:ay+dy*tc});   // ae: tu kończy się ulica (nie tylko odcinek w OSM)
         }
       }
     }
   };
+  // Wersja 188: czy ulica biegnie dalej za końcem odcinka (droga z mapy prawie na wprost, sięgająca co najmniej 3 m dalej)? OSM dzieli ulice na odcinki przy każdej
+  // bocznej uliczce – w v187 każdy taki koniec odcinka liczył się jak wlot na skrzyżowanie i znikały wszystkie linie (także buspasy) na kilkunastu metrach
+  const SG=snapGrid(D);
+  const goesOn=(ex,ey,ux,uy)=>{
+    const cx=Math.floor(ex/40),cy=Math.floor(ey/40);
+    for(let u=cx-1;u<=cx+1;u++)for(let v=cy-1;v<=cy+1;v++){const l=SG.get(u+','+v);if(!l)continue;
+      for(let j=0;j<l.length;j+=4){const px=l[j],py=l[j+1],qx=l[j+2],qy=l[j+3],dx=qx-px,dy=qy-py,L=Math.hypot(dx,dy);if(L<.5)continue;
+        if(Math.abs(dx*ux+dy*uy)/L<.87)continue;
+        let t=((ex-px)*dx+(ey-py)*dy)/(L*L);t=t<0?0:t>1?1:t;if(Math.hypot(px+dx*t-ex,py+dy*t-ey)>4)continue;
+        if(Math.max((px-ex)*ux+(py-ey)*uy,(qx-ex)*ux+(qy-ey)*uy)>=3)return true}}
+    return false};
+  for(const B of A){const a=B.m.a,n=a.length/2;if(n<2)continue;
+    const d0x=a[0]-a[2],d0y=a[1]-a[3],L0=Math.hypot(d0x,d0y)||1,d1x=a[2*n-2]-a[2*n-4],d1y=a[2*n-1]-a[2*n-3],L1=Math.hypot(d1x,d1y)||1;
+    B.c0=goesOn(a[0],a[1],d0x/L0,d0y/L0);B.c1=goesOn(a[2*n-2],a[2*n-1],d1x/L1,d1y/L1)}
   for(const B of A)test(B.m.a,B.w.z,B.w.k,B.w);
   for(const ra of D.RS||[]){if(!LN_RK[ra.k])continue;test(ra,ra.lv,ra.k,null)}
   D.LNJms=Math.round(performance.now()-t0);
@@ -7817,13 +7831,16 @@ function lnCuts(v,s,LWm){
   const key=D.LNJK+'|'+Math.round(LWm*8)+'|'+dmK+'|'+(signs?signs.v:0);let C=v.m.cu;if(C&&C.key===key)return C;
   const w=v.w,cum=v.m.cum,L=cum[cum.length-1],rA=LN_RK[w.k]||1,g=w.g,ring=w.rb||(g.length>=8&&g[0]===g[g.length-2]&&g[1]===g[g.length-1]);
   const A=[],Lf=[],Rt=[],SP=[];
+  for(const j of JJ)if(j.sd)for(const k of JJ)if(k.sd===-j.sd&&Math.abs(k.s-j.s)<4){j.x2=1;break}   // ta sama droga dochodzi z obu stron – przecina
   for(const j of JJ){
-    const hb=j.lw?j.lw.N*lnLanePx(j.lw.kc,s)/s/2:rw(j.bk,s)/s/2,c=hb/Math.max(.45,j.sn)+LWm*.22,rb=LN_RK[j.bk]||1;
-    const sig=j.ae||(j.lw&&j.lw.N>=3)||rb>=rA-(j.sd===0?2:1),iv=[j.s-c,j.s+c];
+    const hb=j.lw?j.lw.N*lnLanePx(j.lw.kc,s)/s/2:rw(j.bk,s)/s/2,c=hb/Math.max(.45,j.sn)+LWm*.22,rb=LN_RK[j.bk]||1,crs=j.sd===0||j.x2;
+    // Wersja 188: linie znikają, gdy ulica tu się kończy, przy szerokiej drodze z pasami, przy światłach albo przy drodze ważnej (przecinającej: najwyżej o klasę niższej, bocznej: co najmniej tak samo ważnej);
+    // boczna uliczka przerywa tylko linię krawędziową (dotąd v187: osiedlowa przecznica kasowała linie i buspasy na całej szerokości)
+    const sig=j.ae||(j.lw&&j.lw.N>=3)||(crs&&j.lw&&j.lw.multi)||rb>=rA-(crs?1:0)||lnCtl(D,j.x,j.y)==='l',iv=[j.s-c,j.s+c];
     if(sig){A.push(iv);
       // linia zatrzymania: przed drogą co najmniej tak samo ważną albo tam, gdzie OSM ma przy skrzyżowaniu światła / STOP / „ustąp pierwszeństwa” (boczna uliczka – bez linii)
-      const bRing=!!(j.lw&&(j.lw.rb||(j.lw.g.length>=8&&j.lw.g[0]===j.lw.g[j.lw.g.length-2]&&j.lw.g[1]===j.lw.g[j.lw.g.length-1]))),ct=(!ring&&(j.sd===0||j.ae))?lnCtl(D,j.x,j.y):null;
-      if(!ring&&(j.sd===0||j.ae)&&(rb>=rA||ct||bRing))SP.push([j.s,bRing||(ct==='g')])}
+      const bRing=!!(j.lw&&(j.lw.rb||(j.lw.g.length>=8&&j.lw.g[0]===j.lw.g[j.lw.g.length-2]&&j.lw.g[1]===j.lw.g[j.lw.g.length-1]))),ct=ring?null:lnCtl(D,j.x,j.y);
+      if(!ring&&(ct==='l'||((crs||j.ae)&&(rb>=rA||ct||bRing))))SP.push([j.s,ct!=='l'&&(bRing||ct==='g')])}   // przy światłach linia zatrzymania na każdym wlocie
     else{if(j.sd>=0)Rt.push(iv);if(j.sd<=0)Lf.push(iv)}
   }
   const mg=arr=>{arr.sort((p,q)=>p[0]-q[0]);const o=[];for(const [a,b] of arr){if(o.length&&a<=o[o.length-1]+.01)o[o.length-1]=Math.max(o[o.length-1],b);else o.push(a,b)}return o};
