@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 193</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 194</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7047,9 +7047,11 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
     }
     const BO={pal,s,rwz,cwz,night,dm,rlw};
     if(D.BR&&D.BR.length)try{drawBridges(c,D.BR,BO,'road')}catch(e){c.setLineDash([]);c.lineCap='round';errNote('mosty',e)}   // mosty i wiadukty (nad drogami niższego poziomu)
-    if(LG)try{lnBody(c,LG,LV,pal,s,dm,night,lite||ecoOn)}catch(e){c.setLineDash([]);c.lineCap='round';lnFail(e)}   // wypełnienie, linie pasów, strzałki
+    const tramDraw=()=>{if(P.tram&&s>=.3){c.lineCap='round';c.lineJoin='round';c.setLineDash([]);c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(P.tram)}};
+    let tramDone=false;   // Wersja 194: na drogach z pasami tory rysujemy po asfalcie, a przed liniami pasów (linie i strzałki nad szynami)
+    if(LG)try{lnBody(c,LG,LV,pal,s,dm,night,lite||ecoOn,()=>{tramDraw();tramDone=true})}catch(e){c.setLineDash([]);c.lineCap='round';lnFail(e)}   // wypełnienie, linie pasów, strzałki
     drawRailSet(c,P.rail,P.rsv,s,night,rlw);
-    if(P.tram&&s>=.3){c.strokeStyle=night?'#6f7a96':'#9aa0aa';c.lineWidth=Math.max(1.6,rlw*.4)/s;c.stroke(P.tram)}
+    if(!tramDone)tramDraw();
     if(D.BR&&D.BR.length)try{drawBridges(c,D.BR,BO,'over');drawBridges(c,D.BR,BO,'rail')}catch(e){c.setLineDash([]);c.lineCap='round';errNote('mosty',e)}   // wiadukty nad torami zasłaniają tory; tory na mostach – ponad drogami
     if(D.flow){for(const f of D.flow){c.save();c.translate(f.x0,f.y0);c.scale(1,-1);c.globalAlpha=.92;c.drawImage(f.img,0,0,f.w,f.w);c.restore()}}
     c.restore();
@@ -7295,7 +7297,7 @@ function drawRouteTop(){
     else{cur={lv:pc.lv,lf:pc.lf,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
-  // (wersja 193: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
+  // (wersja 194: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
   if(runs.length&&runs[0].xy.length>=4){
     const r0=runs[0],xy=r0.xy,sh=lw*r0.lf*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));let tot=0;for(let i=2;i<xy.length;i+=2)tot+=Math.hypot(xy[i]-xy[i-2],xy[i+1]-xy[i-1]);
     if(tot>sh*1.3){let rem=sh;while(xy.length>=4){const dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy);if(L>rem+1e-6){xy[0]+=dx/L*rem;xy[1]+=dy/L*rem;break}rem-=L;xy.splice(0,2)}}
@@ -8162,7 +8164,7 @@ function lnPlates(V,s){
   const out=[];for(const g of grp.values())if(g.n>=2){const H=lnHull(g.P);if(H.length>=3)out.push({H,kc:g.kc})}
   return out;
 }
-function lnBody(c,G,V,pal,s,dm,night,lite){
+function lnBody(c,G,V,pal,s,dm,night,lite,under){
   const ST=lnStyle(pal,night);
   let TP=[];try{TP=lnTapers(V,s)}catch(e){lnFail(e)}
   if(TP.length){   // obrys klina (jak obrys jezdni) – pod wypełnieniem
@@ -8175,6 +8177,7 @@ function lnBody(c,G,V,pal,s,dm,night,lite){
   lnStroke(c,G,ST.edgeOut,-3,s);   // cienka krawędź tuż przy brzegu jezdni
   lnStroke(c,G,g=>ST.fill(g.kc),-5,s);
   for(const t of TP){c.fillStyle=ST.fill(t.kc);c.beginPath();c.moveTo(t.x+t.nx*t.a,t.y+t.ny*t.a);c.lineTo(t.fx+t.nx*t.b,t.fy+t.ny*t.b);c.lineTo(t.fx-t.nx*t.b,t.fy-t.ny*t.b);c.lineTo(t.x-t.nx*t.a,t.y-t.ny*t.a);c.closePath();c.fill()}
+  if(under)try{c.save();under();c.restore()}catch(e){c.restore();lnFail(e)}   // Wersja 194: tory tramwajowe na asfalcie, pod liniami pasów
   const MK=new Map();
   for(const v of V){
     const w=v.w,a=v.m.a;if(a.length<4)continue;
