@@ -1,0 +1,3 @@
+{"root":true,"env":{"browser":true,"es2022":true},"parserOptions":{"ecmaVersion":2022,"sourceType":"script"},
+ "globals":{"L":"readonly"},
+ "rules":{"no-undef":"error","no-dupe-keys":"error","no-unreachable":"error","no-const-assign":"error","no-redeclare":"error","no-self-assign":"error","no-dupe-else-if":"error","no-cond-assign":["error","except-parens"],"no-func-assign":"error","no-import-assign":"error","use-isnan":"error","valid-typeof":"error","no-unsafe-negation":"error","getter-return":"error","no-setter-return":"error","no-sparse-arrays":"error","no-compare-neg-zero":"error","no-loss-of-precision":"error"}}
