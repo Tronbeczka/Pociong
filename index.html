@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 191</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 192</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -6193,7 +6193,13 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
       const lk=isTr&&cls==='mw'&&(pr.ramp==1||pr.ramp==='1'),cw=lk?'mwl':cls;   // lk: łącznik (zjazd/wjazd) – węższy, bez osi środkowej
       const brg=(!wide&&isTr&&pr.brunnel==='bridge'&&BRCLS[cls])?{cls:cw,L:Math.max(1,Math.min(4,Math.round(+pr.layer)||1)),pa:new Path2D(),pb:null,pbk:'',pc:null,ras:[],over:false}:null;
       const pa=brg?brg.pa:gp(cw);let pb=null;   // pb: oś jezdni (przerywana na drogach dwukierunkowych, ciągła na autostradach)
-      if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1';if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr')){pb=brg?(brg.pb=new Path2D()):gp('cl');if(brg)brg.pbk='cl'}else if(cls==='mw'&&!lk){pb=brg?(brg.pb=new Path2D()):gp('cm');if(brg)brg.pbk='cm'}}
+      // Wersja 192: oś jezdni rysujemy tylko na drogach dwukierunkowych. Dotąd ciemna ciągła „bariera” szła środkiem każdej jezdni autostrady i drogi ekspresowej,
+      // także jednokierunkowej (każdy kierunek to osobna linia w danych) – na drogach bez danych o pasach wyglądało to jak ciemne pręgi na asfalcie. Drogi krajowe
+      // dwukierunkowe (trunk) dostają przerywaną oś jak inne drogi; jednokierunkowe „pod prąd” (oneway=-1) – bez osi. Każda klasa ma własną ścieżkę osi:
+      // oś rysuje się zaraz po jezdni swojej klasy, więc na skrzyżowaniu z ważniejszą drogą jej jezdnia zasłania oś bocznej ulicy (dotąd osie wchodziły w skrzyżowania).
+      if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1'||pr.oneway==-1||pr.oneway==='-1',k2='cl_'+cls;
+        if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr'||(cls==='mw'&&!lk&&pr.class==='trunk'))){pb=brg?(brg.pb=new Path2D()):gp(k2);if(brg)brg.pbk=k2}
+        else if(cls==='mw'&&!lk&&!ow){pb=brg?(brg.pb=new Path2D()):gp('cm');if(brg)brg.pbk='cm'}}
       const rbr=!!brg&&(cls==='rail'||cls==='rsv'||cls==='tram');   // oś mostu kolejowego i tramwajowego służy tylko do wycinania trasy spod obiektu (Wersja 156); nie trafia do RS – po torach nie jeździmy
       const pc=one?(brg?(brg.pc=new Path2D()):gp('one1')):null,pe=(fill&&!wide&&(cls==='water'||cls==='park'))?gp(cls+'E'):null;   // pe: obrys bez odcinków leżących na brzegu kafelka (to cięcie geometrii, nie brzeg wody – inaczej na wodzie widać „szwy”)
       for(const rg of f.r){
@@ -6912,6 +6918,16 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
     if(LG)try{lnStroke(c,LG,g=>g.kc===1?pal.csMw:g.kc===2?pal.csPr:g.kc===3?pal.csSc:pal.casing,cwz+(dm?1.2:0),s)}catch(e){c.lineCap='round';lnFail(e)}   // obrysy dróg z pasami: pod wypełnieniem ulic bocznych (ich wloty zostają otwarte)
     const lm=night?'rgba(215,225,255,.55)':'rgba(105,95,75,.55)',le=night?'rgba(215,225,255,.32)':'rgba(105,95,75,.30)';
     const STL=laneOn?lnStyle(pal,night):null;   // Wersja 189: wygląd jak na drogach z pasami
+    const clDraw=(pth,isR)=>{   // oś jezdni (przerywana)
+      if(STL&&s>=.6){   // Wersja 189: oś jezdni jak linie między pasami (biała przerywana, w dzień z ciemnym obrysem)
+        const lp=rw('sc',s)/2,lw=Math.max(1.7,Math.min(4.6,lp*.1))*STL.lw;c.lineCap='butt';c.setLineDash([lp*.55/s,lp*.8/s]);
+        if(isR&&!night){c.strokeStyle='rgba(118,112,100,.6)';c.lineWidth=lw*.8/s;c.stroke(pth)}   // Wersja 192: jasna ulica osiedlowa w dzień – jedna szara kreska (biała z ciemnym obrysem wyglądała jak dwie cienkie linie „‖”)
+        else{if(STL.dashOut){c.strokeStyle=STL.dashOut;c.lineWidth=(lw+1.8)/s;c.stroke(pth)}c.strokeStyle=STL.dash;c.lineWidth=lw/s;c.stroke(pth)}
+        c.setLineDash([]);c.lineCap='round';
+      }
+      else{c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(pth);c.setLineDash([]);c.lineCap='round'}
+    };
+    const clOn=s>=(dm?.5:.7);
     for(const k of order)if(P[k]){const fc=roadFill(k,pal,night),uni=!!(STL&&ROAD_U[k]);c.strokeStyle=fc;c.lineWidth=rwz(k)/s;c.stroke(P[k])
       const w=rwz(k);
       if(k==='mw'&&!uni){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
@@ -6923,14 +6939,9 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
           const LW=w/2,el=Math.max(1.2,Math.max(1.7,Math.min(4.6,LW*.1))*STL.lw*.55),ins=LW*.09;
           c.strokeStyle=STL.edge;c.lineWidth=(w-2*ins+el)/s;c.stroke(P[k]);c.strokeStyle=fc;c.lineWidth=(w-2*ins-el)/s;c.stroke(P[k]);
         }
-      }}
-    if(s>=(dm?.5:.7)){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
-      if(P.cl&&STL&&s>=.6){   // Wersja 189: oś jezdni jak linie między pasami (biała przerywana, w dzień z ciemnym obrysem)
-        const lp=rw('sc',s)/2,lw=Math.max(1.7,Math.min(4.6,lp*.1))*STL.lw;c.lineCap='butt';c.setLineDash([lp*.55/s,lp*.8/s]);
-        if(STL.dashOut){c.strokeStyle=STL.dashOut;c.lineWidth=(lw+1.8)/s;c.stroke(P.cl)}
-        c.strokeStyle=STL.dash;c.lineWidth=lw/s;c.stroke(P.cl);c.setLineDash([]);c.lineCap='round';
       }
-      else if(P.cl){c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(P.cl);c.setLineDash([]);c.lineCap='round'}
+      if(clOn&&P['cl_'+k])clDraw(P['cl_'+k],k==='rs');}
+    if(s>=(dm?.5:.7)){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
     const BO={pal,s,rwz,cwz,night,dm,rlw};
@@ -7183,7 +7194,7 @@ function drawRouteTop(){
     else{cur={lv:pc.lv,lf:pc.lf,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
-  // (wersja 191: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
+  // (wersja 192: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
   if(runs.length&&runs[0].xy.length>=4){
     const r0=runs[0],xy=r0.xy,sh=lw*r0.lf*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));let tot=0;for(let i=2;i<xy.length;i+=2)tot+=Math.hypot(xy[i]-xy[i-2],xy[i+1]-xy[i-1]);
     if(tot>sh*1.3){let rem=sh;while(xy.length>=4){const dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy);if(L>rem+1e-6){xy[0]+=dx/L*rem;xy[1]+=dy/L*rem;break}rem-=L;xy.splice(0,2)}}
