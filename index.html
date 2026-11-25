@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 194</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 195</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7297,7 +7297,7 @@ function drawRouteTop(){
     else{cur={lv:pc.lv,lf:pc.lf,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
-  // (wersja 194: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
+  // (wersja 195: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
   if(runs.length&&runs[0].xy.length>=4){
     const r0=runs[0],xy=r0.xy,sh=lw*r0.lf*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));let tot=0;for(let i=2;i<xy.length;i+=2)tot+=Math.hypot(xy[i]-xy[i-2],xy[i+1]-xy[i-1]);
     if(tot>sh*1.3){let rem=sh;while(xy.length>=4){const dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy);if(L>rem+1e-6){xy[0]+=dx/L*rem;xy[1]+=dy/L*rem;break}rem-=L;xy.splice(0,2)}}
@@ -8116,13 +8116,59 @@ function lnStyle(pal,night){
 // pasy na drodze: wypełnienie, krawędzie, linie między pasami, oś jezdni, strzałki
 // Wersja 189: kliny na końcach dróg z pasami, za którymi ulica biegnie dalej węższa (inna droga z pasami albo zwykła droga z mapy). Dotąd szeroka jezdnia
 // kończyła się prostym cięciem i obok zaczynał się wąski pasek – „schodek”. Teraz szerokość zmienia się na długości ok. 1,8× różnicy szerokości.
-function lnTapers(V,s){
+// Wersja 195: rozwidlenie jezdni. Droga dwukierunkowa z pasami, która rozchodzi się na dwie jezdnie jednokierunkowe (albo dwie jezdnie, które łączą się w jedną),
+// dostawała klin zwężający ją do szerokości jednej jezdni (obie jezdnie zaczynają się w tym samym punkcie osi) – droga najpierw się zwężała, a dalej, gdy jezdnie się
+// rozchodziły, znów poszerzała („schodzi się i rozjeżdża”). Teraz zamiast klina jest płyta: zewnętrzne brzegi biegną prosto od brzegów szerokiej drogi do zewnętrznych
+// brzegów obu jezdni – w miejscu, gdzie jezdnia sięga już szerokości drogi (najdalej 80 m) – więc obrys drogi tylko się poszerza, bez przewężenia.
+function lnSplits(V,s){
+  const E=new Map(),key=(x,y)=>Math.round(x/2)+','+Math.round(y/2),out=[],skip=new Set();
+  const endOf=(v,e)=>{const a=v.m.a,n=a.length/2,i=e?n-1:0,j=e?n-2:1,dx=a[2*i]-a[2*j],dy=a[2*i+1]-a[2*j+1],L=Math.hypot(dx,dy)||1;return [a[2*i],a[2*i+1],dx/L,dy/L]};
+  for(const v of V){if(v.m.a.length<4||!v.m.cum)continue;for(const e of [0,1]){const p=endOf(v,e),k=key(p[0],p[1]);let l=E.get(k);if(!l)E.set(k,l=[]);l.push({v,e,p})}}
+  // droga „od rozwidlenia” przez kolejne odcinki tej samej jezdni (OSM dzieli jezdnię na krótkie odcinki), najwyżej ok. 90 m: punkt i kierunek w odległości t
+  const walk=(v0,e0)=>{const segs=[];let v=v0,e=e0,tot=0;
+    for(let k=0;k<8&&tot<90;k++){const L=v.m.cum[v.m.cum.length-1];segs.push({v,e,s:tot,L});tot+=L;
+      const [x,y,ux,uy]=endOf(v,1-e);let nx=null,bd=.85;const kx=Math.round(x/2),ky=Math.round(y/2);
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=E.get((kx+i)+','+(ky+j));if(!l)continue;
+        for(const o of l){if(o.v===v||Math.hypot(o.p[0]-x,o.p[1]-y)>1.5||o.v.w.ow!==v.w.ow)continue;const d=-(o.p[2]*ux+o.p[3]*uy);if(d>bd){bd=d;nx=o}}}
+      if(!nx)break;v=nx.v;e=nx.e}
+    return {L:tot,at:t=>{t=Math.max(0,Math.min(tot,t));let g=segs[0];for(const q of segs)if(t>=q.s)g=q;const x=t-g.s,q=lnPtDir(g.v.m.a,g.v.m.cum,Math.max(0,Math.min(g.L,g.e?g.L-x:x)));return g.e?[q[0],q[1],-q[2],-q[3]]:q}}};   // punkt i kierunek „od rozwidlenia”
+  for(const v of V){if(v.m.a.length<4||!v.m.cum||v.w.ow!==0)continue;
+    for(const e of [0,1]){
+      const [x,y,ux,uy]=endOf(v,e),kx=Math.round(x/2),ky=Math.round(y/2),C=[];
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=E.get((kx+i)+','+(ky+j));if(!l)continue;
+        for(const o of l){if(o.v===v||Math.hypot(o.p[0]-x,o.p[1]-y)>1.5)continue;if(-(o.p[2]*ux+o.p[3]*uy)<.8)continue;C.push(o)}}   // dalszy ciąg mniej więcej na wprost
+      if(C.length!==2)continue;
+      // koniec na skrzyżowaniu (linie przerwane – lnCuts): tam obszar wypełnia płyta skrzyżowania; płyta rozwidlenia z liniami krawędziowymi przecinałaby skrzyżowanie
+      const atJ=(vv,ee)=>{const CU=lnCuts(vv,s,lnLanePx(vv.w.kc,s)/s),L=vv.m.cum[vv.m.cum.length-1];return !!(CU&&CU.a.length&&(ee?CU.a[CU.a.length-1]>=L-.5:CU.a[0]<=.5))};
+      if(atJ(v,e)||C.some(o=>atJ(o.v,o.e)))continue;
+      const nx=uy,ny=-ux,WT=v.w.N*lnLanePx(v.w.kc,s)/s;
+      const S=C.map(o=>{const w=walk(o.v,o.e),q=w.at(Math.min(w.L,15));return {o,w,lat:(q[0]-x)*nx+(q[1]-y)*ny,W:o.v.w.N*lnLanePx(o.v.w.kc,s)/s,LW:lnLanePx(o.v.w.kc,s)/s}});
+      if(S[0].lat*S[1].lat>=0||Math.min(Math.abs(S[0].lat),Math.abs(S[1].lat))<.3)continue;   // jedna jezdnia w prawo, druga w lewo
+      if(Math.max(S[0].W,S[1].W)>=WT-.5)continue;   // jezdnia nie węższa od drogi – zwykłe końce
+      for(const c of S){const sd=c.lat>0?1:-1,lim=Math.min(c.w.L,80);let t=lim;
+        for(let tt=1;tt<=lim;tt+=1.5){const q=c.w.at(tt),ox=q[0]+q[3]*sd*c.W/2,oy=q[1]-q[2]*sd*c.W/2;if(((ox-x)*nx+(oy-y)*ny)*sd>=WT/2-.05){t=tt;break}}
+        const q=c.w.at(t);c.t=t;c.sd=sd;c.ax=q[0];c.ay=q[1];c.qx=q[3]*sd;c.qy=-q[2]*sd;c.ox=q[0]+c.qx*c.W/2;c.oy=q[1]+c.qy*c.W/2}
+      // na odcinku płyty żadna inna droga nie dochodzi ani nie przecina jezdni (inaczej płyta z liniami krawędziowymi przecięłaby tamto skrzyżowanie)
+      const JM=lnJuncs(v.D||V[0].D),busy=S.some(c=>{const jj=JM.get(c.o.v.w.id);if(!jj)return false;const L=c.o.v.m.cum[c.o.v.m.cum.length-1];
+        return jj.some(j=>{const d=c.o.e?L-j.s:j.s;return d>1.5&&d<c.t+3})});
+      const jT=JM.get(v.w.id),LT=v.m.cum[v.m.cum.length-1];
+      if(busy||(jT&&jT.some(j=>{const d=e?LT-j.s:j.s;return d<3})))continue;
+      const R=S.find(c=>c.sd>0),Lf=S.find(c=>c.sd<0),LWT=lnLanePx(v.w.kc,s)/s,ia=LWT*.09;
+      out.push({kc:v.w.kc,P:[x-nx*WT/2,y-ny*WT/2,x+nx*WT/2,y+ny*WT/2,R.ox,R.oy,R.ax,R.ay,Lf.ax,Lf.ay,Lf.ox,Lf.oy],
+        E:[x+nx*(WT/2-ia),y+ny*(WT/2-ia),R.ox-R.qx*R.LW*.09,R.oy-R.qy*R.LW*.09, x-nx*(WT/2-ia),y-ny*(WT/2-ia),Lf.ox-Lf.qx*Lf.LW*.09,Lf.oy-Lf.qy*Lf.LW*.09],
+        C:[x+nx*WT/2,y+ny*WT/2,R.ox,R.oy,x-nx*WT/2,y-ny*WT/2,Lf.ox,Lf.oy]});
+      skip.add(v.w.id+'|'+e);
+    }}
+  out.skip=skip;return out;
+}
+function lnTapers(V,s,skip){
   const E=new Map(),key=(x,y)=>Math.round(x/2)+','+Math.round(y/2),out=[];
   const end=(a,e)=>{const n=a.length/2,i=e?n-1:0,j=e?n-2:1,dx=a[2*i]-a[2*j],dy=a[2*i+1]-a[2*j+1],L=Math.hypot(dx,dy)||1;return [a[2*i],a[2*i+1],dx/L,dy/L]};
   for(const v of V){const a=v.m.a;if(a.length<4)continue;for(const e of [0,1]){const p=end(a,e),k=key(p[0],p[1]);let l=E.get(k);if(!l)E.set(k,l=[]);l.push({v,e,p})}}
   for(const v of V){const w=v.w,a=v.m.a;if(a.length<4)continue;
     const lp=lnLanePx(w.kc,s),Wl=w.N*lp/s,LWm=lp/s;
     for(const e of [0,1]){
+      if(skip&&skip.has(w.id+'|'+e))continue;   // Wersja 195: rozwidlenie jezdni – płyta zamiast klina
       const go=e?v.m.c1:v.m.c0;if(!go)continue;   // ulica tu się kończy (skrzyżowanie) – bez klina
       {const CU=lnCuts(v,s,LWm),L=v.m.cum[v.m.cum.length-1];if(CU&&CU.a.length&&(e?CU.a[CU.a.length-1]>=L-.5:CU.a[0]<=.5))continue}   // koniec na skrzyżowaniu (linie i tak przerwane) – bez klina
       const [x,y,ux,uy]=end(a,e);let Wc=null,junc=false;
@@ -8166,7 +8212,10 @@ function lnPlates(V,s){
 }
 function lnBody(c,G,V,pal,s,dm,night,lite,under){
   const ST=lnStyle(pal,night);
-  let TP=[];try{TP=lnTapers(V,s)}catch(e){lnFail(e)}
+  let SPL=[];try{SPL=lnSplits(V,s)}catch(e){SPL=[];lnFail(e)}   // Wersja 195: rozwidlenia jezdni
+  let TP=[];try{TP=lnTapers(V,s,SPL.skip)}catch(e){lnFail(e)}
+  if(SPL.length){c.lineJoin='round';c.lineCap='butt';for(const p of SPL){c.strokeStyle=p.kc===1?pal.csMw:p.kc===2?pal.csPr:p.kc===3?pal.csSc:pal.casing;c.lineWidth=4.5/s;c.beginPath();
+    c.moveTo(p.C[0],p.C[1]);c.lineTo(p.C[2],p.C[3]);c.moveTo(p.C[4],p.C[5]);c.lineTo(p.C[6],p.C[7]);c.stroke()}c.lineCap='round'}   // obrys płyty rozwidlenia – pod wypełnieniem
   if(TP.length){   // obrys klina (jak obrys jezdni) – pod wypełnieniem
     c.lineJoin='round';
     for(const t of TP){c.strokeStyle=t.kc===1?pal.csMw:t.kc===2?pal.csPr:t.kc===3?pal.csSc:pal.casing;c.lineWidth=4.5/s;c.beginPath();
@@ -8177,6 +8226,7 @@ function lnBody(c,G,V,pal,s,dm,night,lite,under){
   lnStroke(c,G,ST.edgeOut,-3,s);   // cienka krawędź tuż przy brzegu jezdni
   lnStroke(c,G,g=>ST.fill(g.kc),-5,s);
   for(const t of TP){c.fillStyle=ST.fill(t.kc);c.beginPath();c.moveTo(t.x+t.nx*t.a,t.y+t.ny*t.a);c.lineTo(t.fx+t.nx*t.b,t.fy+t.ny*t.b);c.lineTo(t.fx-t.nx*t.b,t.fy-t.ny*t.b);c.lineTo(t.x-t.nx*t.a,t.y-t.ny*t.a);c.closePath();c.fill()}
+  for(const p of SPL){c.fillStyle=ST.fill(p.kc);c.beginPath();c.moveTo(p.P[0],p.P[1]);for(let i=2;i<p.P.length;i+=2)c.lineTo(p.P[i],p.P[i+1]);c.closePath();c.fill()}   // płyta rozwidlenia
   if(under)try{c.save();under();c.restore()}catch(e){c.restore();lnFail(e)}   // Wersja 194: tory tramwajowe na asfalcie, pod liniami pasów
   const MK=new Map();
   for(const v of V){
@@ -8201,6 +8251,7 @@ function lnBody(c,G,V,pal,s,dm,night,lite,under){
     }
     if(!lite)lnArrows(q.AS,q.AF,v,LWm,CU);
   }
+  for(const p of SPL){const q=MK.get(p.kc);if(!q)continue;q.EP.moveTo(p.E[0],p.E[1]);q.EP.lineTo(p.E[2],p.E[3]);q.EP.moveTo(p.E[4],p.E[5]);q.EP.lineTo(p.E[6],p.E[7])}   // linie krawędziowe wzdłuż płyty rozwidlenia
   for(const t of TP){const q=MK.get(t.kc);if(!q)continue;   // białe linie krawędziowe wzdłuż klina
     for(const sg of [1,-1]){const ea=t.a-t.ia,eb=t.b-t.ib;q.EP.moveTo(t.x+sg*t.nx*ea,t.y+sg*t.ny*ea);q.EP.lineTo(t.fx+sg*t.nx*eb,t.fy+sg*t.ny*eb)}}
   c.lineCap='butt';c.lineJoin='round';
