@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 192</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 193</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2398,8 +2398,11 @@ $('tilt').onclick=()=>{tiltDeg=tiltDeg===0?50:tiltDeg<60?64:0;tiltDyn=0;tiltOv=t
     // do mapy (np. palec puszczony nad przyciskiem albo panelem). Taki „zawieszony” punkt zamieniał każde przeciąganie jednym palcem w zbliżanie i obrót dwoma palcami.
     if(e.isPrimary&&ptrs.size){ptrs.clear();g0=null;pan=null}
     ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});try{vw.setPointerCapture(e.pointerId)}catch(_){}
-    if(ptrs.size===1){pan={x0:e.clientX,y0:e.clientY,moved:false};clearTimeout(lpT);const hx=e.clientX,hy=e.clientY;
-      lpT=setTimeout(()=>{if(pan&&!pan.moved&&ptrs.size===1&&window.mapHold){pan.held=true;window.mapHold(hx,hy)}},650)}   // przytrzymanie = wybór miejsca
+    if(ptrs.size===1){pan={x0:e.clientX,y0:e.clientY,moved:false};clearTimeout(lpT);const hx=e.clientX,hy=e.clientY,t0=performance.now(),pid=e.pointerId,pn=pan;
+      const hold=late=>{if(pan!==pn||pan.moved||ptrs.size!==1||!window.mapHold)return;const q=ptrs.get(pid);if(q&&Math.hypot(q.x-pn.x0,q.y-pn.y0)>=8)return;
+        if(late){requestAnimationFrame(()=>{lpT=setTimeout(()=>hold(false),60)});return}   // Wersja 193: zegar spóźniony (zajęty telefon) – najpierw zaległe ruchy palca
+        pan.held=true;window.mapHold(hx,hy)};
+      lpT=setTimeout(()=>hold(performance.now()-t0>800),650)}   // przytrzymanie = wybór miejsca
     else if(ptrs.size===2){clearTimeout(lpT);pan=null;g0=pair()}
   });
   vw.addEventListener('pointermove',e=>{
@@ -6197,8 +6200,9 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
       // także jednokierunkowej (każdy kierunek to osobna linia w danych) – na drogach bez danych o pasach wyglądało to jak ciemne pręgi na asfalcie. Drogi krajowe
       // dwukierunkowe (trunk) dostają przerywaną oś jak inne drogi; jednokierunkowe „pod prąd” (oneway=-1) – bez osi. Każda klasa ma własną ścieżkę osi:
       // oś rysuje się zaraz po jezdni swojej klasy, więc na skrzyżowaniu z ważniejszą drogą jej jezdnia zasłania oś bocznej ulicy (dotąd osie wchodziły w skrzyżowania).
+      let clK=null;   // Wersja 193: klucz osi tej drogi (oś przycinana na skrzyżowaniach – clCut)
       if(!wide&&isTr){const ow=pr.oneway==1||pr.oneway===true||pr.oneway==='1'||pr.oneway==-1||pr.oneway==='-1',k2='cl_'+cls;
-        if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr'||(cls==='mw'&&!lk&&pr.class==='trunk'))){pb=brg?(brg.pb=new Path2D()):gp(k2);if(brg)brg.pbk=k2}
+        if(!ow&&(cls==='rs'||cls==='tr'||cls==='sc'||cls==='pr'||(cls==='mw'&&!lk&&pr.class==='trunk'))){pb=brg?(brg.pb=new Path2D()):gp(k2);if(brg)brg.pbk=k2;else clK=k2}
         else if(cls==='mw'&&!lk&&!ow){pb=brg?(brg.pb=new Path2D()):gp('cm');if(brg)brg.pbk='cm'}}
       const rbr=!!brg&&(cls==='rail'||cls==='rsv'||cls==='tram');   // oś mostu kolejowego i tramwajowego służy tylko do wycinania trasy spod obiektu (Wersja 156); nie trafia do RS – po torach nie jeździmy
       const pc=one?(brg?(brg.pc=new Path2D()):gp('one1')):null,pe=(fill&&!wide&&(cls==='water'||cls==='park'))?gp(cls+'E'):null;   // pe: obrys bez odcinków leżących na brzegu kafelka (to cięcie geometrii, nie brzeg wody – inaczej na wodzie widać „szwy”)
@@ -6219,7 +6223,7 @@ function* buildMvtG(tiles,lat0,lon0,wide){   // wide: tło do oddalenia (tylko t
             if((ax===bx&&(ax<=0||ax>=E))||(ay===by&&(ay<=0||ay>=E))){pen=false;continue}
             if(!pen){pe.moveTo((ox+ax*k-cx)*cl,(oy-ay*k-cy)*cl);pen=true}
             pe.lineTo((ox+bx*k-cx)*cl,(oy-by*k-cy)*cl)}}
-        if(ra&&ra.length>=4){ra.k=cls;ra.o=owT?1:0;if(brg){ra.lv=1;brg.ras.push(ra)}if(!rbr)RS.push(ra)}
+        if(ra&&ra.length>=4){ra.k=cls;ra.o=owT?1:0;if(clK)ra.cl=clK;if(brg){ra.lv=1;brg.ras.push(ra)}if(!rbr)RS.push(ra)}
       }
       if(brg)BF.push(brg);
       if(tfk){const rs=[];for(const rg of f.r){if(rg.length<6)continue;const a=[];for(let i=0;i+1<rg.length;i+=2)a.push((ox+rg[i]*k-cx)*cl,(oy-rg[i+1]*k-cy)*cl);rs.push(a)}if(rs.length)TF.push({k:tfk,r:rs})}
@@ -6857,6 +6861,99 @@ function drawBridges(c,BR,o,only){
   c.lineCap='round';
 }
 const TERR=['resi','ind','farm','grass','wood','wet','sand','inst','sport','cem','rland'];   // kolejność rysowania terenów (od spodu)
+// ---- Wersja 193: czyste skrzyżowania na drogach z mapy (wszystkie miasta, także bez danych o pasach) ----
+// Dotąd przerywana oś każdej ulicy biegła aż do środka skrzyżowania (na skrzyżowaniu równorzędnych ulic dwie osie krzyżowały się pośrodku), a linia krawędziowa
+// głównej ulicy szła w poprzek wlotu każdej bocznej. Teraz: skrzyżowanie = wspólny punkt co najmniej trzech „ramion” dróg (bez dróg serwisowych i mostów).
+// Oś ramienia kończy się na brzegu drogi co najmniej tak samo ważnej, która tu dochodzi (oś głównej ulicy przy bocznej, mniej ważnej – biegnie dalej),
+// a w miejscu wlotu bocznej ulicy (pod kątem 60–120°) linia krawędziowa przelotowej drogi jest przerwana na szerokość wlotu.
+const CL_RK={rs:1,tr:2,sc:3,pr:4,mw:5};
+function clPt(a,i){const j=Math.floor(i),f=i-j;return f?[a[2*j]+(a[2*j+2]-a[2*j])*f,a[2*j+1]+(a[2*j+3]-a[2*j+1])*f]:[a[2*j],a[2*j+1]]}
+function clArm(a,i,dir){   // kierunek ramienia od punktu i (indeks wierzchołka, ułamkowy – punkt na odcinku) – kolejne punkty aż do ok. 5 m
+  const n=a.length>>1,[x,y]=clPt(a,i);let j=dir>0?Math.floor(i)+1:Math.ceil(i)-1,L=0,px=x,py=y;
+  while(j>=0&&j<n){L+=Math.hypot(a[2*j]-px,a[2*j+1]-py);px=a[2*j];py=a[2*j+1];if(L>=5)break;j+=dir}
+  const dx=px-x,dy=py-y,d=Math.hypot(dx,dy);return d<.5?null:[dx/d,dy/d];
+}
+function clCum(a){if(a.cum)return a.cum;const n=a.length>>1,c=[0];for(let i=1;i<n;i++)c.push(c[i-1]+Math.hypot(a[2*i]-a[2*i-2],a[2*i+1]-a[2*i-1]));a.cum=c;return c}
+function clS(a,i){const c=clCum(a),j=Math.floor(i),f=i-j;return f?c[j]+(c[j+1]-c[j])*f:c[j]}
+function clJn(D){
+  if(D.CLJ)return D.CLJ;
+  const R=D.RS||[],M=new Map(),J=[],G=new Map(),CS=30,ok=a=>!a.lv&&CL_RK[a.k];
+  const add=(x,y,pi,i)=>{const key=Math.round(x*2)+','+Math.round(y*2);let l=M.get(key);if(!l)M.set(key,l=[]);l.push(pi,i)};
+  for(let pi=0;pi<R.length;pi++){const a=R[pi];if(!ok(a))continue;const n=a.length>>1;
+    for(let i=0;i<n;i++)add(a[2*i],a[2*i+1],pi,i);
+    for(let i=0;i<n-1;i++){const x1=a[2*i],y1=a[2*i+1],x2=a[2*i+2],y2=a[2*i+3];
+      for(let u=Math.floor((Math.min(x1,x2)-2)/CS);u<=Math.floor((Math.max(x1,x2)+2)/CS);u++)for(let v=Math.floor((Math.min(y1,y2)-2)/CS);v<=Math.floor((Math.max(y1,y2)+2)/CS);v++){const k=u+','+v;let l=G.get(k);if(!l)G.set(k,l=[]);l.push(pi,i)}}}
+  // koniec ulicy leżący na odcinku innej drogi (wierzchołek skrzyżowania bywa w kafelkach usunięty przy upraszczaniu prostej drogi)
+  for(let pi=0;pi<R.length;pi++){const a=R[pi];if(!ok(a))continue;const n=a.length>>1;
+    for(const e of [0,n-1]){const x=a[2*e],y=a[2*e+1],l=G.get(Math.floor(x/CS)+','+Math.floor(y/CS));if(!l)continue;
+      for(let z=0;z<l.length;z+=2){const pj=l[z],j=l[z+1];if(pj===pi)continue;const b=R[pj],x1=b[2*j],y1=b[2*j+1],dx=b[2*j+2]-x1,dy=b[2*j+3]-y1,L2=dx*dx+dy*dy;if(L2<1)continue;
+        const t=((x-x1)*dx+(y-y1)*dy)/L2,L=Math.sqrt(L2);if(t*L<.7||(1-t)*L<.7)continue;
+        if(Math.abs((x-x1)*dy-(y-y1)*dx)/L>1.2)continue;
+        add(x,y,pj,j+t)}}}
+  for(const l of M.values()){
+    if(l.length<4)continue;   // co najmniej dwa wierzchołki (np. droga przelotowa + koniec bocznej)
+    const arms=[],ps=new Set();
+    for(let z=0;z<l.length;z+=2){const pi=l[z],i=l[z+1],a=R[pi];
+      for(const dir of [-1,1]){const u=clArm(a,i,dir);if(!u)continue;
+        if(arms.some(o=>(o.pi===pi&&o.ux*u[0]+o.uy*u[1]>.95)||(o.k===a.k&&o.ux*u[0]+o.uy*u[1]>.985)))continue;   // ten sam punkt dwa razy w jednej linii; ta sama droga z sąsiedniego kafelka (zakładka kafelków)
+        arms.push({pi,s:clS(a,i),dir,ux:u[0],uy:u[1],r:CL_RK[a.k],k:a.k});ps.add(pi)}}
+    if(arms.length<3||new Set(arms.map(o=>o.pi)).size<2)continue;
+    for(const A of arms){   // „partner”: dalszy ciąg tej samej drogi (ramię w przeciwną stronę)
+      let best=null,bd=-.77;
+      for(const B of arms){if(B===A)continue;const d=A.ux*B.ux+A.uy*B.uy;if(d<bd&&(B.pi===A.pi||B.r===A.r)){if(best&&best.pi===A.pi&&B.pi!==A.pi)continue;bd=d;best=B}}
+      A.pt=best}
+    const p0=clPt(R[l[0]],l[1]);
+    J.push({x:p0[0],y:p0[1],arms});
+  }
+  D.CLJ=J;return J;
+}
+function clCut(D,hw){   // hw(k) – połowa szerokości jezdni klasy k w metrach (przy bieżącym zbliżeniu)
+  const key=['rs','tr','sc','pr','mw'].map(k=>Math.round(hw(k)*4)).join(',');
+  if(D.CLC&&D.CLC.key===key)return D.CLC;
+  const R=D.RS||[],J=clJn(D),cuts=new Map(),MP=new Map();
+  for(const j of J){
+    for(const X of j.arms){
+      const okX=!!R[X.pi].cl;
+      let L=0,thr=null;
+      for(const O of j.arms){if(O===X||O===X.pt||(O.pi===X.pi&&X.ux*O.ux+X.uy*O.uy<-.5))continue;
+        if(O.r<X.r)continue;
+        const sn=Math.max(.5,Math.abs(X.ux*O.uy-X.uy*O.ux));L=Math.max(L,hw(O.k)/sn);
+        if(O.pt&&O.pt.r===O.r&&(!thr||O.r>thr.r))thr=O}
+      if(okX&&L>0){let c=cuts.get(X.pi);if(!c)cuts.set(X.pi,c=[]);c.push(X.s,X.dir,L+.6)}
+      // wlot: X dochodzi do przelotowej drogi (para ramion na wprost) co najmniej tak samo ważnej, pod kątem 60–120°
+      if(thr&&X!==thr.pt&&X.r<=thr.r){const cs=Math.abs(X.ux*thr.ux+X.uy*thr.uy);
+        if(cs<.5){const sn=Math.sqrt(1-cs*cs),h=hw(thr.k),a=.6*h/sn,b=(h-.15)/sn,gk=thr.k+'|'+X.k;let P=MP.get(gk);if(!P)MP.set(gk,P={kp:thr.k,ka:X.k,p:new Path2D()});
+          P.p.moveTo(j.x+X.ux*a,j.y+X.uy*a);P.p.lineTo(j.x+X.ux*b,j.y+X.uy*b)}}
+    }
+  }
+  const CP={};
+  for(let pi=0;pi<R.length;pi++){const a=R[pi];if(!a.cl)continue;
+    const n=a.length>>1,cum=clCum(a);
+    const c=cuts.get(pi),iv=[];
+    if(c)for(let z=0;z<c.length;z+=3){const s0=c[z];iv.push(c[z+1]>0?[s0-.01,s0+c[z+2]]:[s0-c[z+2],s0+.01])}
+    iv.sort((p,q)=>p[0]-q[0]);
+    const P=CP[a.cl]||(CP[a.cl]=new Path2D());
+    // odcinki osi poza przerwami (z tym samym upraszczaniem co przy budowie mapy: punkty bliżej niż ok. 1 m pomijamy)
+    let k=0,pen=false,px=0,py=0;
+    const put=(x,y,mv)=>{if(mv||!pen){P.moveTo(x,y);pen=true;px=x;py=y;return}if(Math.abs(x-px)+Math.abs(y-py)<1.1)return;P.lineTo(x,y);px=x;py=y};
+    for(let i=0;i<n-1;i++){
+      const s0=cum[i],s1=cum[i+1],L=s1-s0;if(L<=0)continue;
+      let t=s0;
+      while(t<s1){
+        while(k<iv.length&&iv[k][1]<=t)k++;
+        if(k<iv.length&&iv[k][0]<=t){pen=false;t=Math.min(s1,iv[k][1]);continue}
+        const e=k<iv.length?Math.min(s1,iv[k][0]):s1,f0=(t-s0)/L,f1=(e-s0)/L;
+        const x0=a[2*i]+(a[2*i+2]-a[2*i])*f0,y0=a[2*i+1]+(a[2*i+3]-a[2*i+1])*f0,x1=a[2*i]+(a[2*i+2]-a[2*i])*f1,y1=a[2*i+1]+(a[2*i+3]-a[2*i+1])*f1;
+        if(!pen)put(x0,y0,true);
+        if(e<s1){P.lineTo(x1,y1);pen=false}else put(x1,y1,false);
+        t=e;
+      }
+    }
+    if(pen&&(Math.abs(a[2*n-2]-px)+Math.abs(a[2*n-1]-py))>.01)P.lineTo(a[2*n-2],a[2*n-1]);
+  }
+  D.CLC={key,CP,MP:[...MP.values()],nj:J.length};
+  return D.CLC;
+}
 function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekranu (wschód, północ) leży przed kamerą (widok 3D); sp – skala malowania (domyślnie bieżąca; przy oddalaniu mniejsza, z wyprzedzeniem)
   const S=$('rot').clientWidth,s=sp||scaleCur,kx=111195*Math.cos(rad(cam.lat)),pal=themePal(PAL[night?'night':'day']),c=vctx,she=sh?sh[0]:0,shn=sh?sh[1]:0;
   $('view').style.background=pal.bg;document.documentElement.style.setProperty('--sky',pal.bg);
@@ -6928,6 +7025,8 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
       else{c.strokeStyle=dm?(night?'rgba(225,232,255,.8)':'rgba(120,108,85,.78)'):lm;c.lineWidth=dm?Math.max(1.5,2.1*Math.min(1.8,s))/s:Math.max(1.1,1.6*Math.min(1.6,s))/s;c.setLineDash(dm?[11/s,13/s]:[9/s,11/s]);c.lineCap='butt';c.stroke(pth);c.setLineDash([]);c.lineCap='round'}
     };
     const clOn=s>=(dm?.5:.7);
+    let CC=null;if(clOn&&!window.__noClCut)try{CC=clCut(D,k=>rwz(k)/s/2)}catch(e){CC=null;errNote('osie',e)}   // Wersja 193: osie przycięte na skrzyżowaniach i otwarte wloty
+    const edgeOn=k=>rwz(k)>=13&&k!=='sv';
     for(const k of order)if(P[k]){const fc=roadFill(k,pal,night),uni=!!(STL&&ROAD_U[k]);c.strokeStyle=fc;c.lineWidth=rwz(k)/s;c.stroke(P[k])
       const w=rwz(k);
       if(k==='mw'&&!uni){c.strokeStyle=pal.mwIn;c.lineWidth=w*.45/s;c.stroke(P[k])}
@@ -6940,7 +7039,9 @@ function paintVec(cam,sh,sp){   // cam – środek płótna; sh – o ile px ekr
           c.strokeStyle=STL.edge;c.lineWidth=(w-2*ins+el)/s;c.stroke(P[k]);c.strokeStyle=fc;c.lineWidth=(w-2*ins-el)/s;c.stroke(P[k]);
         }
       }
-      if(clOn&&P['cl_'+k])clDraw(P['cl_'+k],k==='rs');}
+      if(CC&&edgeOn(k)){c.lineCap='butt';for(const g of CC.MP)if(g.kp===k){c.strokeStyle=fc;c.lineWidth=rwz(g.ka)/s;c.stroke(g.p)}c.lineCap='round'}   // wloty bocznych ulic: przerwa w linii krawędziowej
+      const clP=CC?CC.CP['cl_'+k]:P['cl_'+k];
+      if(clOn&&clP)clDraw(clP,k==='rs');}
     if(s>=(dm?.5:.7)){   // oś jezdni: przerywana na drogach dwukierunkowych, ciągła (bariera) na autostradach
       if(P.cm){c.strokeStyle=night?'rgba(235,240,255,.7)':'rgba(70,60,40,.6)';c.lineWidth=2.2/s;c.stroke(P.cm)}
     }
@@ -7194,7 +7295,7 @@ function drawRouteTop(){
     else{cur={lv:pc.lv,lf:pc.lf,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
-  // (wersja 192: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
+  // (wersja 193: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
   if(runs.length&&runs[0].xy.length>=4){
     const r0=runs[0],xy=r0.xy,sh=lw*r0.lf*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));let tot=0;for(let i=2;i<xy.length;i+=2)tot+=Math.hypot(xy[i]-xy[i-2],xy[i+1]-xy[i-1]);
     if(tot>sh*1.3){let rem=sh;while(xy.length>=4){const dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy);if(L>rem+1e-6){xy[0]+=dx/L*rem;xy[1]+=dy/L*rem;break}rem-=L;xy.splice(0,2)}}
