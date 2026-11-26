@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 195</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 196</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7297,7 +7297,7 @@ function drawRouteTop(){
     else{cur={lv:pc.lv,lf:pc.lf,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
-  // (wersja 195: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
+  // (wersja 196: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
   if(runs.length&&runs[0].xy.length>=4){
     const r0=runs[0],xy=r0.xy,sh=lw*r0.lf*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));let tot=0;for(let i=2;i<xy.length;i+=2)tot+=Math.hypot(xy[i]-xy[i-2],xy[i+1]-xy[i-1]);
     if(tot>sh*1.3){let rem=sh;while(xy.length>=4){const dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy);if(L>rem+1e-6){xy[0]+=dx/L*rem;xy[1]+=dy/L*rem;break}rem-=L;xy.splice(0,2)}}
@@ -8195,19 +8195,43 @@ function lnHull(P){
   for(let i=p.length-1;i>=0;i--){const q=p[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q)}
   up.pop();lo.pop();return lo.concat(up);
 }
+// Wersja 196: płyta skrzyżowania tylko w samym skrzyżowaniu. W wersjach 190–195 płyta była otoczką wypukłą wszystkich końców dróg, które „dotykały się”
+// prostokątami otaczającymi – przy dużych skrzyżowaniach łączyło to kilka sąsiednich skrzyżowań w jeden wielokąt o średnicy do 250 m, który zalewał narożniki
+// chodników, zieleń i budynki (droga „schodziła się i rozjeżdżała”). Teraz: fragmenty łączą się tylko, gdy ich czworokąty naprawdę się przecinają, grupa rozciągnięta
+// dalej niż na szerokość skrzyżowania nie dostaje płyty, a płyta jest przycięta do koła wokół środka skrzyżowania (promień ≈ połowa szerokości najszerszej drogi) –
+// wypełnia szczeliny między końcami jezdni, ale nie wchodzi w narożniki między ulicami.
+function lnQuadHit(A,B){   // czy dwa czworokąty wypukłe (x,y ×4) się przecinają (twierdzenie o osi rozdzielającej)
+  for(const P of [A,B])for(let i=0;i<8;i+=2){const j=(i+2)%8,nx=P[j+1]-P[i+1],ny=P[i]-P[j];let a0=1e18,a1=-1e18,b0=1e18,b1=-1e18;
+    for(let k=0;k<8;k+=2){const p=A[k]*nx+A[k+1]*ny,q=B[k]*nx+B[k+1]*ny;if(p<a0)a0=p;if(p>a1)a1=p;if(q<b0)b0=q;if(q>b1)b1=q}
+    if(a1<b0-1e-6||b1<a0-1e-6)return false}
+  return true;
+}
 function lnPlates(V,s){
   const it=[];
   for(const v of V){const w=v.w,LWm=lnLanePx(w.kc,s)/s,CU=lnCuts(v,s,LWm);if(!CU||!CU.a.length||!v.m.cum)continue;
     const a=v.m.a,cum=v.m.cum,L=cum[cum.length-1],h=w.N*LWm/2;
     for(let k=0;k<CU.a.length;k+=2){const s0=Math.max(0,CU.a[k]),s1=Math.min(L,CU.a[k+1]);if(s1<=s0)continue;
-      const P=[];let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
-      for(const x of [s0,s1]){const [px,py,ux,uy]=lnPtDir(a,cum,x);for(const sg of [1,-1]){const X=px+sg*uy*h,Y=py-sg*ux*h;P.push(X,Y);if(X<x0)x0=X;if(X>x1)x1=X;if(Y<y0)y0=Y;if(Y>y1)y1=Y}}
-      it.push({P,bb:[x0,y0,x1,y1],kc:w.kc,rk:LN_RK[w.k]||1,g:-1})}}
-  // łączenie fragmentów, których prostokąty otaczające się nakładają (jedno skrzyżowanie)
+      const e0=lnPtDir(a,cum,s0),e1=lnPtDir(a,cum,s1),P=[];
+      for(const [px,py,ux,uy] of [e0,e1])for(const sg of [1,-1])P.push(px+sg*uy*h,py-sg*ux*h);
+      const Q=[P[0],P[1],P[4],P[5],P[6],P[7],P[2],P[3]];   // obwód: lewy0, lewy1, prawy1, prawy0
+      const dx=e1[0]-e0[0],dy=e1[1]-e0[1],dl=Math.hypot(dx,dy)||1;
+      it.push({P,Q,h,cx:(e0[0]+e1[0])/2,cy:(e0[1]+e1[1])/2,x0:e0[0],y0:e0[1],ux:dx/dl,uy:dy/dl,kc:w.kc,rk:LN_RK[w.k]||1})}}
   const par=it.map((_,i)=>i),f=i=>{while(par[i]!==i)i=par[i]=par[par[i]];return i};
-  for(let i=0;i<it.length;i++)for(let j=i+1;j<it.length;j++){const A=it[i].bb,B=it[j].bb;if(A[0]<=B[2]&&B[0]<=A[2]&&A[1]<=B[3]&&B[1]<=A[3])par[f(i)]=f(j)}
-  const grp=new Map();for(let i=0;i<it.length;i++){const r=f(i);let g=grp.get(r);if(!g)grp.set(r,g={P:[],n:0,kc:it[i].kc,rk:0});g.P.push(...it[i].P);g.n++;if(it[i].rk>g.rk){g.rk=it[i].rk;g.kc=it[i].kc}}
-  const out=[];for(const g of grp.values())if(g.n>=2){const H=lnHull(g.P);if(H.length>=3)out.push({H,kc:g.kc})}
+  for(let i=0;i<it.length;i++)for(let j=i+1;j<it.length;j++){const A=it[i],B=it[j];if(Math.hypot(A.cx-B.cx,A.cy-B.cy)>A.h+B.h+Math.hypot(A.cx-A.x0,A.cy-A.y0)+Math.hypot(B.cx-B.x0,B.cy-B.y0))continue;if(lnQuadHit(A.Q,B.Q))par[f(i)]=f(j)}
+  const grp=new Map();for(let i=0;i<it.length;i++){const r=f(i);let g=grp.get(r);if(!g)grp.set(r,g=[]);g.push(it[i])}
+  const out=[];
+  for(const g of grp.values()){if(g.length<2)continue;
+    // środek skrzyżowania: średnia przecięć osi fragmentów (pod kątem > 25°), inaczej środek fragmentów
+    let sx=0,sy=0,n=0;
+    for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){const A=g[i],B=g[j],cr=A.ux*B.uy-A.uy*B.ux;if(Math.abs(cr)<.42)continue;
+      const t=((B.x0-A.x0)*B.uy-(B.y0-A.y0)*B.ux)/cr;sx+=A.x0+A.ux*t;sy+=A.y0+A.uy*t;n++}
+    if(!n){for(const A of g){sx+=A.cx;sy+=A.cy}n=g.length}
+    const cx=sx/n,cy=sy/n;let hm=0,rk=0,kc=g[0].kc;for(const A of g){if(A.h>hm)hm=A.h;if(A.rk>rk){rk=A.rk;kc=A.kc}}
+    const R=hm*1.15;
+    if(g.some(A=>Math.hypot(A.cx-cx,A.cy-cy)>R*2.2))continue;   // grupa rozciągnięta na kilka skrzyżowań – bez płyty
+    const P=[];for(const A of g)P.push(...A.P);const H=lnHull(P);
+    if(H.length>=3)out.push({H,kc,cx,cy,R});
+  }
   return out;
 }
 function lnBody(c,G,V,pal,s,dm,night,lite,under){
@@ -8221,7 +8245,8 @@ function lnBody(c,G,V,pal,s,dm,night,lite,under){
     for(const t of TP){c.strokeStyle=t.kc===1?pal.csMw:t.kc===2?pal.csPr:t.kc===3?pal.csSc:pal.casing;c.lineWidth=4.5/s;c.beginPath();
       c.moveTo(t.x+t.nx*t.a,t.y+t.ny*t.a);c.lineTo(t.fx+t.nx*t.b,t.fy+t.ny*t.b);c.moveTo(t.x-t.nx*t.a,t.y-t.ny*t.a);c.lineTo(t.fx-t.nx*t.b,t.fy-t.ny*t.b);c.stroke()}
   }
-  try{for(const p of lnPlates(V,s)){c.fillStyle=ST.fill(p.kc);c.beginPath();c.moveTo(p.H[0][0],p.H[0][1]);for(let i=1;i<p.H.length;i++)c.lineTo(p.H[i][0],p.H[i][1]);c.closePath();c.fill()}}catch(e){lnFail(e)}   // płyty skrzyżowań: pod jezdniami (każda jezdnia zostaje w swoim kolorze, płyta wypełnia szczeliny i ucięte narożniki między nimi)
+  try{for(const p of lnPlates(V,s)){c.save();c.beginPath();c.arc(p.cx,p.cy,p.R,0,6.2832);c.clip();   // Wersja 196: płyta przycięta do koła wokół środka skrzyżowania
+    c.fillStyle=ST.fill(p.kc);c.beginPath();c.moveTo(p.H[0][0],p.H[0][1]);for(let i=1;i<p.H.length;i++)c.lineTo(p.H[i][0],p.H[i][1]);c.closePath();c.fill();c.restore()}}catch(e){c.restore();lnFail(e)}   // płyty skrzyżowań: pod jezdniami (każda jezdnia zostaje w swoim kolorze, płyta wypełnia szczeliny i ucięte narożniki między nimi)
   for(const g of G)lnStroke(c,[g],ST.fill(g.kc),0,s);
   lnStroke(c,G,ST.edgeOut,-3,s);   // cienka krawędź tuż przy brzegu jezdni
   lnStroke(c,G,g=>ST.fill(g.kc),-5,s);
