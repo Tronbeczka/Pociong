@@ -11,7 +11,7 @@ WJS="""(a)=>{const D=vecData,s=scaleCur,kx=111195*Math.cos(rad(D.lat)),cx=(a[1]-
   const SPL=typeof lnSplits==='function'?lnSplits(V,s):[];const TP=lnTapers(V,s,SPL.skip);
   const B=V.map(v=>({a:v.m.a,h:v.w.N*lnLanePx(v.w.kc,s)/s/2}));
   const inPoly=(P,x,y)=>{let c=false;for(let i=0,j=P.length-2;i<P.length;j=i,i+=2){const xi=P[i],yi=P[i+1],xj=P[j],yj=P[j+1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c}return c};
-  const TPP=TP.map(t=>[t.x+t.nx*t.a,t.y+t.ny*t.a,t.fx+t.nx*t.b,t.fy+t.ny*t.b,t.fx-t.nx*t.b,t.fy-t.ny*t.b,t.x-t.nx*t.a,t.y-t.ny*t.a]);
+  const TPP=TP.map(t=>t.P?t.P:[t.x+t.nx*t.a,t.y+t.ny*t.a,t.fx+t.nx*t.b,t.fy+t.ny*t.b,t.fx-t.nx*t.b,t.fy-t.ny*t.b,t.x-t.nx*t.a,t.y-t.ny*t.a]);
   const road=(x,y)=>{for(const b of B){const A=b.a;for(let i=0;i+3<A.length;i+=2){const dx=A[i+2]-A[i],dy=A[i+3]-A[i+1],L2=dx*dx+dy*dy;let t=L2?((x-A[i])*dx+(y-A[i+1])*dy)/L2:0;t=t<0?0:t>1?1:t;if(Math.hypot(A[i]+dx*t-x,A[i+1]+dy*t-y)<=b.h)return true}}
     for(const P of TPP)if(inPoly(P,x,y))return true;for(const p of SPL)if(inPoly(p.P,x,y))return true;return false};
   const W=[];for(let d=-30;d<=70;d+=2){const px=cx+ux*d,py=cy+uy*d;if(!road(px,py)){W.push(null);continue}let l=0,r=0;while(l<90&&road(px-nx*(l+.5),py-ny*(l+.5)))l+=.5;while(r<90&&road(px+nx*(r+.5),py+ny*(r+.5)))r+=.5;W.push([l,r])}
