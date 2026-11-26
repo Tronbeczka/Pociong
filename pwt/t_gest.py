@@ -48,9 +48,14 @@ async def main():
         await drag(pg,cdp,200,300,0,160,steps=16,mid=mid)
         await pg.wait_for_timeout(1800);c=await pg.evaluate(CAM)
         t('lot kamery zaczęty w trakcie przeciągania: palec wygrywa',not c['ovw'] and not c['gl'] and c['free'],c)
+        await pg.evaluate("""(()=>{window.__st=[];let last='';const t0=performance.now();const f=()=>{const k=[freeCam?1:0,panGlide?(panGlide.keep?'K':(panGlide.fly?'F':'G')):'-',ovw?1:0,window.preview?1:0,window.__ptrs?window.__ptrs():-1].join('');if(k!==last){window.__st.push(Math.round(performance.now()-t0)+':'+k);last=k}requestAnimationFrame(f)};f();
+          const on=window.onPos;})()""")
         await pg.evaluate("exitPreview(false);document.getElementById('start').click()");await pg.wait_for_timeout(2500)
+        await pg.evaluate("window.__st.push('drag:'+Math.round(performance.now()))")
         a=await pg.evaluate(CAM);await drag(pg,cdp,200,300,0,150);c=await pg.evaluate(CAM)
-        t('jazda z trasą: przeciąganie przesuwa mapę',mv(a,c)>20 and c['free'],(mv(a,c),c))
+        ok=mv(a,c)>20 and c['free']
+        if not ok:print('   stan:',await pg.evaluate("window.__st.slice(-40)"))
+        t('jazda z trasą: przeciąganie przesuwa mapę',ok,(mv(a,c),c))
         await pg.evaluate("recenter()");await pg.wait_for_timeout(2000)
         await pg.evaluate("routeOverview()");await pg.wait_for_timeout(2500)
         a=await pg.evaluate(CAM);await drag(pg,cdp,200,300,0,150);c=await pg.evaluate(CAM)
