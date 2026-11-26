@@ -1305,8 +1305,8 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   <label style="font-size:.9rem"><input type="checkbox" id="vcRoad" checked> Głos: znaki, korki, limity</label>
   <label style="font-size:.9rem"><input type="checkbox" id="eco"> Tryb oszczędny baterii</label>
   <label style="font-size:.9rem"><input type="checkbox" id="dmCb" checked> Widok kierowcy podczas trasy (szersze drogi, mgła, strzałki na trasie)</label>
-  <label style="font-size:.9rem"><input type="checkbox" id="laneCb" checked> Pasy ruchu na drogach i na trasie (dane z OpenStreetMap)</label>
-  <label style="font-size:.9rem"><input type="checkbox" id="leCb" checked> Auto na pasie, którym jedziesz (z GPS; przy słabym GPS – pas z trasy albo prawy)</label>
+  <label style="display:none!important"><input type="checkbox" id="laneCb"> Pasy ruchu na drogach i na trasie (dane z OpenStreetMap)</label>
+  <label style="display:none!important"><input type="checkbox" id="leCb"> Auto na pasie, którym jedziesz (z GPS; przy słabym GPS – pas z trasy albo prawy)</label>
   <select id="sigDens" class="sec"><option value="all">Znaki na mapie: wszystkie</option><option value="main">Znaki na mapie: światła i STOP</option><option value="route">Znaki na mapie: tylko na trasie</option><option value="off">Znaki na mapie: ukryte</option></select>
   <select id="terrSel" class="sec"><option value="soft">Rzeźba terenu: delikatna</option><option value="strong">Rzeźba terenu: wyraźna</option><option value="off">Rzeźba terenu: wyłączona</option></select>
   <select id="det3Sel" class="sec"><option value="full">Szczegóły 3D: pełne (dachy, okna, drzewa)</option><option value="basic">Szczegóły 3D: podstawowe (dachy)</option><option value="off">Szczegóły 3D: same bryły</option></select>
@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 197</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 198</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7591,7 +7591,10 @@ function projLoc(D,cl){
 // 1) dane pobieramy komórkami ok. 2,2 km (Overpass, pamięć urządzenia 14 dni), 2) droga z kilkoma pasami jest rysowana szerzej, z liniami między pasami
 // i strzałkami, 3) niebieska trasa i auto jadą pasem wynikającym z najbliższego manewru (prawy – domyślnie, lewy przed skrętem w lewo).
 function lnFail(e){window.__lnErr=String(e&&e.stack||e);errNote('pasy',e)}   // błąd w module pasów: pokazujemy w teście i zapisujemy w dzienniku błędów
-var laneOn=LSget('laneOn',true)!==false,leOn=LSget('leOn',true)!==false;   // leOn (Wersja 187): auto na pasie wyznaczonym z odczytów GPS
+// Wersja 198: na prośbę użytkownika drogi wracają do wyglądu sprzed wersji 138 – bez linii pasów, strzałek i buspasów na jezdni, trasa i auto bez
+// ustawiania na pasie (stary moduł pasów jest wyłączony; oznaczenia będą budowane od nowa, etapami). Panel pasów przed skrzyżowaniem w nawigacji
+// zostaje – pobiera strzałki z OpenStreetMap sam (fetchLanes), jak przed wersją 138.
+var laneOn=false,leOn=false;   // leOn (Wersja 187): auto na pasie wyznaczonym z odczytów GPS
 var LANEW=new Map(),laneVer=0,lnDirty=0,lnGrid=new Map(),lnCells=new Map(),lnQ=[],lnBusy=false,carAl=null;
 const LN_K=['tr','mw','pr','sc','rs','sv'],LN_CELL={y:.02,x:.03};
 // opis drogi z tagów OSM: liczba pasów w kierunku zgodnym z rysowaniem (nf), przeciwnym (nb), pasy środkowe (c), jednokierunkowość (ow), strzałki (tf/tb)
