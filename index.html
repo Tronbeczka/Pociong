@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 196</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 197</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -3852,7 +3852,7 @@ function drawLaneArrow(){
   let best=n-1;for(let i=n-1;i>=0;i--)if(L.valid[i]){best=i;break}
   // znamy pasy tej drogi (OSM): strzałki leżą na prawdziwych pasach o prawdziwej szerokości; bez danych – dawny, ściśnięty układ
   let lp=0,laneC=null;
-  try{const q=lnAt(route,at);if(q){const P=q[0],j=q[1];if(P.kn[j]&&P.nt[j]>=n){lp=rw(LN_K[P.kc[j]],scaleCur)/2;const N=P.nt[j]+P.no[j]+P.cc[j],k0=P.nt[j]-n;laneC=i=>(-N/2+P.no[j]+P.cc[j]+k0+i+.5)*lp}}}catch(e){laneC=null}
+  try{const q=lnAt(route,at);if(q){const P=q[0],j=q[1];if(P.kn[j]&&P.nt[j]>=n){lp=rw(LN_K[P.kc[j]],scaleCur)/2;const N=P.nt[j]+P.no[j]+P.cc[j],k0=P.nt[j]-n;laneC=i=>(-N/2+P.no[j]+P.cc[j]+k0+i+.5+lnShT(P.nt[j],P.no[j]))*lp}}}catch(e){laneC=null}
   const pl=laneC?lp:Math.min(22,Rr*.6/(n-1)),gk=laneC?Math.max(.6,Math.min(1.6,lp/scaleCur/10)):1,fE=Math.sin(brg),fN=Math.cos(brg),rE=Math.cos(brg),rN=-Math.sin(brg);
   for(let i=0;i<n;i++){
     const lm=(laneC?laneC(i):Rr/4+(i-(n-1))*pl)/scaleCur;
@@ -7297,7 +7297,7 @@ function drawRouteTop(){
     else{cur={lv:pc.lv,lf:pc.lf,k0:kk,ks:kk,n:1,e:pc.b,xy:[pc.a.x,pc.a.y,pc.b.x,pc.b.y]};runs.push(cur)}
   }
   // początek linii leży w punkcie auta – zaokrąglony koniec wystawałby spod zderzaka; przesuwamy start o promień zaokrąglenia do przodu
-  // (wersja 196: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
+  // (wersja 197: linia jest gęsto próbkowana, więc przesunięcie idzie wzdłuż kilku pierwszych krótkich odcinków, a nie tylko pierwszego)
   if(runs.length&&runs[0].xy.length>=4){
     const r0=runs[0],xy=r0.xy,sh=lw*r0.lf*.78*Math.max(.3,Math.min(1.25,r0.ks/r0.n));let tot=0;for(let i=2;i<xy.length;i+=2)tot+=Math.hypot(xy[i]-xy[i-2],xy[i+1]-xy[i-1]);
     if(tot>sh*1.3){let rem=sh;while(xy.length>=4){const dx=xy[2]-xy[0],dy=xy[3]-xy[1],L=Math.hypot(dx,dy);if(L>rem+1e-6){xy[0]+=dx/L*rem;xy[1]+=dy/L*rem;break}rem-=L;xy.splice(0,2)}}
@@ -7810,7 +7810,7 @@ function lnPlan(R){
         uo=ud+(ut-ud)*w;
       }
     }
-    raw[i]=uo;NT[i]=nt;NO[i]=no;CC[i]=c;
+    raw[i]=uo+lnShT(nt,no);NT[i]=nt;NO[i]=no;CC[i]=c;   // Wersja 197: linia dzieląca kierunki na osi drogi
   }
   const K=4;
   for(let i=0;i<n;i++){let s=0,ws=0,s2=0;for(let d=-K;d<=K;d++){const j=i+d;if(j<0||j>=n)continue;const w=K+1-Math.abs(d);s+=raw[j]*w;s2+=mfR[j]*w;ws+=w}u[i]=s/ws;mf[i]=s2/ws}
@@ -7835,7 +7835,7 @@ function lnHalfPx(R,al){
   const q=lnAt(R,al);if(!q)return null;
   const P=q[0],i=q[1];if(!P.kn[i]||P.mf[i]<.5)return null;
   const N=P.nt[i]+P.no[i]+P.cc[i];if(N<2)return null;
-  return N*rw(LN_K[P.kc[i]],scaleCur)/4;
+  return (N/2+lnShT(P.nt[i],P.no[i]))*rw(LN_K[P.kc[i]],scaleCur)/2;
 }
 // ---- rysunek pasów na mapie (płótno mapy, w metrach względem środka mapy D) ----
 function lnMetres(D,w){
@@ -7888,7 +7888,7 @@ function lnCutLine(P,o,cum,cc){
 // punkt i kierunek osi w odległości x wzdłuż drogi
 function lnPtDir(a,cum,x){
   const n=cum.length;let i=0;while(i<n-2&&cum[i+1]<x)i++;
-  const dx=a[2*i+2]-a[2*i],dy=a[2*i+3]-a[2*i+1],L=Math.hypot(dx,dy)||1,t=Math.max(0,Math.min(1,(x-cum[i])/L));
+  const dx=a[2*i+2]-a[2*i],dy=a[2*i+3]-a[2*i+1],L=Math.hypot(dx,dy)||1,Lc=cum[i+1]-cum[i],t=Math.max(0,Math.min(1,Lc>1e-9?(x-cum[i])/Lc:0));
   return [a[2*i]+dx*t,a[2*i+1]+dy*t,dx/L,dy/L];
 }
 // miejsca skrzyżowań na każdej drodze z pasami (w metrach względem środka mapy D); liczone raz dla danych mapy i danych o pasach
@@ -7918,6 +7918,7 @@ function lnJuncs(D){
           if(t<(i===0?-ea:0)||t>(i===na-2?1+ea:1))continue;
           if(uu<(first?-eb:0)||uu>(last?1+eb:1))continue;
           const tc=Math.max(0,Math.min(1,t)),sA=AW.m.cum[i]+tc*LA,Lt=AW.m.cum[na-1],bEnd=(first&&uu<eb)||(last&&uu>1-eb);
+          if(!lw&&sn<.62&&(sA<3||sA>Lt-3))continue;   // Wersja 197: droga z mapy pod małym kątem przy samym końcu odcinka – to ta sama jezdnia (rozwidlenie, uproszczony kształt na mapie), nie skrzyżowanie
           let sd=0;   // strona, po której dochodzi boczna droga: 1 – prawa (względem kierunku rysowania), -1 – lewa, 0 – przecina
           if(bEnd){const fx=(uu<.5?qx:px)-(ax+dx*tc),fy=(uu<.5?qy:py)-(ay+dy*tc);sd=(fx*dy-fy*dx)>0?1:-1}
           let l2=J.get(AW.w.id);if(!l2)J.set(AW.w.id,l2=[]);
@@ -7986,6 +7987,12 @@ function lnCuts(v,s,LWm){
   return v.m.cu={key,a,l:mg(Lf.concat(A)),r:mg(Rt.concat(A)),st,L};
 }
 const lnLanePx=(kc,s)=>rw(LN_K[kc],s)/2;
+// Wersja 197: jezdnia dwukierunkowa z różną liczbą pasów w każdą stronę (np. 3 w jedną i 2 w drugą) była rysowana symetrycznie wokół osi z OSM, więc linia dzieląca
+// kierunki – i pasy przy niej, np. buspasy – przeskakiwała o pół pasa na każdym styku odcinków o innym podziale pasów (ulica wyglądała jak przesunięte deski).
+// Teraz linia dzieląca kierunki leży zawsze na osi z OSM: rysunek odcinka jest przesunięty o (pasy w kierunku rysowania − pasy w przeciwnym)/2 szerokości pasa.
+// Linia dzieląca kierunki jest więc ciągła, a pas dochodzi albo znika tylko po swojej stronie (tam klin). Auto, linia trasy i strzałki pasów – przesunięte tak samo.
+function lnShT(nt,no){return nt>0&&no>0?(nt-no)/2:0}   // w szerokościach pasa, + = w prawo względem kierunku jazdy (nt – pasy w kierunku jazdy, no – w przeciwnym)
+function lnSh(w){return w.ow===0?lnShT(w.nf,w.nb):0}   // to samo względem kierunku rysowania drogi
 function lnVis(D,s,ox,oy,S){
   const out=[];if(!laneOn||!LANEW.size||s<.6)return out;
   const r=S/2/s*1.25+90;
@@ -7993,7 +8000,9 @@ function lnVis(D,s,ox,oy,S){
     if(!w.multi)continue;
     const m=lnMetres(D,w),b=m.b;
     if(b[2]<ox-r||b[0]>ox+r||b[3]<oy-r||b[1]>oy+r)continue;
-    out.push({w,m,D});
+    const sh=lnSh(w);let md=m;   // md – oś rysunku (przesunięta), m – oś z OSM (do szukania styków i skrzyżowań)
+    if(sh){const d=sh*lnLanePx(w.kc,s)/s,k=Math.round(d*20);let q=m.dsp;if(!q||q.k!==k)q=m.dsp={k,m:{a:lnOff(m.a,d),cum:m.cum,b,sh:d}};md=q.m}
+    out.push({w,m:md,m0:m,D});
   }
   return out;
 }
@@ -8006,7 +8015,7 @@ function lnCull(D){
   const set=new Set(),G=new Map(),CS=40;
   for(const w of LANEW.values()){
     if(!w.multi)continue;
-    const m=lnMetres(D,w),a=m.a,hw=w.N*lnLanePx(w.kc,s)/s/2+1.5;
+    const m=lnMetres(D,w),a=m.a,hw=(w.N/2+Math.abs(lnSh(w)))*lnLanePx(w.kc,s)/s+1.5;
     if(m.b[2]<-760||m.b[0]>760||m.b[3]<-760||m.b[1]>760)continue;
     for(let i=0;i<a.length/2-1;i++){
       const x1=a[2*i],y1=a[2*i+1],x2=a[2*i+2],y2=a[2*i+3],sg=[x1,y1,x2,y2,hw];
@@ -8120,70 +8129,187 @@ function lnStyle(pal,night){
 // dostawała klin zwężający ją do szerokości jednej jezdni (obie jezdnie zaczynają się w tym samym punkcie osi) – droga najpierw się zwężała, a dalej, gdy jezdnie się
 // rozchodziły, znów poszerzała („schodzi się i rozjeżdża”). Teraz zamiast klina jest płyta: zewnętrzne brzegi biegną prosto od brzegów szerokiej drogi do zewnętrznych
 // brzegów obu jezdni – w miejscu, gdzie jezdnia sięga już szerokości drogi (najdalej 80 m) – więc obrys drogi tylko się poszerza, bez przewężenia.
+// Wersja 197: styki odcinków liczone z osi z OSM (rysunek może być przesunięty), brzegi – z rysunku.
+function lnEndA(a,e){const n=a.length/2,i=e?n-1:0,j=e?n-2:1,dx=a[2*i]-a[2*j],dy=a[2*i+1]-a[2*j+1],L=Math.hypot(dx,dy)||1;return [a[2*i],a[2*i+1],dx/L,dy/L]}   // koniec osi i kierunek na zewnątrz
+function lnEnds(V){const E=new Map();for(const v of V){const a=(v.m0||v.m).a;if(a.length<4||!v.m.cum)continue;for(const e of [0,1]){const p=lnEndA(a,e),k=Math.round(p[0]/2)+','+Math.round(p[1]/2);let l=E.get(k);if(!l)E.set(k,l=[]);l.push({v,e,p})}}return E}
+function lnConts(E,v,x,y,ux,uy,dmin,same){   // odcinki, które zaczynają się w (x,y) i biegną dalej mniej więcej w kierunku (ux,uy)
+  const kx=Math.round(x/2),ky=Math.round(y/2),C=[];
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=E.get((kx+i)+','+(ky+j));if(!l)continue;
+    for(const o of l){if(o.v===v||Math.hypot(o.p[0]-x,o.p[1]-y)>1.5)continue;if(same&&o.v.w.ow!==v.w.ow)continue;if(-(o.p[2]*ux+o.p[3]*uy)<dmin)continue;C.push(o)}}
+  return C;
+}
+function lnAtJ(v,e,s){const CU=lnCuts(v,s,lnLanePx(v.w.kc,s)/s),L=v.m.cum[v.m.cum.length-1];return !!(CU&&CU.a.length&&(e?CU.a[CU.a.length-1]>=L-.5:CU.a[0]<=.5))}   // koniec odcinka na skrzyżowaniu
+function lnInto(v,e,t){const cum=v.m.cum,L=cum[cum.length-1],q=lnPtDir(v.m.a,cum,Math.max(0,Math.min(L,e?L-t:t)));return e?[q[0],q[1],-q[2],-q[3]]:q}   // punkt osi rysunku w odległości t od końca e, kierunek w głąb odcinka
+// Wersja 195: rozwidlenie jezdni (droga dwukierunkowa → dwie jednokierunkowe); Wersja 197: każde rozwidlenie i połączenie jezdni (także jednokierunkowa → dwie,
+// np. lewoskręt odchodzący od jezdni na wprost). Dotąd obie odnogi zaczynały się w jednym punkcie osi i były węższe niż jezdnia przed nimi – droga się zwężała, a dalej
+// rozjeżdżała. Teraz zewnętrzne brzegi biegną dalej: lewy brzeg jezdni w lewy brzeg lewej odnogi, prawy – w prawy brzeg prawej (jeśli odnoga na wprost jest węższa – klinem).
 function lnSplits(V,s){
-  const E=new Map(),key=(x,y)=>Math.round(x/2)+','+Math.round(y/2),out=[],skip=new Set();
-  const endOf=(v,e)=>{const a=v.m.a,n=a.length/2,i=e?n-1:0,j=e?n-2:1,dx=a[2*i]-a[2*j],dy=a[2*i+1]-a[2*j+1],L=Math.hypot(dx,dy)||1;return [a[2*i],a[2*i+1],dx/L,dy/L]};
-  for(const v of V){if(v.m.a.length<4||!v.m.cum)continue;for(const e of [0,1]){const p=endOf(v,e),k=key(p[0],p[1]);let l=E.get(k);if(!l)E.set(k,l=[]);l.push({v,e,p})}}
-  // droga „od rozwidlenia” przez kolejne odcinki tej samej jezdni (OSM dzieli jezdnię na krótkie odcinki), najwyżej ok. 90 m: punkt i kierunek w odległości t
+  const E=lnEnds(V),out=[],skip=new Set(),xc=new Map();
+  // dalej tą samą jezdnią przez kolejne krótkie odcinki OSM, najwyżej ok. 90 m: punkt osi rysunku i kierunek w odległości t
   const walk=(v0,e0)=>{const segs=[];let v=v0,e=e0,tot=0;
     for(let k=0;k<8&&tot<90;k++){const L=v.m.cum[v.m.cum.length-1];segs.push({v,e,s:tot,L});tot+=L;
-      const [x,y,ux,uy]=endOf(v,1-e);let nx=null,bd=.85;const kx=Math.round(x/2),ky=Math.round(y/2);
-      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=E.get((kx+i)+','+(ky+j));if(!l)continue;
-        for(const o of l){if(o.v===v||Math.hypot(o.p[0]-x,o.p[1]-y)>1.5||o.v.w.ow!==v.w.ow)continue;const d=-(o.p[2]*ux+o.p[3]*uy);if(d>bd){bd=d;nx=o}}}
+      const p=lnEndA((v.m0||v.m).a,1-e),C=lnConts(E,v,p[0],p[1],p[2],p[3],.85,true);let nx=null,bd=-1;
+      for(const o of C){const d=-(o.p[2]*p[2]+o.p[3]*p[3]);if(d>bd){bd=d;nx=o}}
       if(!nx)break;v=nx.v;e=nx.e}
-    return {L:tot,at:t=>{t=Math.max(0,Math.min(tot,t));let g=segs[0];for(const q of segs)if(t>=q.s)g=q;const x=t-g.s,q=lnPtDir(g.v.m.a,g.v.m.cum,Math.max(0,Math.min(g.L,g.e?g.L-x:x)));return g.e?[q[0],q[1],-q[2],-q[3]]:q}}};   // punkt i kierunek „od rozwidlenia”
-  for(const v of V){if(v.m.a.length<4||!v.m.cum||v.w.ow!==0)continue;
+    const seg=t=>{let g=segs[0];for(const q of segs)if(t>=q.s)g=q;return g};
+    return {L:tot,segs,at:t=>{t=Math.max(0,Math.min(tot,t));const g=seg(t);return lnInto(g.v,g.e,t-g.s)},
+      h:t=>{const g=seg(Math.max(0,Math.min(tot,t)));return g.v.w.N*lnLanePx(g.v.w.kc,s)/s/2}}};   // połowa szerokości odcinka w odległości t (jezdnia dalej bywa szersza)
+  for(const v of V){const m0=v.m0||v.m;if(m0.a.length<4||!v.m.cum)continue;
     for(const e of [0,1]){
-      const [x,y,ux,uy]=endOf(v,e),kx=Math.round(x/2),ky=Math.round(y/2),C=[];
-      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=E.get((kx+i)+','+(ky+j));if(!l)continue;
-        for(const o of l){if(o.v===v||Math.hypot(o.p[0]-x,o.p[1]-y)>1.5)continue;if(-(o.p[2]*ux+o.p[3]*uy)<.8)continue;C.push(o)}}   // dalszy ciąg mniej więcej na wprost
+      const [x,y,ux,uy]=lnEndA(m0.a,e),C=lnConts(E,v,x,y,ux,uy,.8,false);
       if(C.length!==2)continue;
       // koniec na skrzyżowaniu (linie przerwane – lnCuts): tam obszar wypełnia płyta skrzyżowania; płyta rozwidlenia z liniami krawędziowymi przecinałaby skrzyżowanie
-      const atJ=(vv,ee)=>{const CU=lnCuts(vv,s,lnLanePx(vv.w.kc,s)/s),L=vv.m.cum[vv.m.cum.length-1];return !!(CU&&CU.a.length&&(ee?CU.a[CU.a.length-1]>=L-.5:CU.a[0]<=.5))};
-      if(atJ(v,e)||C.some(o=>atJ(o.v,o.e)))continue;
-      const nx=uy,ny=-ux,WT=v.w.N*lnLanePx(v.w.kc,s)/s;
-      const S=C.map(o=>{const w=walk(o.v,o.e),q=w.at(Math.min(w.L,15));return {o,w,lat:(q[0]-x)*nx+(q[1]-y)*ny,W:o.v.w.N*lnLanePx(o.v.w.kc,s)/s,LW:lnLanePx(o.v.w.kc,s)/s}});
-      if(S[0].lat*S[1].lat>=0||Math.min(Math.abs(S[0].lat),Math.abs(S[1].lat))<.3)continue;   // jedna jezdnia w prawo, druga w lewo
-      if(Math.max(S[0].W,S[1].W)>=WT-.5)continue;   // jezdnia nie węższa od drogi – zwykłe końce
-      for(const c of S){const sd=c.lat>0?1:-1,lim=Math.min(c.w.L,80);let t=lim;
-        for(let tt=1;tt<=lim;tt+=1.5){const q=c.w.at(tt),ox=q[0]+q[3]*sd*c.W/2,oy=q[1]-q[2]*sd*c.W/2;if(((ox-x)*nx+(oy-y)*ny)*sd>=WT/2-.05){t=tt;break}}
-        const q=c.w.at(t);c.t=t;c.sd=sd;c.ax=q[0];c.ay=q[1];c.qx=q[3]*sd;c.qy=-q[2]*sd;c.ox=q[0]+c.qx*c.W/2;c.oy=q[1]+c.qy*c.W/2}
+      if(lnAtJ(v,e,s)||C.some(o=>lnAtJ(o.v,o.e,s)))continue;
+      const nx=uy,ny=-ux,LWT=lnLanePx(v.w.kc,s)/s,hT=v.w.N*LWT/2,pT=lnEndA(v.m.a,e),cT=(pT[0]-x)*nx+(pT[1]-y)*ny,TL=cT-hT,TR=cT+hT;   // brzegi jezdni w poprzek styku (n – w prawo)
+      const S=C.map(o=>{const wk=walk(o.v,o.e),q=wk.at(Math.min(wk.L,20)),LW=lnLanePx(o.v.w.kc,s)/s;return {o,w:wk,lat:(q[0]-x)*nx+(q[1]-y)*ny,h:o.v.w.N*LW/2,LW}});
+      if(Math.abs(S[0].lat-S[1].lat)<.3)continue;   // odnogi się nie rozchodzą
+      const Lf=S[0].lat<S[1].lat?S[0]:S[1],R=Lf===S[0]?S[1]:S[0];Lf.sd=-1;R.sd=1;
+      let need=false;
+      for(const c of [Lf,R]){const sd=c.sd,T0=(sd<0?TL:TR)*sd,lim=Math.min(c.w.L,80);
+        const ed=t=>{const q=c.w.at(t),h=c.w.h(t),ox=q[0]+q[3]*sd*h,oy=q[1]-q[2]*sd*h;return [ox,oy,((ox-x)*nx+(oy-y)*ny)*sd,q,h]};   // zewnętrzny brzeg odnogi (szerokość odcinka w tym miejscu)
+        let t=-1;for(let tt=0;tt<=lim;tt+=1.5){if(ed(tt)[2]>=T0-.05){t=tt;break}}
+        if(t<0){const d0=T0-ed(0)[2];t=Math.min(lim,Math.max(4,Math.min(70,d0*3.6)))}   // brzeg odnogi nie sięga brzegu jezdni (odnoga na wprost, węższa) – klin
+        if(t>0)need=true;
+        const r=ed(t),q=r[3];c.t=t;c.ax=q[0];c.ay=q[1];c.ox=r[0];c.oy=r[1];c.qx=q[3]*sd;c.qy=-q[2]*sd}
+      if(!need)continue;
       // na odcinku płyty żadna inna droga nie dochodzi ani nie przecina jezdni (inaczej płyta z liniami krawędziowymi przecięłaby tamto skrzyżowanie)
       const JM=lnJuncs(v.D||V[0].D),busy=S.some(c=>{const jj=JM.get(c.o.v.w.id);if(!jj)return false;const L=c.o.v.m.cum[c.o.v.m.cum.length-1];
         return jj.some(j=>{const d=c.o.e?L-j.s:j.s;return d>1.5&&d<c.t+3})});
       const jT=JM.get(v.w.id),LT=v.m.cum[v.m.cum.length-1];
       if(busy||(jT&&jT.some(j=>{const d=e?LT-j.s:j.s;return d<3})))continue;
-      const R=S.find(c=>c.sd>0),Lf=S.find(c=>c.sd<0),LWT=lnLanePx(v.w.kc,s)/s,ia=LWT*.09;
-      out.push({kc:v.w.kc,P:[x-nx*WT/2,y-ny*WT/2,x+nx*WT/2,y+ny*WT/2,R.ox,R.oy,R.ax,R.ay,Lf.ax,Lf.ay,Lf.ox,Lf.oy],
-        E:[x+nx*(WT/2-ia),y+ny*(WT/2-ia),R.ox-R.qx*R.LW*.09,R.oy-R.qy*R.LW*.09, x-nx*(WT/2-ia),y-ny*(WT/2-ia),Lf.ox-Lf.qx*Lf.LW*.09,Lf.oy-Lf.qy*Lf.LW*.09],
-        C:[x+nx*WT/2,y+ny*WT/2,R.ox,R.oy,x-nx*WT/2,y-ny*WT/2,Lf.ox,Lf.oy]});
+      const ia=LWT*.09;
+      // linie krawędziowe odnóg: zewnętrzną zastępuje brzeg płyty (do miejsca, gdzie płyta sięga), wewnętrzne – ukryte, dopóki odnogi na siebie nachodzą
+      // (rysunek jest szerszy niż prawdziwa jezdnia, więc odnogi rozchodzą się dopiero kilkadziesiąt metrów dalej; dotąd ich linie krzyżowały się na jezdni)
+      let sep=Math.min(Lf.w.L,R.w.L);
+      for(let t=0;t<=sep;t+=2){const a=Lf.w.at(t),b=R.w.at(t),la=(a[0]-x)*nx+(a[1]-y)*ny,lb=(b[0]-x)*nx+(b[1]-y)*ny;if(lb-la>=Lf.w.h(t)+R.w.h(t)){sep=t;break}}
+      for(const c of [Lf,R])for(let k=1;k<c.w.segs.length;k++){const g=c.w.segs[k],f=c.w.segs[k-1];if(g.s>c.t+2)break;skip.add(f.v.w.id+'|'+(1-f.e));skip.add(g.v.w.id+'|'+g.e)}   // styki odcinków odnogi w zasięgu płyty – bez klinów (płyta je zastępuje)
+      for(const c of [Lf,R])for(const g of c.w.segs){   // każdy kolejny odcinek odnogi w zasięgu płyty / nachodzenia odnóg
+        const fw=g.e===0,outR=(c.sd>0)===fw;   // fw: odcinek rysowany od rozwidlenia; outR: zewnętrzny brzeg odnogi to prawy brzeg odcinka (względem kierunku rysowania)
+        const iv=t=>{t=Math.min(g.L,t-g.s);return t<=0?null:fw?[-1,t]:[g.L-t,g.L+1]};
+        let q=xc.get(g.v.w.id);if(!q)xc.set(g.v.w.id,q={l:[],r:[]});
+        const io=iv(c.t+.5),ii=iv(sep);if(io)(outR?q.r:q.l).push(io);if(ii)(outR?q.l:q.r).push(ii)}
+      out.push({kc:v.w.kc,P:[x+nx*TL,y+ny*TL,x+nx*TR,y+ny*TR,R.ox,R.oy,R.ax,R.ay,Lf.ax,Lf.ay,Lf.ox,Lf.oy],
+        E:[x+nx*(TR-ia),y+ny*(TR-ia),R.ox-R.qx*R.LW*.09,R.oy-R.qy*R.LW*.09, x+nx*(TL+ia),y+ny*(TL+ia),Lf.ox-Lf.qx*Lf.LW*.09,Lf.oy-Lf.qy*Lf.LW*.09],
+        C:[x+nx*TR,y+ny*TR,R.ox,R.oy,x+nx*TL,y+ny*TL,Lf.ox,Lf.oy],ids:[v.w.id,...Lf.w.segs.map(g=>g.v.w.id),...R.w.segs.map(g=>g.v.w.id)]});
       skip.add(v.w.id+'|'+e);
     }}
-  out.skip=skip;return out;
+  out.skip=skip;out.xc=xc;return out;
 }
+function lnCutAdd(a,b){   // dodatkowe przedziały bez linii (b: lista par [od,do]) dołączone do posortowanych, scalonych przedziałów a
+  if(!b||!b.length)return a;const arr=[];if(a)for(let k=0;k<a.length;k+=2)arr.push([a[k],a[k+1]]);for(const q of b)arr.push(q);
+  arr.sort((p,q)=>p[0]-q[0]);const o=[];for(const [x,y] of arr){if(o.length&&x<=o[o.length-1]+.01)o[o.length-1]=Math.max(o[o.length-1],y);else o.push(x,y)}return o;
+}
+// Wersja 189: klin na końcu odcinka, za którym ulica biegnie dalej węższa. Wersja 197: osobno dla każdego brzegu (jezdnia może się poszerzać tylko po jednej stronie),
+// brzeg klina biegnie równolegle do brzegu dalszego ciągu (także na łuku i przez kolejne krótkie odcinki OSM tej samej szerokości – dotąd klin kończył się razem
+// z pierwszym, nieraz kilkumetrowym odcinkiem i był bardzo stromy), a na skrzyżowaniu klin też jest – bez białej linii (linie są tam przerwane).
+// Mostek (wersja 197): gdy jezdnia po jednej stronie jest węższa tylko na krótkim kawałku (np. 3 → 2 → 3 pasy na 40 m), dwa kliny spotykały się w jednym punkcie –
+// brzeg „schodził się, a potem rozjeżdżał” (wcięcie w kształcie litery V). Teraz brzeg biegnie gładko od jednego szerokiego odcinka do drugiego, a linia krawędziowa
+// węższego kawałka znika (skrajny pas jest tam po prostu szerszy).
 function lnTapers(V,s,skip){
-  const E=new Map(),key=(x,y)=>Math.round(x/2)+','+Math.round(y/2),out=[];
-  const end=(a,e)=>{const n=a.length/2,i=e?n-1:0,j=e?n-2:1,dx=a[2*i]-a[2*j],dy=a[2*i+1]-a[2*j+1],L=Math.hypot(dx,dy)||1;return [a[2*i],a[2*i+1],dx/L,dy/L]};
-  for(const v of V){const a=v.m.a;if(a.length<4)continue;for(const e of [0,1]){const p=end(a,e),k=key(p[0],p[1]);let l=E.get(k);if(!l)E.set(k,l=[]);l.push({v,e,p})}}
-  for(const v of V){const w=v.w,a=v.m.a;if(a.length<4)continue;
-    const lp=lnLanePx(w.kc,s),Wl=w.N*lp/s,LWm=lp/s;
+  const E=lnEnds(V),out=[],used=new Set(),xc=new Map(),K=(id,e,sd)=>id+'|'+e+'|'+sd,cut=3.2/s;
+  // kolejne odcinki za końcem odcinka v (tylko pojedyncze przedłużenia), najwyżej ok. 160 m; d – przesunięcie osi rysunku względem osi z OSM (w prawo względem kierunku marszu)
+  // dalej przez kolejne odcinki tylko poza skrzyżowaniami (tam obszar wypełnia płyta skrzyżowania, a klin czy mostek w kolorze tej drogi zakryłby drogę poprzeczną)
+  const chain=(v,e0,x,y,ux,uy)=>{
+    const G=[];let cur=v,ce=e0,px=x,py=y,qx=ux,qy=uy,tot=0;
+    for(let k=0;k<10&&tot<160;k++){
+      const C=lnConts(E,cur,px,py,qx,qy,.85,false);if(C.length!==1)break;
+      const o=C[0];if(o.v===v||G.some(g=>g.v===o.v)||(skip&&skip.has(o.v.w.id+'|'+o.e)))break;
+      const R=lnConts(E,o.v,o.p[0],o.p[1],o.p[2],o.p[3],.85,false),mut=R.length===1&&R[0].v===cur;   // styk obustronny (z drugiej strony też jedyne przedłużenie) – nie rozwidlenie
+      const LW=lnLanePx(o.v.w.kc,s)/s,jA=lnAtJ(cur,ce,s)||lnAtJ(o.v,o.e,s),CU=lnCuts(o.v,s,LW),jIn=!!(CU&&CU.a.length);   // jA: styk na skrzyżowaniu, jIn: skrzyżowanie w środku odcinka
+      if(k&&(!mut||jA||jIn))break;
+      const po=lnEndA(o.v.m.a,o.e),L=o.v.m.cum[o.v.m.cum.length-1];
+      G.push({v:o.v,e:o.e,s:tot,L,LW,h:o.v.w.N*LW/2,d:(po[0]-px)*qy-(po[1]-py)*qx,mut,jA,jIn});tot+=L;if(!mut)break;
+      const pe=lnEndA((o.v.m0||o.v.m).a,1-o.e);cur=o.v;ce=1-o.e;px=pe[0];py=pe[1];qx=pe[2];qy=pe[3];
+    }
+    return G;
+  };
+  // pas asfaltu po stronie sd wzdłuż odcinków G (od styku do Te): od brzegu odcinka do brzegu w odległości Wd(t) od osi z OSM;
+  // P – wielokąt (zachodzi trochę na odcinek, by zakryć jego cienką krawędź), C – obrys, E – biała linia (przerwane tam, gdzie dochodzi inna droga)
+  const band=(G,sd,Te,Wd,lines)=>{
+    const S=[];
+    for(const g of G){if(g.s>=Te-.01)break;
+      const cum=g.v.m.cum,u1=Math.min(g.L,Te-g.s),own=g.e===0?sd:-sd,U=[0,u1],n=Math.ceil(u1/3);
+      for(let i=1;i<cum.length-1;i++){const u=g.e?g.L-cum[i]:cum[i];if(u>.05&&u<u1-.05)U.push(u)}
+      for(let i=1;i<n;i++)U.push(u1*i/n);
+      U.sort((p,q)=>p-q);
+      const CU=lines?lnCuts(g.v,s,g.LW):null,cc=CU?(own<0?CU.l:CU.r):null,ia=g.LW*.09;let pu=-1;
+      for(const u of U){if(u-pu<.05)continue;pu=u;
+        const q=lnInto(g.v,g.e,u),rx=q[3],ry=-q[2];let ex=(Wd(g.s+u,g)-g.d-sd*g.h)*sd;if(!(ex>0))ex=0;
+        const cp=g.e?g.L-u:u;let ic=false;if(cc)for(let k=0;k<cc.length;k+=2)if(cp>=cc[k]&&cp<=cc[k+1]){ic=true;break}
+        const ho=sd*(g.h+ex),hi=sd*(g.h-cut),he=ho-sd*ia;
+        S.push({ox:q[0]+rx*ho,oy:q[1]+ry*ho,ix:q[0]+rx*hi,iy:q[1]+ry*hi,ex:q[0]+rx*he,ey:q[1]+ry*he,ic});
+      }
+    }
+    const P=[];for(const p of S)P.push(p.ox,p.oy);for(let i=S.length-1;i>=0;i--)P.push(S[i].ix,S[i].iy);
+    const C=[],El=[];let c=null,l=null;
+    for(const p of S){if(p.ic){c=l=null;continue}if(!c){C.push(c=[]);El.push(l=[])}c.push(p.ox,p.oy);l.push(p.ex,p.ey)}
+    return {P,C:C.filter(x=>x.length>=4),E:El.filter(x=>x.length>=4)};
+  };
+  const ends=[];
+  for(const v of V){const w=v.w,m0=v.m0||v.m;if(m0.a.length<4||!v.m.cum)continue;
+    const LWm=lnLanePx(w.kc,s)/s,hv=w.N*LWm/2;
     for(const e of [0,1]){
-      if(skip&&skip.has(w.id+'|'+e))continue;   // Wersja 195: rozwidlenie jezdni – płyta zamiast klina
-      const go=e?v.m.c1:v.m.c0;if(!go)continue;   // ulica tu się kończy (skrzyżowanie) – bez klina
-      {const CU=lnCuts(v,s,LWm),L=v.m.cum[v.m.cum.length-1];if(CU&&CU.a.length&&(e?CU.a[CU.a.length-1]>=L-.5:CU.a[0]<=.5))continue}   // koniec na skrzyżowaniu (linie i tak przerwane) – bez klina
-      const [x,y,ux,uy]=end(a,e);let Wc=null,junc=false;
-      const kx=Math.round(x/2),ky=Math.round(y/2);
-      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=E.get((kx+i)+','+(ky+j));if(!l)continue;
-        for(const o of l){if(o.v===v||Math.hypot(o.p[0]-x,o.p[1]-y)>1.5)continue;if(-(o.p[2]*ux+o.p[3]*uy)<.85)continue;   // dalszy ciąg w tym samym kierunku
-          const W2=o.v.w.N*lnLanePx(o.v.w.kc,s)/s;Wc=Wc==null?W2:Math.max(Wc,W2);
-          const C2=lnCuts(o.v,s,lnLanePx(o.v.w.kc,s)/s),L2=o.v.m.cum[o.v.m.cum.length-1];if(C2&&C2.a.length&&(o.e?C2.a[C2.a.length-1]>=L2-.5:C2.a[0]<=.5))junc=true}}   // dalszy ciąg zaczyna się na skrzyżowaniu – bez klina
-      if(junc)continue;
-      if(Wc==null)Wc=rw(LN_K[w.kc],s)/s;   // dalej zwykła droga z mapy
-      if(Wl-Wc<LWm*.3)continue;
-      const T=Math.max(4,Math.min(70,(Wl-Wc)*1.8)),fx=x+ux*T,fy=y+uy*T,nx=uy,ny=-ux;
-      out.push({kc:w.kc,x,y,fx,fy,nx,ny,a:Wl/2,b:Wc/2,ia:LWm*.09,ib:Math.min(LWm,Wc/2)*.09});
+      if(skip&&skip.has(w.id+'|'+e))continue;   // rozwidlenie jezdni – płyta zamiast klina
+      if(!(e?m0.c1:m0.c0))continue;   // ulica tu się kończy – bez klina
+      const [x,y,ux,uy]=lnEndA(m0.a,e),nx=uy,ny=-ux,C=lnConts(E,v,x,y,ux,uy,.85,false);
+      if(C.length>1)continue;
+      const pv=lnEndA(v.m.a,e),cv=(pv[0]-x)*nx+(pv[1]-y)*ny;   // środek rysunku odcinka v na styku (w poprzek, względem osi z OSM)
+      ends.push({v,e,x,y,ux,uy,nx,ny,cv,hv,LWm,nc:C.length,G:C.length?chain(v,e,x,y,ux,uy):[]});
     }}
-  return out;
+  // mostki: najpierw najdłuższe; każdy koniec odcinka (po danej stronie) należy najwyżej do jednego mostka
+  const cand=[];
+  for(const q of ends){const {v,e,cv,hv,LWm,G}=q;if(!G.length||!G[0].mut||G[0].jA||G[0].jIn)continue;
+    for(const sd of [-1,1]){
+      const ev=cv+sd*hv;if((ev-(G[0].d+sd*G[0].h))*sd<LWm*.15)continue;
+      let hit=-1,mn=1e9;
+      for(let k=0;k<G.length;k++){const Ek=G[k].d+sd*G[k].h;if(k>0&&(ev-Ek)*sd<=LWm*.15){hit=k;break}mn=Math.min(mn,Ek*sd)}   // dalej jezdnia znów sięga (prawie) do brzegu v
+      if(hit<0)continue;
+      const g1=G[hit],W1=g1.d+sd*g1.h,Lch=g1.s,dm=Math.max(ev*sd,W1*sd)-mn;
+      if(Lch>2*Math.max(4,Math.min(70,dm*3.6))+25)continue;   // długi węższy kawałek – zwykłe kliny (jezdnia naprawdę się zwęża)
+      const keys=[K(v.w.id,e,sd),K(g1.v.w.id,g1.e,-sd)];for(let k=0;k<hit;k++)keys.push(K(G[k].v.w.id,G[k].e,-sd),K(G[k].v.w.id,1-G[k].e,sd));
+      cand.push({q,sd,ev,W1,Lch,hit,keys});
+    }}
+  cand.sort((a,b)=>b.Lch-a.Lch);
+  for(const b of cand){if(b.keys.some(k=>used.has(k)))continue;for(const k of b.keys)used.add(k);
+    const {q,sd,ev,W1,Lch,hit}=b,G=q.G.slice(0,hit),r=band(G,sd,Lch,t=>ev+(W1-ev)*t/Lch,true);
+    if(r.P.length>=6)out.push({kc:q.v.w.kc,P:r.P,C:r.C,E:r.E,ids:[q.v.w.id,q.G[hit].v.w.id,...G.map(g=>g.v.w.id)]});
+    for(const g of G){let m=xc.get(g.v.w.id);if(!m)xc.set(g.v.w.id,m={l:[],r:[]});((g.e===0?sd:-sd)<0?m.l:m.r).push([-1,g.L+1])}   // linia krawędziowa węższego kawałka znika
+  }
+  // kliny
+  for(const q of ends){const {v,e,x,y,ux,uy,nx,ny,cv,hv,LWm,G}=q,w=v.w;
+    const nl=lnAtJ(v,e,s)||(G.length>0&&lnAtJ(G[0].v,G[0].e,s));   // styk na skrzyżowaniu – klin bez białej linii
+    for(const sd of [-1,1]){
+      if(used.has(K(w.id,e,sd)))continue;   // tu jest mostek
+      const ev=cv+sd*hv;
+      if(!G.length){if(q.nc)continue;   // dalej zwykła droga z mapy
+        const ec=sd*rw(LN_K[w.kc],s)/s/2,dd=(ev-ec)*sd;if(dd<LWm*.15)continue;
+        const T=Math.max(4,Math.min(70,dd*3.6)),P0=[x+nx*ev,y+ny*ev],e2=[x+ux*T+nx*ec,y+uy*T+ny*ec],ia=LWm*.09;
+        out.push({kc:w.kc,P:[P0[0],P0[1],x+nx*ec,y+ny*ec,x+ux*T/2+nx*ec,y+uy*T/2+ny*ec,e2[0],e2[1]],C:[[P0[0],P0[1],e2[0],e2[1]]],
+          E:nl?null:[[P0[0]-nx*sd*ia,P0[1]-ny*sd*ia,e2[0]-nx*sd*ia,e2[1]-ny*sd*ia]],ids:[w.id],u:!!nl});
+        continue}
+      if(used.has(K(G[0].v.w.id,G[0].e,-sd)))continue;   // dalszy ciąg leży w mostku
+      const E1=G[0].d+sd*G[0].h,dd=(ev-E1)*sd;   // dd>0: odcinek v sięga po tej stronie dalej niż dalszy ciąg
+      if(dd<LWm*.15)continue;   // dalszy ciąg szerszy (jego klin narysuje się od jego strony) albo brzegi się zgadzają
+      let La=0;for(const g of G){if(Math.abs(g.d+sd*g.h-E1)>LWm*.15)break;La=g.s+g.L}   // dalej ta sama szerokość po tej stronie
+      const T=Math.min(Math.max(4,Math.min(70,dd*3.6)),La*.95);if(T<2)continue;
+      const r=band(G,sd,T,(t,g)=>{const Eg=g.d+sd*g.h;return ev+(Eg-ev)*Math.min(1,t/T)},!nl);
+      if(r.P.length>=6)out.push({kc:w.kc,P:r.P,C:r.C,E:nl?null:r.E,ids:[w.id,...G.filter(g=>g.s<T).map(g=>g.v.w.id)],u:!!nl});   // u: na skrzyżowaniu – pod jezdniami (nie zakrywa drogi poprzecznej)
+    }}
+  // styki odcinków: końce jezdni są ucięte prostopadle, więc tam, gdzie oś skręca na styku (albo oś rysunku przesuwa się – inny podział pasów), na zewnątrz zakrętu
+  // zostawała szczelina, przez którą prześwitywało tło (ciemna kreska w poprzek jezdni). Teraz styk wypełnia otoczka obu końców, a obrys i biała linia biegną wzdłuż niej.
+  const J=[],jk=new Set(),jo=new Map();
+  for(const q of ends){if(q.nc!==1||!q.G.length||!q.G[0].mut||q.G[0].jA)continue;const g=q.G[0],v=q.v;   // na skrzyżowaniu szczeliny wypełnia płyta skrzyżowania
+    const k1=v.w.id+'|'+q.e,k2=g.v.w.id+'|'+g.e,key=k1<k2?k1+'/'+k2:k2+'/'+k1;jo.set(k1,g.v.w);if(jk.has(key))continue;jk.add(key);
+    const pa=lnEndA(v.m.a,q.e),pb=lnEndA(g.v.m.a,g.e),ax=pa[3],ay=-pa[2],bx=-pb[3],by=pb[2],ha=q.hv,hb=g.h;   // normalne w prawo względem kierunku od v do g
+    const A=[pa[0]-ax*ha,pa[1]-ay*ha,pa[0]+ax*ha,pa[1]+ay*ha],B=[pb[0]-bx*hb,pb[1]-by*hb,pb[0]+bx*hb,pb[1]+by*hb];
+    J.push({v,e:q.e,g,kc:v.w.kc,A,B,ax,ay,bx,by,LA:q.LWm,LB:g.LW,H:lnHull(A.concat(B))})}
+  out.J=J;out.jo=jo;out.xc=xc;return out;
+}
+function lnExt(o,d0,d1){   // łamana wydłużona na końcach (d0 – na początku, d1 – na końcu)
+  if(!d0&&!d1)return o;const n=o.length/2,r=Float64Array.from(o);
+  if(d0){const dx=o[0]-o[2],dy=o[1]-o[3],L=Math.hypot(dx,dy)||1;r[0]+=dx/L*d0;r[1]+=dy/L*d0}
+  if(d1){const dx=o[2*n-2]-o[2*n-4],dy=o[2*n-1]-o[2*n-3],L=Math.hypot(dx,dy)||1;r[2*n-2]+=dx/L*d1;r[2*n-1]+=dy/L*d1}
+  return r;
 }
 // Wersja 190: płyta skrzyżowania. Jezdnie z pasami kończyły się na skrzyżowaniu prostym cięciem, a ich prostokątne końce nachodziły na siebie pod różnymi kątami –
 // skrzyżowanie wyglądało jak sterta uciętych desek („dziwnie ucięte drogi”). Teraz obszar skrzyżowania (fragmenty dróg bez linii, wyznaczone jak w lnCuts)
@@ -8234,26 +8360,37 @@ function lnPlates(V,s){
   }
   return out;
 }
+var lnTPC=null;   // pamięć ostatnich wyliczeń lnSplits / lnTapers
 function lnBody(c,G,V,pal,s,dm,night,lite,under){
   const ST=lnStyle(pal,night);
-  let SPL=[];try{SPL=lnSplits(V,s)}catch(e){SPL=[];lnFail(e)}   // Wersja 195: rozwidlenia jezdni
-  let TP=[];try{TP=lnTapers(V,s,SPL.skip)}catch(e){lnFail(e)}
+  // Wersja 197: rozwidlenia, kliny, mostki i styki liczone raz dla tego samego zestawu odcinków i skali (dotąd w każdej klatce)
+  const D0=V.length?V[0].D:null,ck=s+'|'+(D0&&D0.LNJK)+'|'+dmK+'|'+(signs?signs.v:0)+'|'+V.map(v=>v.w.id).join(',');
+  let SPL=[],TP=[];
+  if(lnTPC&&lnTPC.k===ck&&lnTPC.D===D0){SPL=lnTPC.SPL;TP=lnTPC.TP}
+  else{try{SPL=lnSplits(V,s)}catch(e){SPL=[];lnFail(e)}   // Wersja 195: rozwidlenia jezdni
+    try{TP=lnTapers(V,s,SPL.skip)}catch(e){TP=[];lnFail(e)}
+    lnTPC={k:ck,D:D0,SPL,TP}}
   if(SPL.length){c.lineJoin='round';c.lineCap='butt';for(const p of SPL){c.strokeStyle=p.kc===1?pal.csMw:p.kc===2?pal.csPr:p.kc===3?pal.csSc:pal.casing;c.lineWidth=4.5/s;c.beginPath();
     c.moveTo(p.C[0],p.C[1]);c.lineTo(p.C[2],p.C[3]);c.moveTo(p.C[4],p.C[5]);c.lineTo(p.C[6],p.C[7]);c.stroke()}c.lineCap='round'}   // obrys płyty rozwidlenia – pod wypełnieniem
-  if(TP.length){   // obrys klina (jak obrys jezdni) – pod wypełnieniem
+  const JT=TP.J||[];
+  if(TP.length||JT.length){   // obrys klina (jak obrys jezdni) – pod wypełnieniem
     c.lineJoin='round';
+    for(const j of JT){c.strokeStyle=j.kc===1?pal.csMw:j.kc===2?pal.csPr:j.kc===3?pal.csSc:pal.casing;c.lineWidth=4.5/s;c.beginPath();
+      c.moveTo(j.A[0],j.A[1]);c.lineTo(j.B[0],j.B[1]);c.moveTo(j.A[2],j.A[3]);c.lineTo(j.B[2],j.B[3]);c.stroke()}   // obrys wzdłuż styku
     for(const t of TP){c.strokeStyle=t.kc===1?pal.csMw:t.kc===2?pal.csPr:t.kc===3?pal.csSc:pal.casing;c.lineWidth=4.5/s;c.beginPath();
-      c.moveTo(t.x+t.nx*t.a,t.y+t.ny*t.a);c.lineTo(t.fx+t.nx*t.b,t.fy+t.ny*t.b);c.moveTo(t.x-t.nx*t.a,t.y-t.ny*t.a);c.lineTo(t.fx-t.nx*t.b,t.fy-t.ny*t.b);c.stroke()}
+      for(const l of t.C){c.moveTo(l[0],l[1]);for(let i=2;i<l.length;i+=2)c.lineTo(l[i],l[i+1])}c.stroke()}
   }
   try{for(const p of lnPlates(V,s)){c.save();c.beginPath();c.arc(p.cx,p.cy,p.R,0,6.2832);c.clip();   // Wersja 196: płyta przycięta do koła wokół środka skrzyżowania
     c.fillStyle=ST.fill(p.kc);c.beginPath();c.moveTo(p.H[0][0],p.H[0][1]);for(let i=1;i<p.H.length;i++)c.lineTo(p.H[i][0],p.H[i][1]);c.closePath();c.fill();c.restore()}}catch(e){c.restore();lnFail(e)}   // płyty skrzyżowań: pod jezdniami (każda jezdnia zostaje w swoim kolorze, płyta wypełnia szczeliny i ucięte narożniki między nimi)
+  for(const t of TP)if(t.u){c.fillStyle=ST.fill(t.kc);c.beginPath();c.moveTo(t.P[0],t.P[1]);for(let i=2;i<t.P.length;i+=2)c.lineTo(t.P[i],t.P[i+1]);c.closePath();c.fill()}   // klin na skrzyżowaniu: pod jezdniami, jak płyta skrzyżowania
   for(const g of G)lnStroke(c,[g],ST.fill(g.kc),0,s);
   lnStroke(c,G,ST.edgeOut,-3,s);   // cienka krawędź tuż przy brzegu jezdni
   lnStroke(c,G,g=>ST.fill(g.kc),-5,s);
-  for(const t of TP){c.fillStyle=ST.fill(t.kc);c.beginPath();c.moveTo(t.x+t.nx*t.a,t.y+t.ny*t.a);c.lineTo(t.fx+t.nx*t.b,t.fy+t.ny*t.b);c.lineTo(t.fx-t.nx*t.b,t.fy-t.ny*t.b);c.lineTo(t.x-t.nx*t.a,t.y-t.ny*t.a);c.closePath();c.fill()}
+  for(const j of JT){if(j.H.length<3)continue;c.fillStyle=ST.fill(j.kc);c.beginPath();c.moveTo(j.H[0][0],j.H[0][1]);for(let i=1;i<j.H.length;i++)c.lineTo(j.H[i][0],j.H[i][1]);c.closePath();c.fill()}   // styk odcinków
+  for(const t of TP){if(t.u)continue;c.fillStyle=ST.fill(t.kc);c.beginPath();c.moveTo(t.P[0],t.P[1]);for(let i=2;i<t.P.length;i+=2)c.lineTo(t.P[i],t.P[i+1]);c.closePath();c.fill()}
   for(const p of SPL){c.fillStyle=ST.fill(p.kc);c.beginPath();c.moveTo(p.P[0],p.P[1]);for(let i=2;i<p.P.length;i+=2)c.lineTo(p.P[i],p.P[i+1]);c.closePath();c.fill()}   // płyta rozwidlenia
   if(under)try{c.save();under();c.restore()}catch(e){c.restore();lnFail(e)}   // Wersja 194: tory tramwajowe na asfalcie, pod liniami pasów
-  const MK=new Map();
+  const MK=new Map(),ECL=new Map(),jo=TP.jo;
   for(const v of V){
     const w=v.w,a=v.m.a;if(a.length<4)continue;
     let q=MK.get(w.kc);if(!q)MK.set(w.kc,q={DP:new Path2D(),SP:new Path2D(),EP:new Path2D(),BP:new Path2D(),AS:new Path2D(),AF:new Path2D(),TP:new Path2D(),GP:new Path2D(),lp:lnLanePx(w.kc,s)});
@@ -8266,9 +8403,11 @@ function lnBody(c,G,V,pal,s,dm,night,lite,under){
       else if(w.c===0){const d=LWm*.075;LN(q.SP,lnOff(a,x-d),ca);LN(q.SP,lnOff(a,x+d),ca)}
       else LN(q.SP,lnOff(a,x),ca);
     }
-    {const e=N*LWm/2-LWm*.09;LN(q.EP,lnOff(a,-e),CU&&CU.l);LN(q.EP,lnOff(a,e),CU&&CU.r)}   // ciągłe linie krawędziowe (przerwane tam, gdzie dochodzi inna droga)
-    if(w.xf)for(let k=0;k<w.nf;k++)if(w.xf>>k&1)LN(q.BP,lnOff(a,x0+(w.nb+w.c+k+.5)*LWm),ca);   // buspasy (kolor)
-    if(w.xb)for(let k=0;k<w.nb;k++)if(w.xb>>k&1)LN(q.BP,lnOff(a,x0+(w.nb-1-k+.5)*LWm),ca);
+    {const e=N*LWm/2-LWm*.09,xq=SPL.xc&&SPL.xc.get(w.id),xt=TP.xc&&TP.xc.get(w.id),cl=lnCutAdd(lnCutAdd(CU&&CU.l,xq&&xq.l),xt&&xt.l),cr=lnCutAdd(lnCutAdd(CU&&CU.r,xq&&xq.r),xt&&xt.r);
+      LN(q.EP,lnOff(a,-e),cl);LN(q.EP,lnOff(a,e),cr);ECL.set(w.id,{l:cl,r:cr,L:cum?cum[cum.length-1]:0})}   // ciągłe linie krawędziowe (przerwane tam, gdzie dochodzi inna droga)
+    const bo=i=>{const u=jo&&jo.get(w.id+'|'+i);return u&&(u.xf||u.xb)&&u.kc===w.kc?LWm*.12:0},b0=bo(0),b1=bo(1);   // buspas biegnie dalej (ta sama klasa drogi – to samo pociągnięcie pędzla, więc zakładka nie ciemnieje) – lekko na zakładkę, bez szczeliny na styku
+    if(w.xf)for(let k=0;k<w.nf;k++)if(w.xf>>k&1)LN(q.BP,lnExt(lnOff(a,x0+(w.nb+w.c+k+.5)*LWm),b0,b1),ca);   // buspasy (kolor)
+    if(w.xb)for(let k=0;k<w.nb;k++)if(w.xb>>k&1)LN(q.BP,lnExt(lnOff(a,x0+(w.nb-1-k+.5)*LWm),b0,b1),ca);
     if(CU&&cum)for(let k=0;k<CU.st.length;k+=3){   // linie zatrzymania: w poprzek pasów wjeżdżających na skrzyżowanie
       const dir=CU.st[k+1],x=CU.st[k]-dir*LWm*.06,[px,py,ux,uy]=lnPtDir(a,cum,x),e=N*LWm/2-LWm*.09,
         xa=dir>0?(w.nb+w.c>0?x0+(w.nb+w.c)*LWm+LWm*.12:-e):-e,xb=dir>0?e:(w.nf+w.c>0?x0+w.nb*LWm-LWm*.12:e),P=CU.st[k+2]?q.GP:q.TP;
@@ -8277,8 +8416,12 @@ function lnBody(c,G,V,pal,s,dm,night,lite,under){
     if(!lite)lnArrows(q.AS,q.AF,v,LWm,CU);
   }
   for(const p of SPL){const q=MK.get(p.kc);if(!q)continue;q.EP.moveTo(p.E[0],p.E[1]);q.EP.lineTo(p.E[2],p.E[3]);q.EP.moveTo(p.E[4],p.E[5]);q.EP.lineTo(p.E[6],p.E[7])}   // linie krawędziowe wzdłuż płyty rozwidlenia
-  for(const t of TP){const q=MK.get(t.kc);if(!q)continue;   // białe linie krawędziowe wzdłuż klina
-    for(const sg of [1,-1]){const ea=t.a-t.ia,eb=t.b-t.ib;q.EP.moveTo(t.x+sg*t.nx*ea,t.y+sg*t.ny*ea);q.EP.lineTo(t.fx+sg*t.nx*eb,t.fy+sg*t.ny*eb)}}
+  {const hid=(id,own,end)=>{const r=ECL.get(id);if(!r)return true;const cc=own<0?r.l:r.r,x=end?r.L:0;if(!cc)return false;for(let k=0;k<cc.length;k+=2)if(cc[k]<=x+.3&&cc[k+1]>=x-.3)return true;return false};
+   for(const j of JT){const q=MK.get(j.kc);if(!q)continue;   // biała linia krawędziowa wzdłuż styku – tylko tam, gdzie po obu stronach styku jest
+    for(const sd of [-1,1]){const i=sd<0?0:2,ax=j.A[i],ay=j.A[i+1],bx=j.B[i],by=j.B[i+1];if(Math.abs((bx-ax)*j.ax+(by-ay)*j.ay)>Math.min(j.LA,j.LB)*.15)continue;
+      if(hid(j.v.w.id,j.e?sd:-sd,j.e===1)||hid(j.g.v.w.id,j.g.e===0?sd:-sd,j.g.e===1))continue;
+      const ia=j.LA*.09,ib=j.LB*.09;q.EP.moveTo(ax-j.ax*sd*ia,ay-j.ay*sd*ia);q.EP.lineTo(bx-j.bx*sd*ib,by-j.by*sd*ib)}}}
+  for(const t of TP){if(!t.E)continue;const q=MK.get(t.kc);if(!q)continue;for(const l of t.E){q.EP.moveTo(l[0],l[1]);for(let i=2;i<l.length;i+=2)q.EP.lineTo(l[i],l[i+1])}}   // białe linie krawędziowe wzdłuż klina / mostka
   c.lineCap='butt';c.lineJoin='round';
   for(const q of MK.values()){
     const lw=Math.max(1.7,Math.min(4.6,q.lp*.1))*ST.lw;
@@ -8311,7 +8454,7 @@ var LE={w:null,fwd:true,p:null,k:-1,nt:0,at:0,acc:99,d:null,n:0,wh:null};
 const leLW=k=>k==='mw'||k==='mwl'?3.6:3.25;   // szerokość pasa w rzeczywistości (m)
 function lePlanLane(w,nt,no){
   try{if(!route||!route.lp||carAl==null)return null;const q=lnAt(route,carAl);if(!q)return null;const P=q[0],i=q[1];if(!P.kn[i]||P.nt[i]!==nt)return null;
-    return Math.max(0,Math.min(nt-1,Math.round(P.u[i]-(-w.N/2+no+w.c)-.5)))}catch(e){return null}
+    return Math.max(0,Math.min(nt-1,Math.round(P.u[i]-lnShT(nt,no)-(-w.N/2+no+w.c)-.5)))}catch(e){return null}
 }
 function leObs(lat,lon,acc,hd,sp){
   if(!leOn||!laneOn||!LANEW.size||hd==null)return;
@@ -8352,7 +8495,7 @@ function leUnits(w,fwd){
   const nt=fwd?w.nf:w.nb,no=fwd?w.nb:w.nf,mk=(fwd?w.xf:w.xb)|0;let k;
   if(leOn&&LE.w===w&&LE.fwd===fwd&&LE.k>=0&&performance.now()-LE.at<6000)k=LE.k;
   else{k=nt-1;while(k>0&&(mk>>k&1))k--}
-  return -w.N/2+no+w.c+Math.max(0,Math.min(nt-1,k))+.5;
+  return -w.N/2+no+w.c+Math.max(0,Math.min(nt-1,k))+.5+lnShT(nt,no);
 }
 // na trasie: przesunięcie auta (px od osi) wg pasa z GPS albo null (wtedy pas z planu trasy)
 function leAtPx(lat,lon,brg){
