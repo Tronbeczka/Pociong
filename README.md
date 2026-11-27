@@ -42,3 +42,9 @@ na wyciągu OSM (gałąź `testdata`, `pwt/osmload.py` → `osm.pkl`), przejazdy
 - `pwt/t_zoomjz.py` – gest dwoma palcami: bez przeliczeń w trakcie, po geście właściwa szerokość i gotowe linie
 - `pwt/jzbench2.py` – czas sieci / geometrii / linii (min i mediana z 9 prób)
 
+## Wersja 203 – bez cieni budynków, stała szerokość dróg w czasie jazdy
+
+- `jz/patch203.py` – 2 poziomy szerokości dróg (1,6 do 3,4 px/m, 1,15 powyżej), `BLD_SH=false` (bez cieni budynków i budowli)
+- `pwt/t_autozoom.py` – jazda 0–62–0 km/h: kamera zmienia zbliżenie, a szerokość dróg i jezdnie z pasami zostają bez zmian; bez cieni budynków
+- `pwt/t_v203.py` – jak t_v202 dla wersji 203
+
