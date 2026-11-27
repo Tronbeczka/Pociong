@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 200</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 201</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -5673,7 +5673,13 @@ function gpsCoarse(){   // przybliżona pozycja (sieć komórkowa, Wi-Fi) tylko 
   },()=>{},{enableHighAccuracy:false,timeout:15000,maximumAge:600000})}catch{}
 }
 const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mwl:{w:12,m:8},mw:{w:19,m:14}};   // mwl: łączniki autostrad (zjazdy, wjazdy) – jeden pas, węższe niż sama autostrada (Wersja 162)   // w = min. szerokość w px, m = szerokość drogi w metrach (przy zbliżeniu rosną)
-const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4)*dmK;   // z bliska drogi są szerokie na tyle, by auto mieściło się na pasie
+// Wersja 201: drogi z mapy są szersze niż w rzeczywistości (czytelność z daleka i przy jeździe), ale przy dużym zbliżeniu (postój, powolna jazda,
+// ręczne przybliżenie) mnożnik ×2,4 sprawiał, że jezdnie drogi dwujezdniowej, łącznice i wloty skrzyżowania zlewały się w jedną żółtą plamę
+// (np. pl. Powstańców Warszawy przy moście Grunwaldzkim – przejścia, torowiska i wysepki „w środku jezdni”). Teraz mnożnik maleje łagodnie
+// ze zbliżeniem: do 1,2 px/m bez zmian (2,4), przy jeździe po mieście (2 px/m) ok. 1,9, na postoju (2,8 px/m) ok. 1,55, z bliska (≥ 4,6 px/m) 1,05.
+// Szerokość w pikselach i tak rośnie przy zbliżaniu (mnożnik maleje wolniej, niż rośnie skala).
+const rwF=s=>s<=1.2?2.4:Math.max(1.05,2.4-Math.log(s/1.2));
+const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*rwF(s))*dmK;
 const PAL={
  day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623',rcase:'#173f8f',rhalo:'#ffffff',rcaseD:'#0a1226'},
  night:{tun:'#3d4866',bg:'#141926',water:'#173a57',waterEdge:'#21507a',park:'#1f3d2e',parkEdge:'#285040',farm:'#18202b',grass:'#1c3528',wood:'#173226',wet:'#1a2f31',sand:'#212633',resi:'#191f2f',ind:'#1b1e2f',inst:'#1c2234',sport:'#1d3829',cem:'#1b2f24',rland:'#1b202c',bld:'#273046',bldEdge:'#34405c',bldSh:'#00000030',casing:'#080b11',csSc:'#6b5a30',csMw:'#9a5f2e',csPr:'#7d6a38',sv:'#444e6b',rs:'#546082',tr:'#5f6c91',sc:'#6f6d98',pr:'#7f779c',mw:'#b98259',mwIn:'#cf9569',rail:'#76819a',railDash:'#1a2030',lbl:'#c8d0e2',lblMw:'#e2b992',halo:'#1a2030ee',plbl:'#aab3c8',wnl:'#6fa4d6',route:'#5b94f7',routeEdge:'#c98a2b',rcase:'#07102b',rhalo:'#7f97e6',rcaseD:'#03060f'}};
