@@ -1,4 +1,5 @@
-# Wersja 199: płynna zmiana skali – linie pasów nie znikają (poprzednia skala do czasu policzenia nowej), nowa geometria najwyżej co 250 ms
+# Wersja 202: zbliżanie dwoma palcami – w trakcie gestu jezdnie z pasami nie liczą się od nowa (szerokość dróg „zamrożona”),
+# po zdjęciu palców: jeden poziom szerokości dla zwykłych dróg i jezdni z pasami, linie dla widocznych fragmentów gotowe w ciągu ok. 2 s
 import asyncio,sys,os,math,json
 sys.path.insert(0,'/tmp/pwt')
 from h import *
@@ -6,19 +7,27 @@ import t_jz as TJ
 t=T()
 async def main():
     async with async_playwright() as p:
-        b,pg,logs=await launch(p,lat=51.1116,lon=17.0593)
-        await goto(pg,51.1116,17.0593,hd=297,speed=0,zoom=1.0,tilt=0,wait=1500);await TJ.wait_ready(pg);await pg.wait_for_timeout(1500)
-        r=await pg.evaluate("""async()=>{const D=vecData,kx=111195*Math.cos(rad(D.lat)),c=vecCam(performance.now()),ox=(c.lon-D.lon)*kx,oy=(c.lat-D.lat)*111195;
-          const cv=document.createElement('canvas');cv.width=600;cv.height=600;const cx=cv.getContext('2d');const pal=PAL[night?'night':'day'];
-          const res=[];let s=.75,nb=0,miss=0,maxms=0,keys=new Set(),had=new Set();
-          for(let f=0;f<90;f++){s*=0.9977;const t0=performance.now();const F=jzFrame(D,s,ox,oy,600);
-            if(F){cx.setTransform(1,0,0,1,0,0);cx.translate(300,300);cx.scale(s,-s);cx.translate(-ox,-oy);jzBody(cx,F,pal,s,false,night,null,0,4);
-              keys.add(F.B.key);const now=new Set();for(const G of F.G){const has=!!(G.lines||G.old);if(had.has(G.ch.id)&&!has)miss++;if(has)now.add(G.ch.id)}had=now}
-            maxms=Math.max(maxms,performance.now()-t0);await new Promise(r=>setTimeout(r,16))}
-          return {frames:90,buckets:keys.size,miss,maxms:+maxms.toFixed(1),s0:scaleCur,s1:s}}""")
-        print('  ',r)
-        t('płynne oddalanie przy małej skali (90 klatek po ok. 16 ms, skala 0,75→0,61): nowa geometria rzadko (≤ 8 razy)',r['buckets']<=8,r)
-        t('linie nie znikają: jezdnia, która miała linie, ma je w kolejnej klatce (nowe albo z poprzedniej skali)',r['miss']==0,r)
+        b,pg,logs=await launch(p,lat=51.10850,lon=17.04780)
+        await goto(pg,51.10850,17.04780,hd=250,speed=0,zoom=1.0,tilt=50,wait=1500);await TJ.wait_ready(pg);await pg.wait_for_timeout(2000)
+        await pg.evaluate("""()=>{window.__nb=0;const ob=jzBucket;jzBucket=function(N,s){const had=N.bk.size,B=ob(N,s);if(N.bk.size!==had)window.__nb++;return B};
+          window.__pp=window.__ptrs;window.__ptrs=()=>window.__fing?2:window.__pp()}""")
+        lv0=await pg.evaluate("()=>rwLv")
+        # gest: palce na ekranie, skala ×1,013 przez 50 kroków (2,8 → ok. 5 px/m), potem ×1/1,013 przez 70 kroków (do ok. 2,2 px/m)
+        await pg.evaluate("()=>{window.__fing=true;window.__nb=0}")
+        for d in [1.013]*50+[1/1.013]*70:
+            await pg.evaluate("(d)=>{ovwOff();setZoom(zoomMul*d);updRecenter()}",d);await pg.wait_for_timeout(20)
+        r1=await pg.evaluate("()=>({nb:window.__nb,lv:rwLv,s:scaleCur})")
+        print('   w trakcie gestu:',r1)
+        t('w trakcie gestu (palce na ekranie) jezdnie z pasami nie liczą się od nowa i szerokość dróg się nie zmienia',r1['nb']==0 and r1['lv']==lv0,dict(r1,lv0=lv0))
+        await pg.evaluate("()=>{window.__fing=false}")
+        ok=None
+        for i in range(40):
+            await pg.wait_for_timeout(100)
+            r2=await pg.evaluate("""()=>{const F=jzFrame.last;   /* ostatnio malowany obszar */
+              return {lv:rwLv,want:rwLvFor(scaleCur),key:F&&F.B.key,cur:jzKey(scaleCur),pend:F?jzPending(F):-1,stale:!!(JZN&&JZN.stale)}}""")
+            if r2['lv']==r2['want'] and r2['key']==r2['cur'] and r2['pend']==0:ok=(i+1)*100;break
+        print('   po geście:',r2,'gotowe po',ok,'ms')
+        t('po zdjęciu palców: szerokość dróg i jezdni z pasami dla nowej skali, linie w widoku gotowe w ≤ 4 s',ok is not None,r2)
         t('bez błędów strony',not logs,logs[:3])
         await b.close()
     t.end()

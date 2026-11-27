@@ -33,3 +33,12 @@ na wyciągu OSM (gałąź `testdata`, `pwt/osmload.py` → `osm.pkl`), przejazdy
 - `pwt/look5.py` – zrzut całego ekranu w punkcie przy zadanej skali (px/m), np. `look5.py tag "51.1085,17.0478,250,4.5,50"`
 - `pwt/t_v201.py` – jak t_v200 dla wersji 201
 
+## Wersja 202 – płynne przesuwanie i zbliżanie
+
+- `jz/patch202.py` – poziomy szerokości dróg (8, co ok. 12 %) zmieniane po zatrzymaniu zbliżania; budowanie od wersji 199:
+  `patch200.py` (moduł `jz/jz.js`) → `patch201.py` → `patch202.py`
+- `jz/jz.js` – linie pasów w tle (porcje ~6 ms), fragmentami po ok. 300 m, tylko w widoku; w trakcie gestu bez nowej geometrii
+- `pwt/t_perfmove.py` – przesuwanie palcem i zbliżanie na procesorze spowolnionym CDP (`RATE=4`): liczba i czas malowań, przeliczenia, rozdzielczość
+- `pwt/t_zoomjz.py` – gest dwoma palcami: bez przeliczeń w trakcie, po geście właściwa szerokość i gotowe linie
+- `pwt/jzbench2.py` – czas sieci / geometrii / linii (min i mediana z 9 prób)
+

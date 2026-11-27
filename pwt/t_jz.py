@@ -54,7 +54,7 @@ PERF="""()=>{JZN=null;const D=vecData,s=scaleCur,c=vecCam(performance.now()),kx=
   const cv=document.createElement('canvas');cv.width=900;cv.height=900;const cx=cv.getContext('2d');cx.translate(450,450);cx.scale(s,-s);cx.translate(-ox,-oy);const pal=PAL[night?'night':'day'];
   const fr=()=>{const t0=performance.now();const F=jzFrame(D,s,ox,oy,900);if(F){jzCasing(cx,F,pal,4,true,s,0);jzBody(cx,F,pal,s,true,night,null,0,4);jzBody(cx,F,pal,s,true,night,null,1,4)}return performance.now()-t0};
   const cs=[];for(let r=0;r<3;r++){JZN=null;D.JZT=null;cs.push(fr())}cs.sort((x,y)=>x-y);const a=cs[1];JZN=null;D.JZT=null;fr();let n=1;   /* pierwsza klatka: mediana z 3 prób */
-  while(n<60){const F=jzFrame(D,s,ox,oy,900);if(!F||!F.G.some(G=>!G.lines))break;fr();n++}
+  while(n<60){const F=jzFrame(D,s,ox,oy,900);if(!F||(typeof jzPending==='function'?jzPending(F)===0:!F.G.some(G=>!G.lines)))break;if(typeof jzWork==='function')jzWork();else fr();n++}   /* Wersja 202: linie w tle, fragmentami, porcje po ~6 ms */
   const w=fr();return {cold:+a.toFixed(1),frames:n,warm:+w.toFixed(2)}}"""
 PTS=[(51.10760,17.04640),(51.11160,17.05930),(51.11120,17.06070),(51.109189,17.051237),(51.1079,17.0385),(51.0971,17.0147),(51.1035,17.0310),(51.1092,17.0520),
      (51.1123,17.0590),(51.1175,16.9900),(51.0800,17.0150),(51.0830,17.0700),(51.0857,17.01165),(51.0700,16.9950),(51.0970,17.0159),(51.1300,16.9300)]
@@ -89,7 +89,7 @@ async def main():
         t('linie odnóg tego samego rozwidlenia się nie krzyżują',not tot['xx'],tot['xx'][:6])
         t('rozwidlenia: brzeg odnogi zaczyna się na brzegu jezdni sprzed rozwidlenia (≤ 0,6 m)',len(tot['fork'])>=4 and max(tot['fork'])<=.6,tot['fork'])
         t('bez błędów modułu',not errs,errs[:2])
-        t('czas: pierwsza klatka ≤ 50 ms (w tym 7 ms na linie), kolejne ≤ 3 ms, linie gotowe w ≤ 25 klatkach',all(x['cold']<=50 and x['warm']<=3 and x['frames']<=25 for x in perf),perf)
+        t('czas: pierwsza klatka ≤ 50 ms, kolejne ≤ 3 ms, linie gotowe w ≤ 25 porcjach (po ok. 6 ms)',all(x['cold']<=50 and x['warm']<=3 and x['frames']<=25 for x in perf),perf)
         t('bez błędów strony',not logs,logs[:3])
         await b.close()
     t.end()

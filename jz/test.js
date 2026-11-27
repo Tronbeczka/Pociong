@@ -5,7 +5,7 @@ global.rad=x=>x*Math.PI/180;global.LN_K=['tr','mw','pr','sc','rs','sv'];
 const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},mwl:{w:12,m:8},mw:{w:19,m:14}};
 global.rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*2.4);global.laneVer=1;global.LANEW=new Map();
 global.lnFail=e=>{throw e};global.window={};
-eval(fs.readFileSync(process.argv[2]||'/tmp/jz/jz.js','utf8')+';global.jz={jzNet,jzBucket,jzGeo,jzLines,jzFrame,jzTiles};');
+eval(fs.readFileSync(process.argv[2]||'/tmp/jz/jz.js','utf8')+';global.jz={jzNet,jzBucket,jzGeo,jzLines,jzLinesR,jzBlocks,jzFrame,jzTiles};');
 const D0={lat:51.1,lon:17.0,bb:[-2000,-2000,2000,2000],RS:[]};
 const kx=111195*Math.cos(rad(51.1));
 const ll=(x,y)=>[+(D0.lat+y/111195).toFixed(7),+(D0.lon+x/kx).toFixed(7)];
@@ -80,4 +80,17 @@ ok('… trzy części: ziemia, most, ziemia',G.parts.length===3&&G.parts.map(p=>
 ok('… szerokość stała (bez zwężenia przed mostem)',Math.max(...G.gL)-Math.min(...G.gL)<.01&&Math.max(...G.gR)-Math.min(...G.gR)<.01,null);
 L=jz.jzLines(N,B,G);const s0=segs(L.P[0].div),s1=segs(L.P[1].div);
 ok('… linia środkowa i na ziemi, i na moście',s0.length>=2&&s1.length>=1,[s0.length,s1.length]);
+// 6) Wersja 202: linie liczone fragmentami (ok. 300 m) – te same kreski i linie co przy liczeniu całego ciągu naraz
+reset();
+way([[-800,0],[900,0]],{nf:2,nb:2});D0.RS=[Object.assign([-410,-200,-410,200],{k:'tr'}),Object.assign([-100,0,-100,200],{k:'tr'}),Object.assign([300,-200,300,200],{k:'tr'}),Object.assign([598,-200,598,200],{k:'tr'})];
+N=jz.jzNet(D0);B=jz.jzBucket(N,s);G=jz.jzGeo(N,B,N.C[0]);L=jz.jzLines(N,B,G);
+{const LB=jz.jzBlocks(G),parts=LB.map(bl=>jz.jzLinesR(N,B,G,bl.a,bl.b));
+ const key=sg=>sg[0][0].toFixed(3)+','+sg[0][1].toFixed(3),fullD=new Set(segs(L.P[0].dash).map(key)),blkD=[];for(const P of parts)for(const sg of segs(P.P[0].dash))blkD.push(key(sg));
+ const setB=new Set(blkD);
+ ok('fragmenty: tyle samo kresek co dla całego ciągu, bez podwójnych',LB.length>=5&&blkD.length===setB.size&&setB.size===fullD.size&&[...fullD].every(k=>setB.has(k)),[LB.length,fullD.size,setB.size,blkD.length]);
+ const cov=(P,t)=>{const xs=[];for(const sg of segs(P[0][t]))for(let i=1;i<sg.length;i++)xs.push([Math.min(sg[i-1][0],sg[i][0]),Math.max(sg[i-1][0],sg[i][0]),sg[i][1].toFixed(2)]);return xs};
+ const inCov=(xs,x,y)=>xs.some(c=>c[2]===y&&x>=c[0]-1e-6&&x<=c[1]+1e-6);
+ const fl=cov(L.P,'div'),bk=[].concat(...parts.map(p=>cov(p.P,'div')));let same=true;
+ for(let x=-799;x<=899;x+=0.5){const a=inCov(fl,x,fl.length?fl[0][2]:'0.00'),b2=inCov(bk,x,fl.length?fl[0][2]:'0.00');if(a!==b2){same=false;break}}
+ ok('… linia środkowa w tych samych miejscach (z przerwami na skrzyżowaniach)',same&&fl.length>0,fl.length)}
 console.log(fails?('BŁĘDY: '+fails):'WSZYSTKO OK');
