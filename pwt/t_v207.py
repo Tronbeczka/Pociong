@@ -25,7 +25,7 @@ async def main():
     async with async_playwright() as p:
         b,pg,logs=await launch(p,lat=51.1115,lon=17.0600,app=APP)
         await goto(pg,51.1115,17.0600,hd=0,speed=0,zoom=1.0,tilt=0,wait=800);await ready(pg);await pg.wait_for_timeout(2500)
-        v=await pg.evaluate("document.getElementById('ver').textContent");t('wersja 207',v=='wersja 207',v)
+        V=os.environ.get('VER','wersja 207');v=await pg.evaluate("document.getElementById('ver').textContent");t(V,v==V,v)
         tot=0
         for name,la,lo in [('pl. Grunwaldzki',51.1115,17.0600),('pl. Powstańców Warszawy',51.1066,17.0450),('Kazimierza Wielkiego',51.1095,17.0300),('Traugutta/Podwale',51.1072,17.0425)]:
             await pg.evaluate("()=>{gpsOk=null}");await goto(pg,la,lo,hd=0,speed=0,zoom=1.0,tilt=0,wait=600);await ready(pg);await pg.wait_for_timeout(1500)

@@ -89,3 +89,10 @@ Moduł jezdni z pasami (199–203) i poziomy szerokości dróg zostają w histor
   wyłączanie razem z liniami pasów
 - `pwt/t_v206.py` – z `VER="wersja 207"`; przy zbliżaniu/przesuwaniu dopuszcza tylko przeliczenie dróg ze strzałkami, przy których doszły przejścia dla pieszych
 - `pwt/arzeb.py` – diagnostyka: strzałki a przejścia dla pieszych
+
+## Wersja 208 – komunikaty o przejściach i znakach mieszczą się w okienku
+
+- `jz/patch208.py` – `python3 patch208.py wersja207.html wynik.html` (styl okienka #sig: zawijanie tekstu, szerokość do kolumny przycisków)
+- `pwt/t_v208.py` – `APP=v208.html python3 t_v208.py`: 6 rodzajów komunikatów na ekranach 320–414 px i poziomo, rozmiar interfejsu 0 i 2 – tekst w okienku, okienko na ekranie i nie pod przyciskami
+- `pwt/sigmeas.py` – pomiar przepełnienia okienka (do porównania wersji)
+- `pwt/t_v207.py` – numer wersji z `VER`
