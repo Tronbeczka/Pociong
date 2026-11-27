@@ -27,3 +27,9 @@ na wyciągu OSM (gałąź `testdata`, `pwt/osmload.py` → `osm.pkl`), przejazdy
 - `pwt/t_v200.py` – stary moduł wyłączony, nowy rysuje, panel pasów bez zmian
 - `pwt/fkone2.py` – podgląd szerokości odnogi przy węźle rozwidlenia
 
+## Wersja 201 – z bliska drogi bez zlewania się w plamę
+
+- `jz/patch201.py` – mnożnik szerokości dróg zależny od zbliżenia (`rwF`): do 1,2 px/m 2,4, na postoju ok. 1,55, z bliska 1,05
+- `pwt/look5.py` – zrzut całego ekranu w punkcie przy zadanej skali (px/m), np. `look5.py tag "51.1085,17.0478,250,4.5,50"`
+- `pwt/t_v201.py` – jak t_v200 dla wersji 201
+
