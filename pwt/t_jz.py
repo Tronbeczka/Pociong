@@ -7,22 +7,25 @@ t=T()
 JS="""()=>{window.__jzRaw=1;JZN=null;const D=vecData,s=scaleCur,c=vecCam(performance.now()),kx=111195*Math.cos(rad(D.lat)),ox=(c.lon-D.lon)*kx,oy=(c.lat-D.lat)*111195;
   const F=jzFrame(D,s,ox,oy,900);if(!F){window.__jzRaw=0;return {n:0}}
   for(const G of F.G)jzLines(F.N,F.B,G);window.__jzRaw=0;
-  const res={n:F.G.length,dips:[],slope:[],cross:[],fork:[],xx:[],err:window.__lnErr||null,parts:0,bridges:0};
+  const res={n:F.G.length,dips:[],slope:[],cross:[],fork:[],xx:[],wide:[],err:window.__lnErr||null,parts:0,bridges:0};
   const inPoly=(Lx,Rx,x,y)=>{const n=Lx.length/2;let c=false;const P=[];for(let k=0;k<n;k++)P.push(Lx[2*k],Lx[2*k+1]);for(let k=n-1;k>=0;k--)P.push(Rx[2*k],Rx[2*k+1]);
     for(let i=0,j=P.length-2;i<P.length;j=i,i+=2){const xi=P[i],yi=P[i+1],xj=P[j],yj=P[j+1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c}
     if(!c)return 0;let dm=1e9;for(let i=0,j=P.length-2;i<P.length;j=i,i+=2){const ax=P[j],ay=P[j+1],bx=P[i],by=P[i+1],vx=bx-ax,vy=by-ay,l2=vx*vx+vy*vy;let u=l2?((x-ax)*vx+(y-ay)*vy)/l2:0;u=u<0?0:u>1?1:u;dm=Math.min(dm,Math.hypot(x-ax-vx*u,y-ay-vy*u))}return dm};
   for(const G of F.G){const {gL,gR,LWs,T,i0,i1,h}=G;res.parts+=G.parts.length;if(G.parts.some(p=>p.z))res.bridges++;
+    {const TT=jzTiles(D),ks=new Set(G.ch.pcs.map(q=>jzTileK(TT,q.p)));if(G.ch.tail)for(const t of G.ch.tail)if(t)ks.add(t.k);
+     if(G.ch.fk)for(const Fk of G.ch.fk)if(Fk)for(const q of Fk.T.ch.pcs)ks.add(jzTileK(TT,q.p));   /* (odnoga przy węźle ma szerokość jezdni sprzed rozwidlenia) */
+     let mx=0;for(const k of ks)mx=Math.max(mx,F.B.TWk[k]||0);
+     for(let j=i0;j<=i1;j++)if(Math.max(gL[j],gR[j])>mx+.05){res.wide.push({id:G.ch.pcs[0].p.w.id,g:+Math.max(gL[j],gR[j]).toFixed(2),mx:+mx.toFixed(2),lat:+(D.lat+G.Y[j]/111195).toFixed(6),lon:+(D.lon+G.X[j]/kx).toFixed(6)});break}}
     const lwd=F.B.LWk[LN_K[G.ch.kc]]||F.B.LWk.tr,W=2*Math.round(Math.max(40,8*lwd)/2/h)*h*.95,w=Math.round(W/h);
     for(const [nm,g] of [['L',gL],['P',gR]]){
       let worst=0,wi=-1,ms=0;
       for(let j=i0+1;j<i1;j++){const th=g[j]+.35*LWs[j];let a=-1,bb=-1;for(let i=j-1;i>=Math.max(i0,j-w);i--)if(g[i]>=th){a=i;break}if(a<0)continue;
         for(let k=j+1;k<=Math.min(i1,a+w);k++)if(g[k]>=th){bb=k;break}if(bb<0)continue;   // zwężenie krótsze niż okno domknięcia (takie mają być pominięte)
         const dp=Math.min(g[a],g[bb])-g[j];if(dp<=worst)continue;
-        const E=nm==='L'?G.eL:G.eR,lim=g[j]+.1;let u=j,v=j;while(u>i0&&E[u-1]<=lim)u--;while(v<i1&&E[v+1]<=lim)v++;
-        if((v-u)*h>=Math.max(40,8*lwd)+3.6*lwd-2)continue;   // zwężenie w danych dłuższe niż okno wygładzania – prawdziwe (np. 2 pasy między skrzyżowaniami)
+        if(G.sq[j]||G.wn[j]<Math.min(G.wn[a],G.wn[bb])-.1)continue;   // zwężenie przy sąsiedniej jezdni (wspólne miejsce) albo zmiana klasy drogi – prawdziwe
         worst=dp;wi=j}
       for(let j=i0+1;j<=i1;j++)ms=Math.max(ms,Math.abs(g[j]-g[j-1])/h);
-      if(wi>=0&&worst>=.35*LWs[wi])res.dips.push({id:G.ch.pcs[0].p.w.id,sd:nm,dep:+(worst/LWs[wi]).toFixed(2),t:Math.round(T[wi]),lat:+(D.lat+G.Y[wi]/111195).toFixed(6),lon:+(D.lon+G.X[wi]/kx).toFixed(6),pr:(()=>{const o=[];for(let q=Math.max(i0,wi-100);q<=Math.min(i1,wi+100);q+=8)o.push([q,+g[q].toFixed(1),+(nm==='L'?G.eL[q]:G.eR[q]).toFixed(1)]);return o})(),w});
+      if(wi>=0&&worst>=.35*LWs[wi])res.dips.push({id:G.ch.pcs[0].p.w.id,sd:nm,dep:+(worst/LWs[wi]).toFixed(2),t:Math.round(T[wi]),lat:+(D.lat+G.Y[wi]/111195).toFixed(6),lon:+(D.lon+G.X[wi]/kx).toFixed(6),pr:(()=>{const o=[];for(let q=Math.max(i0,wi-100);q<=Math.min(i1,wi+100);q+=8)o.push([q,+g[q].toFixed(1),+G.wn[q].toFixed(1),G.sq[q]]);return o})(),w});
       if(ms>.31){let mj=i0+1;for(let j=i0+1;j<=i1;j++)if(Math.abs(g[j]-g[j-1])/h>=ms-1e-9){mj=j;break}res.slope.push({id:G.ch.pcs[0].p.w.id,sd:nm,ms:+ms.toFixed(2),lat:+(D.lat+G.Y[mj]/111195).toFixed(6),lon:+(D.lon+G.X[mj]/kx).toFixed(6)})}}
     // linie na innych jezdniach z pasami (ten sam poziom): punkt głębiej niż 0,8 m w cudzym obrysie
     const R=G.lines&&G.lines.raw;if(R)for(const key of ['dash','div']){const a=R[key];
@@ -67,18 +70,19 @@ async def wait_ready(pg):
 async def main():
     async with async_playwright() as p:
         b,pg,logs=await launch(p,lat=PTS[0][0],lon=PTS[0][1])
-        tot=dict(n=0,dips=[],slope=[],cross=[],fork=[],xx=[],parts=0,bridges=0);errs=[];perf=[]
+        tot=dict(n=0,dips=[],slope=[],cross=[],fork=[],xx=[],wide=[],parts=0,bridges=0);errs=[];perf=[]
         for la,lo in PTS:
             await goto(pg,la,lo,hd=0,speed=0,zoom=2.4,tilt=0,wait=1500);await wait_ready(pg)
             r=await pg.evaluate(JS)
             print('  ',(la,lo),'jezdnie',r.get('n'),'wcięcia',len(r.get('dips',[])),'stromo',len(r.get('slope',[])),'linie na innych',len(r.get('cross',[])),'X',len(r.get('xx',[])),'rozwidlenia',r.get('fork'),flush=True)
-            for k in ['dips','slope','cross','fork','xx']:tot[k]+=r.get(k,[])
+            for k in ['dips','slope','cross','fork','xx','wide']:tot[k]+=r.get(k,[])
             tot['n']+=r.get('n',0);tot['parts']+=r.get('parts',0);tot['bridges']+=r.get('bridges',0)
             if r.get('err'):errs.append(r['err'])
             if len(perf)<6:perf.append(await pg.evaluate(PERF))
         print('   wcięcia:',tot['dips'][:8]);print('   stromo:',tot['slope'][:8]);print('   linie na innych jezdniach:',tot['cross'][:10]);print('   X:',tot['xx'][:10]);print('   czas:',perf)
         t('nowe jezdnie z pasami narysowane w wielu miejscach',tot['n']>=150,tot['n'])
         t('jezdnie na mostach rysowane w częściach (ziemia / most)',tot['bridges']>=3,tot['bridges'])
+        t('jezdnia nie szersza niż zwykła droga z mapy pod nią (Wersja 200)',not tot['wide'],tot['wide'][:6])
         t('brzeg bez wcięć (zwężenie ≥ 0,35 pasa i zaraz poszerzenie)',not tot['dips'],tot['dips'][:6])
         t('zmiana szerokości łagodna (≤ 0,3 m na metr)',not tot['slope'],tot['slope'][:6])
         t('linie pasów nie wchodzą na inne jezdnie z pasami (skrzyżowania, rozwidlenia, jezdnie obok siebie)',not tot['cross'],tot['cross'][:6])

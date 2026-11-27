@@ -18,3 +18,12 @@ na wyciągu OSM (gałąź `testdata`, `pwt/osmload.py` → `osm.pkl`), przejazdy
 - `pwt/t_v199.py` – stary moduł wyłączony, nowy rysuje; panel pasów w nawigacji bez zmian
 - `pwt/t_zoomjz.py` – płynna zmiana skali: linie nie znikają, geometria liczona rzadko
 - `pwt/jzbench.py`, `pwt/fkdbg2.py`, `pwt/dipdbg.py` – pomiar czasu i podgląd rozwidleń / przebiegu szerokości
+
+## Wersja 200 – szerokość jezdni jak na mapie
+
+- `jz/patch200.py` – podmiana modułu w wersji 199 (`jz/jz.js`: jezdnia = szerokość zwykłej drogi z mapy, pasy dzielą ją między siebie,
+  jezdnie obok siebie dzielą wspólne miejsce według liczby pasów)
+- `pwt/t_jz.py` – 11 sprawdzeń, nowe: „jezdnia nie szersza niż zwykła droga z mapy pod nią”
+- `pwt/t_v200.py` – stary moduł wyłączony, nowy rysuje, panel pasów bez zmian
+- `pwt/fkone2.py` – podgląd szerokości odnogi przy węźle rozwidlenia
+

@@ -25,8 +25,9 @@ ok('Curie: jeden ciąg z 6 odcinków',N.C.length===1&&N.C[0].pcs.length===6,N.C.
 let G=jz.jzGeo(N,B,N.C[0]);const LW=B.LWk.tr;
 const gl=[...G.gL],gr=[...G.gR];
 ok('lewy brzeg stały (3 pasy) – bez wcięcia',Math.max(...gl)-Math.min(...gl)<.01,[Math.min(...gl)/LW,Math.max(...gl)/LW]);
-let mono=true;for(let i=1;i<gr.length;i++)if(gr[i]>gr[i-1]+1e-9)mono=false;
-ok('prawy brzeg tylko się zwęża (3→2), bez schodka (zmiana ≤ 0,3 m na 1 m)',mono&&Math.max(...gr.slice(1).map((v,i)=>Math.abs(v-gr[i])))<=.3,[gr[0]/LW,gr[gr.length-1]/LW]);
+ok('szerokość jak zwykła droga z mapy (stała, bez poszerzania o pasy)',Math.max(...gl,...gr)-Math.min(...gl,...gr)<.01&&Math.abs(gl[0]-B.TWk.tr)<.01,[gl[0],B.TWk.tr]);
+{const nt=[...G.NT];let mx=0;for(let i=1;i<nt.length;i++)mx=Math.max(mx,Math.abs(nt[i]-nt[i-1]));
+ ok('liczba pasów 6→5 zmienia się łagodnie (najwyżej 1 pas na 3 szerokości drogi)',Math.round(nt[0])===6&&Math.round(nt[nt.length-1])===5&&mx<=G.h/(3*B.TWk.tr)+1e-6,[nt[0],nt[nt.length-1],mx])}
 let L=jz.jzLines(N,B,G);ok('linie pasów narysowane',L.nseg>=5,L.nseg);
 // 2) rozwidlenie: 2+2 na wschód, potem jezdnia na wschód (2 pasy, na południe) i jezdnia na zachód (2 pasy, z północy)
 reset();
@@ -45,16 +46,18 @@ for(const c of br){const g=jz.jzGeo(N,B,c);const at=c.fk[0]?0:1;
     if(prev==null)prev=outer;else{prev=south?Math.min(prev,outer):Math.max(prev,outer);back=Math.max(back,south?outer-prev:prev-outer)}}
   const g0=at===0?g.i0:g.i1,rx0=g.UY[g0],ry0=-g.UX[g0];const eL0=g.Y[g0]+ry0*(g.d[g0]-g.gL[g0]),eR0=g.Y[g0]+ry0*(g.d[g0]+g.gR[g0]);
   const south=c.a[1]+c.a[c.a.length-1]<0,outer0=south?Math.min(eL0,eR0):Math.max(eL0,eR0);
-  ok('odnoga '+(south?'południowa':'północna')+': brzeg zewnętrzny zaczyna się na brzegu drogi sprzed rozwidlenia',Math.abs(Math.abs(outer0)-2*LW)<.3,[outer0/LW]);
+  const inner0=south?Math.max(eL0,eR0):Math.min(eL0,eR0);
+  ok('odnoga '+(south?'południowa':'północna')+': brzeg zewnętrzny zaczyna się na brzegu drogi sprzed rozwidlenia',Math.abs(Math.abs(outer0)-LW)<.3,[outer0/LW]);
+  ok('… a wewnętrzny przy osi (odnogi dzielą jezdnię, nie nachodzą na siebie)',Math.abs(inner0)<=1.2&&(south?inner0<=0.01:inner0>=-.01),inner0);
   ok('… i nie wraca do środka (bez wcięcia; cofnięcie ≤ 0,05 pasa)',back<=.05*LW,back/LW);
 }
 // 3) koniec danych o pasach: dalej zwykła droga (tr) – zwężenie do jej szerokości
 reset();
-way([[-300,0],[0,0]],{nf:2,nb:2});D0.RS=[Object.assign([0,0,150,0,300,0],{k:'tr'})];
+way([[-300,0],[0,0]],{nf:2,nb:2,k:'pr',kc:2});D0.RS=[Object.assign([0,0,150,0,300,0],{k:'tr'})];
 N=jz.jzNet(D0);B=jz.jzBucket(N,s);G=jz.jzGeo(N,B,N.C[0]);
 ok('przedłużenie wzdłuż zwykłej drogi',!!(N.C[0].tail&&N.C[0].tail[1]),N.C[0].tail);
 ok('na końcu jezdnia ma szerokość zwykłej drogi',Math.abs(G.gL[G.i1]-LW)<.06&&Math.abs(G.gR[G.i1]-LW)<.06,[G.gL[G.i1]/LW,G.gR[G.i1]/LW]);
-ok('… a przed końcem ciągu (−60 m) pełne 2 pasy',(()=>{const k=G.T.findIndex(t=>t>=-60);return Math.abs(G.gL[k]-2*LW)<.01})(),null);
+ok('… a przed końcem ciągu (−60 m) szerokość drogi głównej (pr)',(()=>{const k=G.T.findIndex(t=>t>=-60);return Math.abs(G.gL[k]-B.TWk.pr)<.01})(),null);
 // 4) skrzyżowanie: droga z mapy w poprzek (x=100) i boczna ulica od północy (x=200)
 reset();
 way([[-300,0],[400,0]],{nf:2,nb:2});D0.RS=[Object.assign([100,-200,100,200],{k:'tr'}),Object.assign([200,0,200,200],{k:'tr'})];
