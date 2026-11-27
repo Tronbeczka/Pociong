@@ -48,3 +48,12 @@ na wyciągu OSM (gałąź `testdata`, `pwt/osmload.py` → `osm.pkl`), przejazdy
 - `pwt/t_autozoom.py` – jazda 0–62–0 km/h: kamera zmienia zbliżenie, a szerokość dróg i jezdnie z pasami zostają bez zmian; bez cieni budynków
 - `pwt/t_v203.py` – jak t_v202 dla wersji 203
 
+
+## Wersja 204 – powrót do dróg z wersji 198
+
+Na prośbę „Cofnij do wersji sprzed nakładek na drogi”: plik to wersja 198 (d6f0e67) z numerem wersji i wyłączonymi cieniami budynków (jak w 203).
+Moduł jezdni z pasami (199–203) i poziomy szerokości dróg zostają w historii (`jz/`, testy t_jz, t_v199–t_v203, t_zoomjz, t_autozoom) do ewentualnego powrotu.
+
+- `jz/patch204.py` – `python3 patch204.py wersja198.html wynik.html`
+- `pwt/t_v204b.py` – `python3 t_v204b.py wersja198.html wersja204.html`: płótno mapy piksel w piksel jak w 198 (3 miejsca), brak modułu jezdni z pasami, szerokość dróg ×2,4, cienie budynków w 198 są, w 204 brak
+- `pwt/t_v204.py` – sprawdzenia t_nolane dla wersji 204
