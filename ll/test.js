@@ -122,4 +122,31 @@ T('15: narożnik 84° – linie się nie przecinają',cr===0,{cr,a:ra.L.length,b
 // T16: łagodny łuk (promień 60 m) – linie bez przerw
 reset();{const pts=[];for(let k=0;k<=60;k++){const a=rad(-90+k*1.5);pts.push([60*Math.cos(a),60+60*Math.sin(a)])}road(pts,'pr',1);const wc=way(pts.filter((_,i)=>i%5===0),{ow:1,nf:3,nb:0});const rc=llWay(D,wc);
 T('16: łuk o promieniu 60 m – dwie linie bez przerw',rc.L.filter(l=>l.t===0).length===2,{n:rc.L.length,parts:rc.L.map(l=>l.p.length/2)})}}
+// ---- Wersja 207: strzałki ----
+const arrInfo=r=>(r.A||[]).map(a=>{const sh=a.sh;const tail=[sh[0],sh[1]];let tip=null;const hd=a.hd;tip=[hd[0],hd[1]];return {tail:tail.map(v=>+v.toFixed(2)),tip:tip.map(v=>+v.toFixed(2)),w:+a.w.toFixed(2),ws:+a.ws.toFixed(2),nh:hd.length/8}});
+// T17: dojazd 3 pasy do skrzyżowania z równie ważną drogą (x=0), w lewo | prosto | prosto;w prawo
+reset();road(line(-400,0,400,0),'pr',1);road(line(0,-300,0,300),'pr',0);
+w=way(line(-200,0,0,0,50),{ow:1,nf:3,nb:0,tf:'left|through|through;right'});r=llWay(D,w);let ai=arrInfo(r);
+const Hc=13.2*1.07+.8;
+const first=ai.filter(a=>a.tail[0]>Math.max(...ai.map(q=>q.tail[0]))-1);
+T('17: po jednej strzałce w pasie (pierwszy rząd przy skrzyżowaniu; na długim dojeździe drugi rząd wcześniej)',first.length===3&&ai.length%3===0,ai);
+T('17: strzałki na środkach pasów (8,53 / 0 / -8,53 m)',near(first.map(a=>a.tail[1]).sort((a,b)=>a-b),[-8.53,0,8.53],.3),first.map(a=>a.tail));
+T('17: grot ok. 3 m przed brzegiem skrzyżowania, cała strzałka przed nim',ai.every(a=>a.tip[0]<-Hc-1&&a.tail[0]<a.tip[0]-6)&&Math.max(...ai.map(a=>a.tip[0]))>-Hc-9,ai.map(a=>[a.tail[0],a.tip[0]]));
+T('17: skręt w lewo – grot po lewej, prawy pas – dwa groty (prosto i w prawo)',first.filter(a=>a.nh===2).length===1&&first.filter(a=>a.nh===1).length===2,first.map(a=>a.nh));
+// T18: wszystkie pasy prosto – bez strzałek
+w=way(line(-200,0,0,0,50),{ow:1,nf:3,nb:0,tf:'through|through|through'});r=llWay(D,w);T('18: same „prosto” – bez strzałek',(r.A||[]).length===0,arrInfo(r));
+// T19: inna liczba pasów niż w turn:lanes – bez strzałek
+w=way(line(-200,0,0,0,50),{ow:1,nf:3,nb:0,tf:'left|through'});r=llWay(D,w);T('19: turn:lanes nie pasuje do liczby pasów – bez strzałek',(r.A||[]).length===0,arrInfo(r));
+// T20: dwukierunkowa 2+2 między dwoma skrzyżowaniami – strzałki obu kierunków, każda przy swoim skrzyżowaniu
+reset();road(line(-400,0,400,0),'pr',0);road(line(-150,-300,-150,300),'pr',0);road(line(150,-300,150,300),'pr',0);
+w=way(line(-150,0,150,0,50),{ow:0,nf:2,nb:2,tf:'left|through',tb:'through|right'});r=llWay(D,w);ai=arrInfo(r);
+const fw=ai.filter(a=>a.tip[0]>a.tail[0]),bw=ai.filter(a=>a.tip[0]<a.tail[0]);
+T('20: dwukierunkowa – strzałki do przodu (prawe pasy, przy końcu) i pod prąd (lewe pasy, przy początku)',fw.length%2===0&&fw.length>=2&&bw.length===fw.length&&fw.every(a=>a.tip[0]>60&&a.tail[1]<0)&&bw.every(a=>a.tip[0]<-60&&a.tail[1]>0)&&Math.max(...fw.map(a=>a.tip[0]))>120&&Math.min(...bw.map(a=>a.tip[0]))<-120,ai);
+// T21: krótki dojazd (10 m) – bez strzałek
+reset();road(line(-400,0,400,0),'pr',1);road(line(0,-300,0,300),'pr',0);w=way(line(-24,0,0,0,24),{ow:1,nf:3,nb:0,tf:'left|through|right'});r=llWay(D,w);
+T('21: za krótki dojazd – bez strzałek',(r.A||[]).length===0,arrInfo(r));
+// T22: strzałki w obrębie swoich pasów (kształt nie wychodzi poza pas)
+reset();road(line(-400,0,400,0),'pr',1);road(line(0,-300,0,300),'pr',0);w=way(line(-200,0,0,0,50),{ow:1,nf:3,nb:0,tf:'left|left;through|through;right'});r=llWay(D,w);
+let inLane=true;const lw3=25.6/3;for(const a of r.A||[]){const yc=a.sh[1];for(const arr of [a.sh,a.hd])for(let i=0;i<arr.length;i+=2){if(isNaN(arr[i]))continue;if(Math.abs(arr[i+1]-yc)>lw3/2+.05)inLane=false}}
+T('22: strzałki mieszczą się w swoich pasach',inLane&&(r.A||[]).length>=3&&(r.A||[]).length%3===0,arrInfo(r));
 console.log(`WYNIK: ${ok}/${n}`);

@@ -79,3 +79,13 @@ Moduł jezdni z pasami (199–203) i poziomy szerokości dróg zostają w histor
 - `pwt/t_lldrive.py` – jazda 3,4 km przy spowolnionym procesorze: malowanie i praca w tle (porównanie wersji)
 - `pwt/t_v205.py` – z `LINES=1 VER="wersja 206"` dla wersji z liniami (dane o pasach pobierane też bez trasy)
 - `pwt/look6.py`, `llspot.py`, `lldbg.py`, `llsamp.py` – zrzuty i diagnostyka linii w wybranym miejscu
+
+## Wersja 207 – strzałki kierunków na jezdni
+
+- `jz/patch207.py` – `python3 patch207.py wersja206.html wynik.html` (podmienia moduł `ll/ll.js` w aplikacji)
+- `ll/test.js` – 39 testów (doszły strzałki: położenie na środkach pasów i przed skrzyżowaniem, dwa groty dla „prosto;w prawo”, same „prosto” bez strzałek,
+  niezgodna liczba pasów, dwukierunkowa – strzałki obu kierunków przy swoich skrzyżowaniach, za krótki dojazd, kształt w obrębie pasa)
+- `pwt/t_v207.py` – `APP=v207.html python3 t_v207.py`: strzałki w 4 miejscach (w pasie drogi, nie na przejściach dla pieszych, bez nakładania), widoczność zależna od przybliżenia,
+  wyłączanie razem z liniami pasów
+- `pwt/t_v206.py` – z `VER="wersja 207"`; przy zbliżaniu/przesuwaniu dopuszcza tylko przeliczenie dróg ze strzałkami, przy których doszły przejścia dla pieszych
+- `pwt/arzeb.py` – diagnostyka: strzałki a przejścia dla pieszych

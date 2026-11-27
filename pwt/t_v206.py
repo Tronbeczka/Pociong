@@ -19,7 +19,7 @@ async def main():
         b,pg,logs=await launch(p,lat=la,lon=lo,app=APP)
         await goto(pg,la,lo,hd=0,speed=0,zoom=1.0,tilt=0,wait=800)
         ok=await ready(pg)
-        v=await pg.evaluate("document.getElementById('ver').textContent");t('wersja 206',v=='wersja 206',v)
+        V=os.environ.get('VER','wersja 206');v=await pg.evaluate("document.getElementById('ver').textContent");t(V,v==V,v)
         r=await pg.evaluate("""()=>({llOn,laneOn,leOn,lanew:LANEW.size,res:LL.res.size,withL:[...LL.res.values()].filter(r=>r&&r.L&&r.L.length).length,route:!!route,
             lab:getComputedStyle(document.getElementById('laneCb').closest('label')).display,chk:document.getElementById('laneCb').checked})""")
         print('  ',r)
@@ -38,12 +38,14 @@ async def main():
             t(f'{name}: linie różnych dróg się nie przecinają, nie wychodzą poza jezdnię',q['lines']>40 and q['cross']==0 and q['out']==0,q)
         # zbliżanie i przesuwanie: nic się nie przelicza
         n0=await pg.evaluate("LL.n")
+        await pg.evaluate("()=>{window.__rc=[];const o=llWay;window.__llW=o;llWay=function(D,w){const r0=LL.res.get(w.id);window.__rc.push({id:w.id,turn:!!(w.tf||w.tb),zk0:r0?r0.zk:null,zk1:(typeof llZk==='function'&&(w.tf||w.tb))?llZk(w):null,same:!!r0&&r0.D===D});return o.apply(this,arguments)}}")
         for dz in [1.02]*40+[1/1.02]*40:
             await pg.evaluate("(d)=>{ovwOff();setZoom(zoomMul*d);updRecenter()}",dz);await pg.wait_for_timeout(16)
         await pg.mouse.move(195,420);await pg.mouse.down()
         for i in range(1,31):await pg.mouse.move(195+4*i,420+6*i);await pg.wait_for_timeout(16)
         await pg.mouse.up();await pg.wait_for_timeout(1200)
-        n1=await pg.evaluate("LL.n");t('zbliżanie i przesuwanie mapy nie przelicza linii',n1==n0,(n0,n1))
+        n1=await pg.evaluate("LL.n");rc=await pg.evaluate("()=>{llWay=window.__llW;return window.__rc.filter(x=>x.same&&!(x.turn&&x.zk0!==x.zk1))}")
+        t('zbliżanie i przesuwanie mapy nie przelicza linii (najwyżej drogi ze strzałkami, przy których doszły przejścia dla pieszych)',len(rc)==0,(n0,n1,rc[:5]))
         # wyłączenie w ustawieniach: mapa jak w wersji 205
         await pg.evaluate("()=>{const e=document.getElementById('laneCb');e.checked=false;e.onchange()}");await pg.wait_for_timeout(1200)
         r2=await pg.evaluate("()=>({llOn,ls:localStorage.getItem('llOn')})")
