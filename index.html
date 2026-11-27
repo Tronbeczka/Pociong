@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 202</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 203</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -5681,10 +5681,13 @@ const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},
 // Wersja 202: mnożnik ma 8 poziomów (co ok. 12 %) i zmienia się dopiero wtedy, gdy zbliżanie się zatrzyma (palce zdjęte, kamera doszła do docelowej skali).
 // W wersji 201 zmieniał się płynnie razem ze skalą: każde przemalowanie w trakcie zbliżania miało inną szerokość dróg niż powiększany obraz (drogi „telepały się”),
 // a jezdnie z pasami liczyły się od nowa kilkadziesiąt razy na jeden gest – malowanie trwało po ~100 ms, więc aplikacja obniżała rozdzielczość mapy (wszystko się zlewało).
-const RWL=[0,1,2,3,4,5,6,7].map(k=>2.4/Math.pow(1.12,k));
+// Wersja 203: tylko 2 poziomy – 1,6 do 3,4 px/m (cały zakres zbliżenia przy jeździe i na postoju: 0,85–2,8 px/m) i 1,15 przy dużym ręcznym zbliżeniu.
+// Przy 8 poziomach każda zmiana prędkości (kamera oddala się przy 25 i 50 km/h) kończyła się skokiem szerokości dróg o 12–25 % („nadal trochę lata”).
+// Poniżej ok. 1 px/m i tak rządzą najmniejsze szerokości w pikselach (VC.w).
+const RWL=[1.6,1.15];
 let rwLv=-1,rwRest=0,rwZt=0,rwSt=0,rwMov=false;   // rwLv: bieżący poziom (−1: jeszcze nieustalony); rwZt: kiedy ostatnio zmieniła się docelowa skala; rwMov: trwa zbliżanie/oddalanie albo palec na mapie
-const rwLvFor=s=>{if(s<=1.2)return 0;const f=Math.max(1.05,2.4-Math.log(s/1.2));return Math.max(0,Math.min(7,Math.round(Math.log(2.4/f)/Math.log(1.12))))};
-const rwF=s=>s<=.6?2.4:RWL[Math.max(0,rwLv)];
+const rwLvFor=s=>rwLv===1?(s>=3.1?1:0):(s>=3.4?1:0);   // (z małym zapasem, żeby nie przełączać w tę i z powrotem przy granicy)
+const rwF=s=>RWL[Math.max(0,rwLv)];
 const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*rwF(s))*dmK;
 const PAL={
  day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623',rcase:'#173f8f',rhalo:'#ffffff',rcaseD:'#0a1226'},
@@ -9927,6 +9930,7 @@ function drawBuildings3D(){
   const t0=performance.now();
   try{bld3Draw()}finally{d3Adapt(performance.now()-t0)}
 }
+const BLD_SH=false;   // Wersja 203: bez cieni budynków i budowli (cienie drzew zostają)
 function bld3Draw(){
   const D=vecData,pal=PAL[night?'night':'day'],s=vf.s,dl=d3Lvl();
   const W=window.innerWidth,H=window.innerHeight;
@@ -9989,7 +9993,7 @@ function bld3Draw(){
       sn++;   // bez closePath(): wypełnienie samo domyka kontur, a closePath() na konturze z tysiącami punktów jest w Chromium bardzo wolne (czas rósł z kwadratem liczby ścian)
     };
     const dirE=Math.sin(rad(sp.az+180)),dirN=Math.cos(rad(sp.az+180)),tn=Math.tan(rad(Math.max(sp.el,6)));
-    for(let n=Math.max(start,lst.length-260);n<lst.length;n++){
+    if(BLD_SH)for(let n=Math.max(start,lst.length-260);n<lst.length;n++){   // Wersja 203: cienie budynków wyłączone (na prośbę – ciemne plamy na jezdni wyglądały jak budynki nachodzące na drogę)
       if(fogOn&&lst[n].y<fe)continue;   // w pasie mgły cieni nie rysujemy
       const b=lst[n].b;
       if(!b){   // cień budowli: uproszczony obrys rzucony na ziemię
