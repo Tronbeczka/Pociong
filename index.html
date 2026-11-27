@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 204</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 205</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -2358,6 +2358,7 @@ var panGlide=null;   // płynny powrót kamery do auta (patrz glideStart przy p�
 var ovw=null,ovwDue=0,ovTilt=null;   // widok całej trasy: ovw – punkt mapy {lat,lon,s}, do którego kamera jest „przypięta” (nie jedzie z autem); ovwDue – chwila automatycznego powrotu do jazdy (sprawdza ją pętla klatek); ovTilt – nachylenie sprzed przeglądu trasy
 function ovwOff(){ovwDue=0;ovw=null}   // przypięcie kończy się, gdy użytkownik przejmuje mapę (dotyk, kółko myszy, +/−)
 function recenter(){
+  if(window.browse&&!window.brwLive){brwHome(true);return}   // Wersja 205: podgląd wyszukanego miejsca – przycisk wraca do auta (ostatnia pozycja z GPS), a nie do oglądanego miejsca
   if(window.preview&&!window.browse&&route&&vec){fitFly();return}   // w podglądzie trasy przycisk wraca do widoku całej trasy
   if(panGlide){if(!panGlide.keep)return;glideStop()}   // już dojeżdżamy do auta; lot do widoku całej trasy przerywamy i zawracamy
   ovwOff();
@@ -2657,6 +2658,7 @@ function laneUpdate(st,i,d){
   const s=st[i];
   const turn=s&&['turn','end of road','fork','on ramp','off ramp','roundabout','merge'].includes(s.type)&&!(s.type==='turn'&&!s.mod);
   if(!turn||d>450||d<8){lnRender(null);return}
+  if(!s.lanes&&!s.laneBusy&&LANEW.size&&s.lnV!==laneVer){s.lnV=laneVer;try{const L=lnLanesFromStore(route,s);if(L)s.lanes=L}catch(e){}}   // Wersja 205: strzałki z danych pobranych w tle – także gdy dotarły po nieudanym zapytaniu o ten manewr
   if(s.lanes===undefined&&!s.laneBusy){
     s.laneBusy=true;const R=route;
     fetchLanes(R,s).then(x=>{s.lanes=x},()=>{s.lanes=null}).finally(()=>{s.laneBusy=false;if(route===R)navUpdate()});
@@ -3843,7 +3845,9 @@ function drawTurnArrow(){
   }
   mx.restore();
 }
+const LN_ROAD_ARROW=false;   // Wersja 205: strzałki pasów na jezdni przed manewrem wyłączone – na razie bez oznaczeń na ulicy (nieczytelne); strzałki są w panelu u góry ekranu
 function drawLaneArrow(){
+  if(!LN_ROAD_ARROW)return;
   if(!(vec&&vf&&route&&nav&&nav.i>0&&!freeCam))return;
   const st=route.steps&&route.steps[nav.i];if(!st||!st.lanes||!st.lanes.lanes||st.lanes.lanes.length<2)return;
   if(nav.d<22||nav.d>220)return;
@@ -4571,7 +4575,7 @@ function enterBrowse(it){
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   stopSim();try{clearRoute()}catch(e){}
   $('pick').style.display='none';
-  window.preview=true;window.browse=true;document.body.classList.add('preview');
+  window.preview=true;window.browse=true;window.brwLive=false;document.body.classList.add('preview');
   const p={lat:it.lat,lon:it.lon,speed:0,heading:0};last={lat:p.lat,lon:p.lon,t:Date.now()};
   panGlide=null;ovwOff();tiltOv=tiltGo=null;ovTilt=null;freeCam=false;panE=panN=0;zoomMul=.4;rotOff=0;lastH=0;tgtRot=0;curRot=0;
   lastFetch=null;crossings=[];trains=[];vecNext=0;
@@ -4594,7 +4598,36 @@ function enterBrowse(it){
     if(ws&&ws.readyState===1&&(!gBox||dist(gBox.lat,gBox.lon,cp.lat,cp.lon)>3000))gSend(cp.lat,cp.lon);
   },1500);
 }
-$('brwBack').onclick=()=>{$('start').click()};
+$('brwBack').onclick=()=>brwHome(false);
+// Wersja 205: powrót z podglądu wyszukanego miejsca do auta – przycisk „do auta” (wyśrodkowanie), „Wróć do mojej pozycji (GPS)” i „Prowadź tutaj”.
+// W podglądzie GPS jest wyłączony, a „auto” stoi w oglądanym miejscu (co 1,5 s także pozycja last): przycisk „do auta” wracał więc do wyszukanego
+// miejsca, po „Wróć do mojej pozycji” auto stało w oglądanym miejscu, dopóki telefon nie podał nowej pozycji, a „Prowadź tutaj” liczyło trasę
+// z wyszukanego miejsca do niego samego („start i cel są w tym samym miejscu”). Teraz mapa od razu wraca do ostatniej pozycji z GPS (sprzed wyszukania;
+// po ponownym uruchomieniu aplikacji – zapamiętanej), auto jest szare, dopóki nie przyjdzie nowy odczyt (jak przy starcie), a trasa liczy się od auta.
+function brwPos(){   // ostatnia prawdziwa pozycja z GPS albo zapamiętana w telefonie; null – nieznana
+  if(gpsOk&&gpsOk.lat>-90&&gpsOk.lat<90&&gpsOk.lon>-180&&gpsOk.lon<180)return {lat:gpsOk.lat,lon:gpsOk.lon,h:gpsOk.h,t:gpsOk.t};
+  try{const q=JSON.parse(localStorage.getItem('lastpos')||'null');if(q&&q.lat>-90&&q.lat<90&&q.lon>-180&&q.lon<180)return {lat:q.lat,lon:q.lon,h:null,t:q.t}}catch(e){}
+  return null;
+}
+function brwRestore(lp){   // po wyjściu z podglądu: kamera i auto (szare do pierwszego odczytu) w ostatniej znanej pozycji; bez niej auto zostaje, a pozycja jest nieznana
+  const c=lp||vecCam0(performance.now());
+  if(c){fix=null;provCam={lat:c.lat,lon:c.lon};document.body.classList.add('nofix');hAnch=null}
+  if(lp){
+    last={lat:lp.lat,lon:lp.lon,t:lp.t||0};   // czas odczytu: świeży (do 30 s) służy od razu za start trasy, starszy – trasa czeka na odczyt z telefonu
+    if(lp.h!=null&&!isNaN(lp.h)){lastH=lp.h;tgtRot=-lastH}
+    if(!lastFetch||dist(lastFetch.lat,lastFetch.lon,lp.lat,lp.lon)>1500)loadCrossings(lp.lat,lp.lon);
+  }else last=null;   // oglądane miejsce nie jest pozycją auta
+  clearInterval(window.brwHT);let n=0;vecNext=0;   // mapa wokół auta doczytuje się, zanim przyjdzie odczyt GPS (potem robi to follow)
+  const lv=()=>{if(fix||window.preview||++n>75){clearInterval(window.brwHT);return}const cp=vecCam(performance.now());
+    if(cp&&vec&&(!vecData||dist(vecData.lat,vecData.lon,cp.lat,cp.lon)>600)&&Date.now()>vecNext)loadVec(cp.lat,cp.lon)};
+  window.brwHT=setInterval(lv,800);lv();
+}
+function brwHome(quiet){
+  const lp=brwPos();
+  exitPreview(true);brwRestore(lp);
+  startGps(quiet);
+  updRecenter();
+}
 
 // ================= Tablica odjazdów przy przejeździe (dotknij przejazdu na mapie) =================
 function xDepartures(c){
@@ -5087,7 +5120,8 @@ $('parkShow').onclick=()=>{
 };
 $('brwGo').onclick=()=>{
   const it=window.browseIt;if(!it)return;
-  exitPreview();
+  const lp=brwPos();
+  exitPreview();brwRestore(lp);   // Wersja 205: trasa od auta (ostatnia pozycja z GPS), a nie od wyszukanego miejsca
   F.to.el.value=it.label||it.title;F.to.pt={lat:it.lat,lon:it.lon,label:it.label||it.title};
   F.from.el.value='';F.from.pt=null;
   startGps(true);showPlanner();try{renderChips()}catch(e){}
@@ -7594,6 +7628,9 @@ function lnFail(e){window.__lnErr=String(e&&e.stack||e);errNote('pasy',e)}   // 
 // Wersja 198: na prośbę użytkownika drogi wracają do wyglądu sprzed wersji 138 – bez linii pasów, strzałek i buspasów na jezdni, trasa i auto bez
 // ustawiania na pasie (stary moduł pasów jest wyłączony; oznaczenia będą budowane od nowa, etapami). Panel pasów przed skrzyżowaniem w nawigacji
 // zostaje – pobiera strzałki z OpenStreetMap sam (fetchLanes), jak przed wersją 138.
+// Wersja 205: dla tego panelu dane o pasach znów pobierają się w tle (komórkami, wzdłuż trasy w czasie nawigacji – jak w wersjach 138–203),
+// więc strzałki są od razu, także gdy pojedyncze zapytanie o jeden manewr się nie uda. Na jezdni nadal nic nie rysujemy (laneOn=false).
+var lnPanel=true;
 var laneOn=false,leOn=false;   // leOn (Wersja 187): auto na pasie wyznaczonym z odczytów GPS
 var LANEW=new Map(),laneVer=0,lnDirty=0,lnGrid=new Map(),lnCells=new Map(),lnQ=[],lnBusy=false,carAl=null;
 const LN_K=['tr','mw','pr','sc','rs','sv'],LN_CELL={y:.02,x:.03};
@@ -7649,7 +7686,7 @@ function lnIdx(w){
 function lnIngest(arr){
   let add=0;
   for(const w of arr||[]){if(!w||LANEW.has(w.id))continue;LANEW.set(w.id,w);lnIdx(w);add++}
-  if(add){laneVer++;vd=null}
+  if(add){laneVer++;if(laneOn)vd=null}   // Wersja 205: same dane dla panelu strzałek nie zmieniają mapy – bez przemalowania
 }
 // najbliższa droga z danymi o pasach: {w,fwd,i}; fwd = jedziemy zgodnie z kierunkiem rysowania drogi; needTurn = tylko drogi ze strzałkami (turn:lanes)
 function lnMatch(lat,lon,brg,maxd,needTurn){
@@ -7731,16 +7768,17 @@ function lnPrune(p){
   if(!drop)return;
   lnGrid.clear();for(const w of LANEW.values())lnIdx(w);
   for(const [k,c] of lnCells)if(c.s===2){const x=((c.cx+.5)*LN_CELL.x-p.lon)*kx,y=((c.cy+.5)*LN_CELL.y-p.lat)*111195;if(Math.abs(x)>R||Math.abs(y)>R)lnCells.delete(k)}
-  laneVer++;vd=null;
+  laneVer++;if(laneOn)vd=null;
 }
 function lnTick(){
-  if(!laneOn||!vec||!vecData||window.preview||demo)return;   // dopiero gdy mapa jest już wczytana (nie spowalniamy jej startu)
+  const pan=!laneOn&&lnPanel;   // Wersja 205: tylko panel strzałek u góry ekranu – dane wzdłuż trasy, i tylko w czasie nawigacji
+  if(!(laneOn||(pan&&route&&route.len>0&&route.steps&&route.steps.length>2))||!vec||!vecData||window.preview||demo)return;   // dopiero gdy mapa jest już wczytana (nie spowalniamy jej startu)
   const p=(vf&&vf.car)||last;if(!p)return;
   if(!xReady(p)&&performance.now()<20000)return;   // najpierw przejazdy kolejowe (ważniejsze); pasy dopiero po ich wczytaniu (najpóźniej po 20 s)
   lnPrune(p);
   const dy=1300/111195,dx=1300/(111195*Math.cos(rad(p.lat)));
-  for(const [a,b] of [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]])lnWant(p.lat+a*dy,p.lon+b*dx,Math.hypot(a,b));
-  if(route&&route.len>0&&!window.browse){const a0=route.along||0;for(let d=700;d<=7000;d+=700){const q=routeAt(route,Math.min(route.len,a0+d));lnWant(q[0],q[1],1+d/700)}}
+  if(!pan)for(const [a,b] of [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]])lnWant(p.lat+a*dy,p.lon+b*dx,Math.hypot(a,b));
+  if(route&&route.len>0&&!window.browse){const a0=route.along||0;for(let d=pan?0:700;d<=7000;d+=700){const q=routeAt(route,Math.min(route.len,a0+d));lnWant(q[0],q[1],(pan?0:1)+d/700)}}
   if(lnQ.length)lnPump();
 }
 setInterval(()=>{try{lnTick()}catch(e){}},2500);
@@ -10604,7 +10642,7 @@ setInterval(livePush,3000);
       const age=Math.round((Date.now()-o.t)/1000),eta=o.eta?new Date(o.eta).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}):null;
       grpFr=[{id:'live',n:o.n||'Kierowca',lat:o.lat,lon:o.lon,h:o.h,t:o.t}];
       const ttl=(o.n||'Kierowca')+(o.to?' → '+o.to:''),sub=(eta?'przyjazd ok. '+eta+(o.rem!=null?' · jeszcze '+o.rem+' km':'')+' · ':'')+o.v+' km/h · pozycja sprzed '+(age<90?age+' s':Math.round(age/60)+' min');
-      if(!started){started=true;enterBrowse({lat:o.lat,lon:o.lon,title:ttl,label:ttl});$('brwFav').style.display='none';$('brwGo').style.display='none'}
+      if(!started){started=true;enterBrowse({lat:o.lat,lon:o.lon,title:ttl,label:ttl});window.brwLive=true;$('brwFav').style.display='none';$('brwGo').style.display='none'}   // brwLive (Wersja 205): „auto” podglądu to śledzony kierowca – przycisk „do auta” wraca do niego
       else if(!freeCam){try{follow({lat:o.lat,lon:o.lon,speed:0,heading:0})}catch(e){}}
       setBanner(age>180?'warn':'ok',ttl,sub);$('big').textContent=ttl;$('sub').textContent=sub;
     }catch(e){if(started&&Date.now()-lastOk>30000)setBanner('warn','Brak połączenia','Próbuję ponownie…')}
