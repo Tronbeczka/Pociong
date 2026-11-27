@@ -18,7 +18,7 @@ async def main():
           return {laneOn,leOn,lanew:LANEW.size,vis:lnVis(D,s,(c.lon-D.lon)*kx,(c.lat-D.lat)*111195,600).length,lnb:window.__lnb,lnErr:window.__lnErr||null,
             labLane:lab('laneCb'),labLe:lab('leCb'),ver:(document.getElementById('ver')||{}).textContent,free:freeLanePos(),rs:D.RS?D.RS.length:0}})()""")
         print('  ',r)
-        t('wersja 204',r['ver']=='wersja 204',r['ver'])
+        V=os.environ.get('VER','wersja 204');t(V,r['ver']==V,r['ver'])
         t('pasy ruchu i auto na pasie wyłączone',r['laneOn'] is False and r['leOn'] is False,r)
         t('dane o pasach nie są pobierane (ul. Marii Curie-Skłodowskiej)',r['lanew']==0 and r['vis']==0,r)
         t('stary moduł pasów nie rysuje niczego (0 wywołań w 6 klatkach)',r['lnb']==0 and not r['lnErr'],r)

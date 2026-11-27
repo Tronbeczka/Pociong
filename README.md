@@ -57,3 +57,12 @@ Moduł jezdni z pasami (199–203) i poziomy szerokości dróg zostają w histor
 - `jz/patch204.py` – `python3 patch204.py wersja198.html wynik.html`
 - `pwt/t_v204b.py` – `python3 t_v204b.py wersja198.html wersja204.html`: płótno mapy piksel w piksel jak w 198 (3 miejsca), brak modułu jezdni z pasami, szerokość dróg ×2,4, cienie budynków w 198 są, w 204 brak
 - `pwt/t_v204.py` – sprawdzenia t_nolane dla wersji 204
+
+## Wersja 205 – przycisk „do auta” po wyszukaniu miejsca, strzałki pasów u góry ekranu
+
+- `jz/patch205.py` – `python3 patch205.py wersja204.html wynik.html`: powrót z podglądu wyszukanego miejsca do ostatniej pozycji z GPS (przycisk „do auta”,
+  „Wróć do mojej pozycji”, „Prowadź tutaj” – trasa od auta), dane o pasach w tle wzdłuż trasy dla panelu strzałek (tylko w nawigacji), bez strzałek na jezdni
+- `pwt/t_v205.py` – `APP=wersja.html python3 t_v205.py`: powrót do auta (telefon bez nowego odczytu – śledzenie GPS przeglądarki testowej wyłączone na czas sprawdzenia),
+  „Prowadź tutaj” po 3 i 35 s oglądania, podgląd śledzonego kierowcy, panel przy skręcie w prawo (Traugutta) i w lewo (Podwale) – też gdy zapytanie o manewr się nie udaje,
+  brak rysowania na jezdni (linie pasów, strzałki przed manewrem, auto i trasa na pasie)
+- `pwt/t_v204.py`, `pwt/t_v204b.py` – zmienne VER (numer wersji), REF i REF_SH (porównanie z wersją 204 bez cieni): `VER="wersja 205" REF=204 REF_SH=0 python3 t_v204b.py v204.html v205.html`
