@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 199</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 200</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7753,18 +7753,18 @@ function lnTick(){
 setInterval(()=>{try{lnTick()}catch(e){}},2500);
 {const e=$('leCb');if(e){e.checked=leOn;e.onchange=()=>{leOn=e.checked;LSput('leOn',leOn);LE.w=null;LE.k=-1}}}
 {const e=$('laneCb');if(e){e.checked=laneOn;e.onchange=()=>{laneOn=e.checked;LSput('laneOn',laneOn);vd=null;laneVer++;if(route)route.lp=null;if(laneOn)lnTick()}}}
-// ================= Wersja 199: jezdnie z pasami od nowa – etap 1: obrys jezdni i linie pasów =================
+// ================= Wersja 199–200: jezdnie z pasami od nowa – etap 1: obrys jezdni i linie pasów =================
 // Stary moduł (wersje 138–197) rysował każdy odcinek OSM osobno i łatał styki (kliny, płyty, mostki), więc na rozwidleniach i skrzyżowaniach
 // wychodziły schodki, wcięcia i krzyżujące się linie. Teraz:
 // 1) kolejne odcinki tej samej jezdni (jedyne przedłużenie z obu stron, ten sam poziom, ten sam rodzaj ruchu) tworzą jeden ciąg – jeden wielokąt, bez styków,
-// 2) szerokość po każdej stronie = liczba pasów × szerokość pasa; zwężenie krótsze niż ok. 8 pasów długości jest pomijane, a każda zmiana szerokości jest łagodna,
-// 3) linie pasów wynikają z narysowanej szerokości (pas pojawia się i znika razem z poszerzeniem), więc nigdy nie przeskakują,
-// 4) tam, gdzie ciąg przechodzi w zwykłą drogę z mapy, jezdnia zwęża się łagodnie do jej szerokości,
-// 5) na rozwidleniu odnogi wychodzą z węzła w kierunku jezdni sprzed rozwidlenia (ten sam przekrój – bez szczeliny i schodka), ich zewnętrzne brzegi
-//    biegną po jej brzegach, dopóki się nie rozejdą; linie odnogi „głównej” biegną dalej, a linie drugiej znikają tam, gdzie na nią wchodzą,
+// 2) Wersja 200: jezdnia ma dokładnie szerokość zwykłej drogi z mapy pod nią (w wersji 199 każdy pas miał pół szerokości drogi, więc droga z 4–6 pasami
+//    była 2–3 razy szersza od mapy i zakrywała przejścia, torowiska i chodniki), a pasy dzielą tę szerokość między siebie,
+// 3) zmiana liczby pasów jest łagodna (linie rozchodzą się albo schodzą stopniowo), krótkie zmiany (np. odcinek w środku skrzyżowania) są pomijane,
+// 4) tam, gdzie ciąg przechodzi w zwykłą drogę innej klasy, szerokość zmienia się łagodnie,
+// 5) na rozwidleniu odnogi wychodzą z węzła w kierunku jezdni sprzed rozwidlenia; jezdnie, które leżą obok siebie i na siebie nachodzą (odnogi tuż za
+//    rozwidleniem, dwie jezdnie drogi dwujezdniowej), dzielą wspólne miejsce według liczby pasów – bez poszerzania drogi i bez nakładania linii,
 // 6) linie znikają tam, gdzie leży inna droga (skrzyżowania; boczna ulica przerywa tylko linie po swojej stronie),
-// 7) dwie jezdnie drogi dwujezdniowej, które po poszerzeniu na siebie nachodzą, odsuwają się na zewnątrz i stykają wąskim pasem rozdziału,
-// 8) koniec jezdni bez dalszej drogi jest zaokrąglony jak zwykłe drogi na mapie.
+// 7) koniec jezdni bez dalszej drogi jest zaokrąglony jak zwykłe drogi na mapie.
 var jzOn=true,JZN=null;
 const JZ_DT=1,JZ_SLOPE=.3,JZ_MIN_S=.6;
 function jzDir(a,n,e){   // kierunek „na zewnątrz” odcinka na końcu e (z ostatnich ≥ 5 m)
@@ -7878,6 +7878,19 @@ function jzTailPts(o,dir,x,y,u,L){
   if(acc<L){const n=pts.length/2,ux=pts[2*n-2]-pts[2*n-4],uy=pts[2*n-1]-pts[2*n-3],l=Math.hypot(ux,uy)||1;pts.push(px+ux/l*(L-acc),py+uy/l*(L-acc))}
   return {pts,k:o.k};
 }
+// klasa zwykłej drogi z mapy leżącej pod odcinkiem (z niej szerokość jezdni – taka jak na mapie); brak – klasa z danych o pasach
+function jzTileK(TT,p){
+  if(p.tk!==undefined)return p.tk;
+  const a=p.a,n=p.n,v=new Map(),lv=p.w.z?1:0;let acc=0,f=0;const F=[.2,.5,.8];
+  for(let i=1;i<n&&f<3;i++){const x1=a[2*i-2],y1=a[2*i-1],dx=a[2*i]-x1,dy=a[2*i+1]-y1,l=Math.hypot(dx,dy);if(l<1e-6)continue;
+    while(f<3&&acc+l>=F[f]*p.L){const t=(F[f]*p.L-acc)/l,x=x1+dx*t,y=y1+dy*t,ux=dx/l,uy=dy/l;
+      for(const o of jzTileNear(TT,x,y,3)){if(o.lv!==lv||Math.abs(o.ux*ux+o.uy*uy)<.9)continue;
+        const q=Math.max(0,Math.min(o.L,(x-o.x1)*o.ux+(y-o.y1)*o.uy)),dd=Math.hypot(x-o.x1-o.ux*q,y-o.y1-o.uy*q);if(dd<=2.5)v.set(o.k,(v.get(o.k)||0)+1)}
+      f++}
+    acc+=l}
+  let k=LN_K[p.w.kc]||'tr',b=0;for(const [kk,c] of v)if(c>b){b=c;k=kk}
+  return p.tk=k;
+}
 // ciąg: oś (punkty co JZ_DT m), dla każdej próbki – odcinek, kierunek, liczba pasów
 function jzChain(pcs,closed,id){
   // jezdnia jednokierunkowa: ciąg w kierunku ruchu
@@ -7914,8 +7927,8 @@ function jzBucket(N,s){
   const key=jzKey(s);let B=N.bk.get(key);
   // przy płynnej zmianie skali nowa geometria najwyżej co 250 ms (w międzyczasie poprzednia – różnica szerokości kilka %); potem dorysowanie
   if(!B&&N.lastB&&performance.now()-N.lastT<250){if(!jzBucket.t)jzBucket.t=setTimeout(()=>{jzBucket.t=0;try{vd=null}catch(e){}},260);return N.lastB}
-  if(!B){if(N.bk.size>6){const L=N.lastB;N.bk.clear();if(L)N.bk.set(L.key,L)}const LWk={},TWk={};for(const k of LN_K){TWk[k]=rw(k,s)/2/s;LWk[k]=rw(k,s)/(k==='mw'?3:2)/s}   // pas: połowa szerokości zwykłej drogi (autostrada: jedna trzecia – jej jezdnia ma zwykle 3 pasy)
-    B={key,s,LWk,TWk,geo:new Map(),grid:new Map(),gridOf:new Set(),sig:new Map(),from:N.lastB||null};if(B.from)B.from.from=null;N.bk.set(key,B);N.lastT=performance.now()}   /* (bez łańcucha starych skal w pamięci) */
+  if(!B){if(N.bk.size>6){const L=N.lastB;N.bk.clear();if(L)N.bk.set(L.key,L)}const TWk={};for(const k of ['sv','rs','tr','sc','pr','mwl','mw'])TWk[k]=rw(k,s)/2/s;   // połowa szerokości zwykłej drogi z mapy (tyle ma jezdnia z pasami)
+    B={key,s,LWk:TWk,TWk,bld:new Set(),geo:new Map(),grid:new Map(),gridOf:new Set(),sig:new Map(),from:N.lastB||null};if(B.from)B.from.from=null;N.bk.set(key,B);N.lastT=performance.now()}   /* (bez łańcucha starych skal w pamięci) */
   N.lastB=B;return B;
 }
 // przesuwne maksimum / minimum w oknie ±h próbek (kolejka monotoniczna)
@@ -7945,11 +7958,14 @@ function jzRamp(v,m){
 function jzGeo(N,B,ch,full){
   let G=B.geo.get(ch.id);
   if(!G)G=jzProf(N,B,ch);
+  if(!G)return null;
   if(full!==false&&G.st===0){G.st=1;jzDone(N,B,G);G.st=2}   // (st 1: w trakcie – wywołanie zwrotne dostaje G bez dokończenia)
   return G;
 }
 function jzProf(N,B,ch){
-  let G;const dt=JZ_DT,LWk=B.LWk,TWk=B.TWk;
+  if(B.bld.has(ch.id))return null;B.bld.add(ch.id);   // (ciąg w trakcie liczenia – np. wzajemne rozwidlenia)
+  try{
+  let G;const dt=JZ_DT,TWk=B.TWk,TT=jzTiles(N.D);
   // oś: przedłużenie na początku (odwrócone) + ciąg + przedłużenie na końcu
   const ax=[];let t0=0;
   const T0=ch.tail&&ch.tail[0],T1=ch.tail&&ch.tail[1];
@@ -7959,120 +7975,127 @@ function jzProf(N,B,ch){
   const A=Float64Array.from(ax),na=A.length/2,cum=new Float64Array(na);for(let i=1;i<na;i++)cum[i]=cum[i-1]+Math.hypot(A[2*i]-A[2*i-2],A[2*i+1]-A[2*i-1]);
   t0=cum[st];   // t ciągu = t osi − t0
   const Ltot=cum[na-1],n=Math.max(2,Math.round(Ltot/dt)+1),h=Ltot/(n-1);
-  const X=new Float64Array(n),Y=new Float64Array(n),T=new Float64Array(n),eL=new Float64Array(n),eR=new Float64Array(n),LW=new Float64Array(n),PI=new Int32Array(n),ZZ=new Uint8Array(n);
+  const X=new Float64Array(n),Y=new Float64Array(n),T=new Float64Array(n),W2=new Float64Array(n),nA=new Float64Array(n),nB=new Float64Array(n),nC=new Float64Array(n),PI=new Int32Array(n),ZZ=new Uint8Array(n);
+  const lanes=(i,q)=>{const w=q.p.w;if(ch.ow===0){nA[i]=q.fwd?w.nb:w.nf;nB[i]=q.fwd?w.nf:w.nb;nC[i]=w.c||0}else{nA[i]=0;nC[i]=0;nB[i]=w.N}};   // A: pasy po lewej (w stronę przeciwną), B: po prawej, C: środkowe
   let pj=0;
   for(let i=0;i<n;i++){const ta=i*h,p=jzAt(A,cum,ta);X[i]=p[0];Y[i]=p[1];const t=ta-t0;T[i]=t;
-    if(t<-.01&&T0){LW[i]=LWk[T0.k]||LWk.tr;eL[i]=eR[i]=TWk[T0.k]||TWk.tr;PI[i]=-1;ZZ[i]=T0.lv;continue}   // przedłużenie: szerokość zwykłej drogi
-    if(t>ch.L+.01&&T1){LW[i]=LWk[T1.k]||LWk.tr;eL[i]=eR[i]=TWk[T1.k]||TWk.tr;PI[i]=-2;ZZ[i]=T1.lv;continue}
+    if(t<-.01&&T0){W2[i]=TWk[T0.k]||TWk.tr;PI[i]=-1;ZZ[i]=T0.lv;lanes(i,ch.pcs[0]);continue}   // przedłużenie: szerokość zwykłej drogi, pasy jak na końcu ciągu
+    if(t>ch.L+.01&&T1){W2[i]=TWk[T1.k]||TWk.tr;PI[i]=-2;ZZ[i]=T1.lv;lanes(i,ch.pcs[ch.pcs.length-1]);continue}
     while(pj<ch.pcs.length-1&&t>ch.pcs[pj].s1)pj++;while(pj>0&&t<ch.pcs[pj].s0)pj--;
-    const q=ch.pcs[pj],w=q.p.w,lw=LWk[LN_K[w.kc]]||LWk.tr;LW[i]=lw;PI[i]=pj;ZZ[i]=w.z?1:0;
-    if(ch.ow===0){const R=q.fwd?w.nf:w.nb,Lf=q.fwd?w.nb:w.nf,c=w.c||0;eL[i]=(Lf+c/2)*lw;eR[i]=(R+c/2)*lw}
-    else{eL[i]=ch.Nref/2*lw;eR[i]=w.N*lw-eL[i]}
+    const q=ch.pcs[pj];W2[i]=TWk[jzTileK(TT,q.p)]||TWk.tr;PI[i]=pj;ZZ[i]=q.p.w.z?1:0;lanes(i,q);
   }
-  // krótkie zwężenia pomijamy (domknięcie), potem łagodne zmiany szerokości
-  const lwd=LWk[LN_K[ch.kc]]||LWk.tr,hw=Math.round((Math.max(40,8*lwd)+3.6*lwd)/2/h),ho=Math.round(Math.max(10,lwd)/2/h),m=JZ_SLOPE*h;
-  const cl=v=>{const c=jzSlide(jzSlide(v,hw,true),hw,false);return jzSlide(jzSlide(c,ho,false),ho,true)};   // zwężenia krótsze niż ok. 12 pasów długości i wybrzuszenia krótsze niż ok. 1 pas – pomijane
-  const gL=jzRamp(cl(eL),m),gR=jzRamp(cl(eR),m),LWs=jzRamp(LW,m*.25);
+  // krótkie zmiany liczby pasów pomijamy (domknięcie i otwarcie), potem zmiany łagodne: pas przybywa / ubywa na ok. 3 szerokościach drogi
+  let lwd=0;for(let i=0;i<n;i++)lwd+=W2[i];lwd/=n;
+  const hw=Math.round((Math.max(40,8*lwd)+3.6*lwd)/2/h),ho=Math.round(Math.max(10,lwd)/2/h),mN=h/(3*lwd);
+  const cl=v=>{const c=jzSlide(jzSlide(v,hw,true),hw,false);return jzSlide(jzSlide(c,ho,false),ho,true)};
+  const fA=jzRamp(cl(nA),mN),fB=jzRamp(cl(nB),mN),fC=jzRamp(cl(nC),mN),NT=new Float64Array(n);for(let i=0;i<n;i++)NT[i]=Math.max(1,fA[i]+fB[i]+fC[i]);
+  // szerokość: zmiana klasy drogi łagodnie; przy rozwidleniu – w węźle jak jezdnia sprzed rozwidlenia
+  const wn=jzRamp(W2,JZ_SLOPE*h);
+  if(ch.fk)for(const at of [0,1]){const F=ch.fk[at];if(!F)continue;const TG=jzGeo(N,B,F.T.ch,false);if(!TG)continue;
+    const ti=F.T.at?TG.n-1:0,n0=at?n-1:0,dW=TG.wn[ti]-wn[n0];if(Math.abs(dW)<.01)continue;const Lw=Math.max(20,5*Math.abs(dW));   /* (krótki ciąg: zmiana nie kończy się w nim, ale nie jest stroma) */
+    for(let k=0;k<n;k++){const ds=at?ch.L-T[k]:T[k];if(ds<-.5||ds>=Lw)continue;const v=Math.max(0,ds)/Lw;wn[k]+=dW*(1-v*v*(3-2*v))}}
   // kierunek osi: różnica środkowa ±2 m (wygładza załamania)
   const UX=new Float64Array(n),UY=new Float64Array(n),k2=Math.max(1,Math.round(2/h));
   for(let i=0;i<n;i++){const a=Math.max(0,i-k2),b=Math.min(n-1,i+k2),dx=X[b]-X[a],dy=Y[b]-Y[a],l=Math.hypot(dx,dy)||1;UX[i]=dx/l;UY[i]=dy/l}
-  G={ch,n,h,X,Y,T,UX,UY,gL,gR,LWs,LW,PI,ZZ,A,cumA:cum,t0,d:new Float64Array(n),i0:0,i1:n-1,lines:null,ok:false,eL,eR,nw:[gL[0]+gR[0],gL[n-1]+gR[n-1]],fp:[null,null]};   // nw: szerokość na końcach przed zmianami na rozwidleniach
+  const LWs=new Float64Array(n);for(let i=0;i<n;i++)LWs[i]=2*wn[i]/NT[i];
+  G={ch,n,h,X,Y,T,UX,UY,wn,gL:Float64Array.from(wn),gR:Float64Array.from(wn),nA:fA,nB:fB,nC:fC,NT,LWs,PI,ZZ,A,cumA:cum,t0,d:new Float64Array(n),i0:0,i1:n-1,lines:null,ok:false,fp:[null,null],sq:new Uint8Array(n)};
   B.geo.set(ch.id,G);B.sig.set(ch.sig,G);
   {const PB=N.prev&&N.prev.bk.get(B.key),PG=PB&&PB.sig.get(ch.sig);   // ten sam ciąg w poprzednich danych: jego linie (przesunięte do nowego układu) do czasu policzenia nowych
     if(PG&&(PG.lines||PG.old)&&PG.n===n){const pd=N.prev.D,kx=111195*Math.cos(rad(N.D.lat)),L=PG.lines||PG.old.L,o=PG.lines?[0,0]:PG.old.o;
       G.old={L,o:[o[0]+(pd.lon-N.D.lon)*kx,o[1]+(pd.lat-N.D.lat)*111195]}}
     else if(B.from){const QG=B.from.geo.get(ch.id);if(QG&&QG.lines)G.old={L:QG.lines,o:[0,0]}}}   // ta sama sieć, poprzednia skala
   G.st=0;return G;
+  }finally{B.bld.delete(ch.id)}
 }
 function jzDone(N,B,G){
-  const {ch,n,T,gL,gR}=G,T0=ch.tail&&ch.tail[0],T1=ch.tail&&ch.tail[1],TWk=B.TWk;
-  // przesunięcie na rozwidleniu (wymaga geometrii jezdni przed rozwidleniem i drugiej odnogi)
+  const {ch,n,T}=G,T0=ch.tail&&ch.tail[0],T1=ch.tail&&ch.tail[1],TWk=B.TWk;
   if(ch.fk)for(const at of [0,1]){const F=ch.fk[at];if(F)try{jzFork(N,B,G,at,F)}catch(e){lnFail(e)}}
-  if(ch.ow)try{jzTwin(N,B,G)}catch(e){lnFail(e)}
+  try{jzSqueeze(N,B,G)}catch(e){lnFail(e)}
+  const {gL,gR,NT,LWs}=G;for(let k=0;k<n;k++)LWs[k]=(gL[k]+gR[k])/NT[k];
   // przycięcie przedłużeń tam, gdzie jezdnia osiągnęła już szerokość zwykłej drogi
-  if(T1){let i=n-1;for(let k=0;k<n;k++)if(T[k]>ch.L){const tl=TWk[T1.k]||TWk.tr;if(Math.abs(gL[k]-tl)<.05&&Math.abs(gR[k]-tl)<.05&&Math.abs(G.d[k])<.05){i=k;break}}G.i1=Math.max(0,i)}
-  if(T0){let i=0;for(let k=n-1;k>=0;k--)if(T[k]<0){const tl=TWk[T0.k]||TWk.tr;if(Math.abs(gL[k]-tl)<.05&&Math.abs(gR[k]-tl)<.05&&Math.abs(G.d[k])<.05){i=k;break}}G.i0=Math.min(G.i1,i)}
+  if(T1){let i=n-1;for(let k=0;k<n;k++)if(T[k]>ch.L){const tl=TWk[T1.k]||TWk.tr;if(Math.abs(gL[k]-tl)<.05&&Math.abs(gR[k]-tl)<.05){i=k;break}}G.i1=Math.max(0,i)}
+  if(T0){let i=0;for(let k=n-1;k>=0;k--)if(T[k]<0){const tl=TWk[T0.k]||TWk.tr;if(Math.abs(gL[k]-tl)<.05&&Math.abs(gR[k]-tl)<.05){i=k;break}}G.i0=Math.min(G.i1,i)}
   jzOutline(G);G.ok=true;
 }
-// rozwidlenie / połączenie: odnoga wychodzi z węzła w kierunku jezdni sprzed rozwidlenia (ten sam przekrój w węźle – bez szczeliny i schodka),
-// jej zewnętrzny brzeg biegnie po brzegu tamtej jezdni, dopóki odnogi się nie rozejdą; gdy odnogi razem są węższe od jezdni, luka między nimi zwęża się łagodnie
+// rozwidlenie / połączenie: odnoga wychodzi z węzła w kierunku jezdni sprzed rozwidlenia – w węźle ten sam przekrój (bez szczeliny i schodka),
+// dalej przekrój stopniowo obraca się do własnego kierunku odnogi (bez zawinięcia brzegu)
 function jzFork(N,B,G,at,F){
-  const ch=G.ch,TG=jzGeo(N,B,F.T.ch),SG=jzGeo(N,B,F.S.ch,false);if(!TG||!SG)return;
+  const ch=G.ch,TG=jzGeo(N,B,F.T.ch,false);if(!TG)return;
   const n=G.n,ti=F.T.at?TG.n-1:0,sT=F.T.at?1:-1,sg=at?-1:1,n0=at?n-1:0;
   const uTx=sT*TG.UX[ti],uTy=sT*TG.UY[ti];   // kierunek jezdni w stronę odnóg
-  const tL=F.T.at?TG.gL[ti]-TG.d[ti]:TG.gR[ti]+TG.d[ti],tR=F.T.at?TG.gR[ti]+TG.d[ti]:TG.gL[ti]-TG.d[ti];   // jej brzegi patrząc w stronę odnóg
-  const pt=(g,a,dist)=>{const T=g.T,ch2=g.ch,t=a?ch2.L-dist:dist;if(t>=T[g.n-1])return g.n-1;if(t<=T[0])return 0;let lo=0,hi=g.n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(T[m]<=t)lo=m;else hi=m}return t-T[lo]<T[hi]-t?lo:hi};
+  const pt=(a,dist)=>{const T=G.T,t=a?ch.L-dist:dist;if(t>=T[n-1])return n-1;if(t<=T[0])return 0;let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(T[m]<=t)lo=m;else hi=m}return t-T[lo]<T[hi]-t?lo:hi};
   const dist=k=>{const v=at?ch.L-G.T[k]:G.T[k];return v<0&&v>-.5?0:v};   // (węzeł: zaokrąglenie)
-  const i15=pt(G,at,15),j15=pt(SG,F.S.at,15),nx=G.X[n0],ny=G.Y[n0];
-  const left=((G.X[i15]-nx)*(SG.Y[j15]-ny)-(G.Y[i15]-ny)*(SG.X[j15]-nx))<0;   // ta odnoga po lewej (patrząc od węzła)
-  const lwd=B.LWk[LN_K[ch.kc]]||B.LWk.tr,bL0=at?G.gR[n0]:G.gL[n0],bR0=at?G.gL[n0]:G.gR[n0],wB=bL0+bR0,wS=SG.nw[F.S.at];
-  const ss=(ds,L)=>{if(ds>=L)return 0;const v=ds/L;return 1-v*v*(3-2*v)};   // 1 w węźle → 0 w odległości L, łagodnie
-  // a) kierunek przekroju: w węźle jak jezdnia sprzed rozwidlenia, dalej stopniowo własny (bez szczeliny i zawinięcia brzegu)
-  const i10=pt(G,at,Math.min(10,ch.L*.5));let bx=G.X[i10]-nx,by=G.Y[i10]-ny;const bl=Math.hypot(bx,by)||1;bx/=bl;by/=bl;
-  const th=Math.acos(Math.max(-1,Math.min(1,bx*uTx+by*uTy))),om=Math.max(tL,tR,wB),Lb=Math.min(ch.L*.45,Math.max(12,3*th*om));
-  G.fp[at]={w:wB,th};
-  for(let k=0;k<n;k++){const ds=dist(k);if(ds<0||ds>=Lb)continue;const w=ss(ds,Lb);
+  const i10=pt(at,Math.min(10,ch.L*.5)),nx=G.X[n0],ny=G.Y[n0];let bx=G.X[i10]-nx,by=G.Y[i10]-ny;const bl=Math.hypot(bx,by)||1;bx/=bl;by/=bl;
+  const th=Math.acos(Math.max(-1,Math.min(1,bx*uTx+by*uTy))),wB=2*G.wn[n0],om=Math.max(wB,2*TG.wn[ti]),Lb=Math.min(ch.L*.45,Math.max(12,3*th*om));
+  G.fp[at]={w:G.NT[n0],th};   // (pierwszeństwo linii: więcej pasów, potem bardziej na wprost)
+  for(let k=0;k<n;k++){const ds=dist(k);if(ds<0||ds>=Lb)continue;const v=ds/Lb,w=1-v*v*(3-2*v);
     let ux=sg*G.UX[k]*(1-w)+uTx*w,uy=sg*G.UY[k]*(1-w)+uTy*w;const l=Math.hypot(ux,uy)||1;G.UX[k]=sg*ux/l;G.UY[k]=sg*uy/l}
-  // b) przesunięcie: zewnętrzny brzeg w węźle na brzegu jezdni; dalej biegnie po nim, dopóki odnogi się nie rozejdą (koniec zaokrąglony);
-  //    odnoga szersza na zewnątrz niż jezdnia – w węźle cofnięta do jej brzegu i łagodnie wraca na swoje miejsce
-  const Lmax=Math.min(120,ch.L*.9),x0=left?tL-bL0:tR-bR0,bq=Math.max(0,Math.min(.5*lwd,.5*x0)),Lt=Math.min(ch.L*.6,Math.max(20,-5*x0));
-  const sm=x=>bq<=0?Math.max(0,x):x>=bq?x:x<=-bq?0:(x+bq)*(x+bq)/(4*bq);
-  for(let k=0;k<n;k++){const ds=dist(k);if(ds<0||ds>Lmax)continue;let dl;
-    if(x0>=0){const j=pt(SG,F.S.at,ds),hsep=Math.hypot(G.X[k]-SG.X[j],G.Y[k]-SG.Y[j]),bL=at?G.gR[k]:G.gL[k],bR=at?G.gL[k]:G.gR[k];   // brzegi odnogi w kierunku od węzła
-      dl=left?-sm(tL-bL-hsep/2):sm(tR-bR-hsep/2);const f=(ds-Lmax*.7)/(Lmax*.3);if(f>0)dl*=1-(f>=1?1:f*f*(3-2*f))}   // najpóźniej na końcu odcinka przesunięcie wygasa
-    else dl=(left?-x0:x0)*ss(ds,Lt);
-    G.d[k]=at?-dl:dl;
-  }
-  // c) wewnętrzny brzeg: luka między odnogami (jezdnia szersza niż obie razem) bierze jedna odnoga – ta, której linie nie liczą się od tej strony;
-  //    odnoga szersza niż cała jezdnia – w węźle zwężona do niej; obie zmiany zanikają łagodnie
-  const gap=tL+tR-wB-wS,absorb=ch.ow?(at===0?left:!left):left,A=gap>.05*lwd&&absorb?gap:wB-tL-tR>.05*lwd?-(wB-tL-tR):0;
-  if(A){const La=Math.min(ch.L*.6,Math.max(20,5*Math.abs(A))),arr=left?(at?G.gL:G.gR):(at?G.gR:G.gL);
-    for(let k=0;k<n;k++){const ds=dist(k);if(ds<0||ds>=La)continue;arr[k]+=A*ss(ds,La)}}
 }
 // powiązanie dwóch ciągów na rozwidleniu: 0 – brak, 1 – jezdnia i jej odnoga, 2 – druga odnoga (ta ma pierwszeństwo), 3 – druga odnoga (tamta ma pierwszeństwo:
 // szersza albo bardziej na wprost – jej linie biegną dalej, a linie tej znikają tam, gdzie wchodzą na nią)
 function jzRelK(G,Q){
   const a=G.ch,b=Q.ch;
   if(a.fk)for(let at=0;at<2;at++){const F=a.fk[at];if(!F)continue;if(F.T.ch===b)return 1;
-    if(F.S.ch===b){const p=G.fp[at],q=Q.fp[F.S.at];if(!p||!q)return 2;const lw=G.LWs[at?G.n-1:0],dw=q.w-p.w;
-      return dw>.25*lw||(Math.abs(dw)<=.25*lw&&(q.th<p.th-.02||(Math.abs(q.th-p.th)<=.02&&b.id<a.id)))?3:2}}
+    if(F.S.ch===b){const p=G.fp[at],q=Q.fp[F.S.at];if(!p||!q)return 2;const dw=q.w-p.w;
+      return dw>.25||(Math.abs(dw)<=.25&&(q.th<p.th-.02||(Math.abs(q.th-p.th)<=.02&&b.id<a.id)))?3:2}}
   if(b.fk)for(const F of b.fk)if(F&&F.T.ch===a)return 1;
   return 0;
 }
-// druga jezdnia drogi dwujezdniowej (równoległa, w przeciwną stronę): gdy po poszerzeniu na siebie nachodzą, obie odsuwają się na zewnątrz
-// tak, by stykały się wąskim pasem rozdziału – wszystkie pasy obu jezdni widoczne, linie nie chowają się pod drugą jezdnią
-function jzTwin(N,B,G){
+// jezdnie leżące obok siebie (prawie równolegle, ten sam poziom), które na siebie nachodzą – odnogi tuż za rozwidleniem, dwie jezdnie drogi
+// dwujezdniowej, jezdnia zbierająca obok głównej: wspólne miejsce dzielą według liczby pasów (każda zwęża się od strony sąsiadki, nie poszerza drogi);
+// jezdnie w przeciwnych kierunkach zostawiają między sobą wąski pas rozdziału
+function jzSqueeze(N,B,G){
   const ch=G.ch;
-  if(!N.tw){const g=new Map(),CS=48;   // siatka osi jezdni jednokierunkowych z pasami
-    for(const q of N.C){if(!q.ow||!q.show)continue;const a=q.a,n=a.length/2;
-      for(let j=0;j<n-1;j++){const x1=a[2*j],y1=a[2*j+1],x2=a[2*j+2],y2=a[2*j+3],c0=Math.floor(Math.min(x1,x2)/CS),c1=Math.floor(Math.max(x1,x2)/CS),r0=Math.floor(Math.min(y1,y2)/CS),r1=Math.floor(Math.max(y1,y2)/CS);
-        for(let cx=c0;cx<=c1;cx++)for(let cy=r0;cy<=r1;cy++){const k=(cx+50000)*100000+cy+50000;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(q,j)}}}
-    N.tw={g,CS}}
-  const {g,CS}=N.tw,n=G.n,{X,Y,UX,UY,gL,gR,PI,ZZ}=G;
-  let wmax=0;for(let k=0;k<n;k++)wmax=Math.max(wmax,gL[k],gR[k]);
-  const R=Math.min(100,2*wmax+2),rc=Math.ceil(R/CS),gap=2.5/B.s,ST=6,raw=new Float64Array(n);let sl=0,sr=0;
-  for(let k=0;k<n;k+=ST){if(PI[k]<0)continue;const x=X[k],y=Y[k],ux=UX[k],uy=UY[k],cx=Math.floor(x/CS),cy=Math.floor(y/CS);
-    let bq=null,bj=0,bt=0,bd=1e9,bs=0;
-    for(let a=cx-rc;a<=cx+rc;a++)for(let b=cy-rc;b<=cy+rc;b++){const l=g.get((a+50000)*100000+b+50000);if(!l)continue;
-      for(let i=0;i<l.length;i+=2){const q=l[i];if(q===ch)continue;const j=l[i+1],A=q.a,x1=A[2*j],y1=A[2*j+1],vx=A[2*j+2]-x1,vy=A[2*j+3]-y1,L2=vx*vx+vy*vy;if(L2<1e-4)continue;
-        const L=Math.sqrt(L2);if((vx*ux+vy*uy)/L>-.85)continue;   // tylko ruch w przeciwną stronę, prawie równolegle
-        const t=((x-x1)*vx+(y-y1)*vy)/L2;if(t<-.02||t>1.02)continue;
-        const px=x1+vx*t-x,py=y1+vy*t-y,D=Math.hypot(px,py);if(D<bd&&D<R){bd=D;bq=q;bj=j;bt=t;bs=(-uy*px+ux*py)>0?1:-1}}}
-    if(!bq)continue;
-    const QG=jzGeo(N,B,bq,false);if(!QG)continue;/* wystarczy przebieg szerokości */const tq=bq.cum[bj]+bt*(bq.cum[bj+1]-bq.cum[bj]),qi=Math.max(0,Math.min(QG.n-1,Math.round((tq+QG.t0)/QG.h)));
-    if(QG.ZZ[qi]!==ZZ[k])continue;   // inny poziom (most nad drogą)
-    const ov=(bs>0?gL[k]:gR[k])+(bs>0?QG.gL[qi]:QG.gR[qi])+gap-bd;if(ov<=0)continue;
-    let w=1;if(ch.fk)for(let at=0;at<2;at++){if(!ch.fk[at])continue;const Lw=Math.min(120,ch.L*.9),ds=at?ch.L-G.T[k]:G.T[k];if(ds<Lw){const v=Math.max(0,ds)/Lw;w=Math.min(w,v*v*(3-2*v))}}   // przy rozwidleniu rządzi dopasowanie do jezdni sprzed niego
-    raw[k]=ov/2*w;if(bs>0)sl+=raw[k];else sr+=raw[k];
-  }
-  if(sl+sr<=0)return;
-  for(let k=0;k<n;k++)if(k%ST){const a=k-k%ST,b=Math.min(n-1,a+ST);if(b>a){const f=(k-a)/(b-a);raw[k]=raw[a]*(1-f)+raw[b]*f}}
-  // łagodnie: górna obwiednia o nachyleniu JZ_SLOPE, potem średnia z 11 próbek
-  const m=JZ_SLOPE*G.h;for(let k=1;k<n;k++)raw[k]=Math.max(raw[k],raw[k-1]-m);for(let k=n-2;k>=0;k--)raw[k]=Math.max(raw[k],raw[k+1]-m);
-  const K=5,at=i=>raw[i<0?0:i>=n?n-1:i];let acc=0;for(let i=-K;i<=K;i++)acc+=at(i);const sm=new Float64Array(n);
-  for(let i=0;i<n;i++){sm[i]=acc/(2*K+1);acc+=at(i+K+1)-at(i-K)}
-  const dir=sl>=sr?1:-1,d=G.d;   // druga jezdnia po lewej → odsunięcie w prawo
-  for(let k=0;k<n;k++){const p=sm[k];if(p<.01)continue;if(dir>0)d[k]=d[k]>=0?Math.max(d[k],p):d[k]+p;else d[k]=d[k]<=0?Math.min(d[k],-p):d[k]-p}
+  if(!N.ax){const g=new Map(),CS=32;   // siatka odcinków osi wszystkich rysowanych ciągów
+    for(const q of N.C){if(!q.show)continue;const a=q.a,n=a.length/2;
+      for(let j=0;j<n-1;j++){const x1=a[2*j],y1=a[2*j+1],vx=a[2*j+2]-x1,vy=a[2*j+3]-y1,L=Math.hypot(vx,vy);if(L<.05)continue;const o={q,j,x1,y1,ux:vx/L,uy:vy/L,L};
+        const c0=Math.floor(Math.min(x1,x1+vx)/CS),c1=Math.floor(Math.max(x1,x1+vx)/CS),r0=Math.floor(Math.min(y1,y1+vy)/CS),r1=Math.floor(Math.max(y1,y1+vy)/CS);
+        for(let cx=c0;cx<=c1;cx++)for(let cy=r0;cy<=r1;cy++){const k=((cx&32767)<<15)|(cy&32767);let l=g.get(k);if(!l)g.set(k,l=[]);l.push(o)}}}
+    N.ax={g,CS}}
+  const {g,CS}=N.ax,n=G.n,{X,Y,UX,UY,wn,NT,ZZ}=G;
+  const tb=q=>{if(ch.fk)for(const F of ch.fk)if(F&&F.T.ch===q)return true;if(q.fk)for(const F of q.fk)if(F&&F.T.ch===ch)return true;return false};   // jezdnia i jej odnoga stykają się końcami, nie bokami
+  let wmax=0,tmax=0;for(let k=0;k<n;k++)wmax=Math.max(wmax,wn[k]);for(const k in B.TWk)tmax=Math.max(tmax,B.TWk[k]);
+  const R=wmax+tmax+1,gap=2.5/B.s,ST=3,limL=new Float64Array(n).fill(1e9),limR=new Float64Array(n).fill(1e9),cells=new Set(),rel=new Map(),hits=[],side=new Map();
+  for(let k=0;k<n;k+=ST){const x=X[k],y=Y[k],ux=UX[k],uy=UY[k],nx=uy,ny=-ux,wG=wn[k];   // n: w prawo
+    cells.clear();for(let l=-R;l<=R+.01;l+=CS/2)cells.add(((Math.floor((x+nx*l)/CS)&32767)<<15)|(Math.floor((y+ny*l)/CS)&32767));
+    for(const ck of cells){const l=g.get(ck);if(!l)continue;
+      for(const o of l){const q=o.q;if(q===ch)continue;const c=o.ux*ux+o.uy*uy;if(Math.abs(c)<.82)continue;
+        let r=rel.get(q);if(r===undefined){r=tb(q);rel.set(q,r)}if(r)continue;
+        const nv=nx*o.uy-ny*o.ux;if(Math.abs(nv)<1e-6)continue;const wx=o.x1-x,wy=o.y1-y;
+        const lam=(wx*o.uy-wy*o.ux)/nv,mu=(wx*ny-wy*nx)/nv;if(mu<-.5||mu>o.L+.5||Math.abs(lam)>R)continue;   // przecięcie prostej przekroju z osią sąsiadki
+        const QG=jzGeo(N,B,q,false);if(!QG)continue;const qi=Math.max(0,Math.min(QG.n-1,Math.round((q.cum[o.j]+Math.max(0,Math.min(o.L,mu))+QG.t0)/QG.h)));
+        if(QG.ZZ[qi]!==ZZ[k])continue;
+        const wQ=QG.wn[qi],o1=Math.max(-wG,lam-wQ),o2=Math.min(wG,lam+wQ);if(o2<=o1)continue;   // część wspólna pasów obu jezdni (w przekroju tej)
+        hits.push({k,q,lam,o1,o2,f:NT[k]/(NT[k]+QG.NT[qi]),gp:c<0?gap/2:0});
+        if(Math.abs(lam)>.5)side.set(q,(side.get(q)||0)+lam)}}}
+  // rozwidlenie: zewnętrzny brzeg odnogi w węźle dokładnie na brzegu jezdni sprzed rozwidlenia (ta mogła być zwężona przez swoją sąsiadkę)
+  const FX=[];if(ch.fk)for(const at of [0,1]){const F=ch.fk[at];if(!F)continue;const TG=jzGeo(N,B,F.T.ch);if(!TG||TG.st!==2)continue;const ti=F.T.at?TG.n-1:0;
+    const tl=F.T.at?TG.gL[ti]:TG.gR[ti],tr=F.T.at?TG.gR[ti]:TG.gL[ti];FX.push({at,S:F.S.ch,eL:at?tr:tl,eR:at?tl:tr})}   // brzegi jezdni w układzie tej odnogi
+  if(!hits.length&&!FX.length)return;
+  // strona sąsiadki: tuż przy wspólnym węźle osie prawie się pokrywają, więc tam – strona, po której leży dalej
+  for(const H of hits){const sd=Math.abs(H.lam)>Math.max(1,.25*wn[H.k])?H.lam:(side.get(H.q)||H.lam),k=H.k;
+    if(sd>=0){const pp=H.o1+(H.o2-H.o1)*H.f-H.gp;if(pp<limR[k])limR[k]=pp}   // sąsiadka po prawej: ta bierze lewą część wspólnego miejsca
+    else{const pp=H.o2-(H.o2-H.o1)*H.f+H.gp;if(-pp<limL[k])limL[k]=-pp}}
+  // próbki pośrednie: ostrożniej (mniejsza z sąsiednich), potem łagodnie: dolna obwiednia o nachyleniu JZ_SLOPE i średnia z 11 próbek
+  for(const lim of [limL,limR]){
+    for(let k=0;k<n;k++)if(k%ST){const a=k-k%ST,b=Math.min(n-1,a+ST);lim[k]=Math.min(lim[a],lim[b])}
+    const m=JZ_SLOPE*G.h;for(let k=1;k<n;k++)lim[k]=Math.min(lim[k],lim[k-1]+m);for(let k=n-2;k>=0;k--)lim[k]=Math.min(lim[k],lim[k+1]+m);
+    const K=5,at=i=>Math.min(1e6,lim[i<0?0:i>=n?n-1:i]);let acc=0;for(let i=-K;i<=K;i++)acc+=at(i);const sm=new Float64Array(n);
+    for(let i=0;i<n;i++){sm[i]=acc/(2*K+1);acc+=at(i+K+1)-at(i-K)}
+    for(let k=0;k<n;k++)lim[k]=sm[k]}
+  for(const X of FX){const sd=side.get(X.S),outL=sd===undefined||sd>0,outR=sd===undefined||sd<0,n0=X.at?n-1:0;   // druga odnoga po prawej → zewnętrzny brzeg lewy
+    const Lj=Math.max(15,5*Math.max(outL?Math.abs(Math.min(limL[n0],wn[n0])-X.eL):0,outR?Math.abs(Math.min(limR[n0],wn[n0])-X.eR):0));   // zmiana najwyżej ok. 0,3 m na metr
+    for(let k=0;k<n;k++){const ds=Math.max(0,X.at?ch.L-G.T[k]:G.T[k]);if(ds>=Lj)continue;const v=ds/Lj,w=v*v*(3-2*v);
+      if(outL)limL[k]=X.eL*(1-w)+Math.min(limL[k],wn[k])*w;if(outR)limR[k]=X.eR*(1-w)+Math.min(limR[k],wn[k])*w}}
+  const {gL,gR,sq}=G,VA=new Float64Array(n),VB=new Float64Array(n),m=JZ_SLOPE*G.h;
+  for(let k=0;k<n;k++){let a=Math.min(gL[k],limL[k]),b=Math.min(gR[k],limR[k]);const mw=.3*wn[k];
+    if(a+b<mw){let e=mw-a-b;const ea=Math.min(e/2,gL[k]-a);a+=ea;e-=ea;const eb=Math.min(e,gR[k]-b);b+=eb;e-=eb;if(e>0)a+=Math.min(e,gL[k]-a)}   // (najwęższa jezdnia: 0,3 szerokości – nie szerzej niż droga)
+    VA[k]=a;VB[k]=b}
+  // ostatecznie: zmiana najwyżej JZ_SLOPE m na metr (dolna obwiednia) i bez załamań (średnia z 7 próbek); nigdy szerzej niż droga z mapy
+  for(const [g,V] of [[gL,VA],[gR,VB]]){
+    for(let k=1;k<n;k++)V[k]=Math.min(V[k],V[k-1]+m);for(let k=n-2;k>=0;k--)V[k]=Math.min(V[k],V[k+1]+m);
+    const K=3,at=i=>V[i<0?0:i>=n?n-1:i];let acc=0;for(let i=-K;i<=K;i++)acc+=at(i);
+    for(let k=0;k<n;k++){const v=acc/(2*K+1);acc+=at(k+K+1)-at(k-K);if(v<g[k]-.01)sq[k]=1;g[k]=Math.min(g[k],v)}}
 }
 // obrys: lewy i prawy brzeg oraz wielokąt; koniec ciągu bez dalszej drogi – zaokrąglony jak zwykłe drogi na mapie
 function jzOutline(G){
@@ -8110,7 +8133,7 @@ function jzRegister(B,G){
 }
 function jzLines(N,B,G){
   if(G.lines)return G.lines;
-  const ch=G.ch,D=N.D,TT=jzTiles(D),mg=1.0,CS=16,{X,Y,UX,UY,gL,gR,d,LWs,T,ZZ,i0,i1}=G,ins=2/B.s,m=i1-i0+1;
+  const ch=G.ch,D=N.D,TT=jzTiles(D),mg=1.0,CS=16,{X,Y,UX,UY,gL,gR,d,LWs,T,ZZ,i0,i1,nA,nB,nC,NT}=G,ins=2/B.s,m=i1-i0+1;
   // geometria sąsiednich ciągów (do przerw na skrzyżowaniach)
   const b=G.bb,R=80;
   for(const q of N.C){if(!q.show&&!q.fk&&!q.ft)continue;const c=q.bb;if(c[2]<b[0]-R||c[0]>b[2]+R||c[3]<b[1]-R||c[1]>b[3]+R)continue;
@@ -8172,15 +8195,17 @@ function jzLines(N,B,G){
         if(lat<-Q.gL[q]-mg||lat>Q.gR[q]+mg)continue;
         return true}}   // każda inna jezdnia z pasami (także równoległa – np. dwie jezdnie drogi dwujezdniowej, które przy pogrubieniu na siebie nachodzą): tam bez linii
     return false};
-  const defs=[];
-  let mR=0,mL=0,mN=0;for(let i=i0;i<=i1;i++){mR=Math.max(mR,Math.floor(gR[i]/LWs[i]+.4));mL=Math.max(mL,Math.floor(gL[i]/LWs[i]+.4));mN=Math.max(mN,Math.floor((gL[i]+gR[i])/LWs[i]+.4))}
+  const defs=[],pm=5/B.s;   // linie tylko na pasach szerszych niż ok. 5 px (inaczej zlewają się w kreskowanie)
+  let mA=0,mB=0,mN=0;for(let i=i0;i<=i1;i++){mA=Math.max(mA,Math.ceil(nA[i]));mB=Math.max(mB,Math.ceil(nB[i]));mN=Math.max(mN,Math.ceil(NT[i]))}
+  const le=i=>d[i]-gL[i];   // lewy brzeg; pasy kolejno od lewej: A (ruch w przeciwną stronę), C (środkowe), B
   if(ch.ow===0){
-    defs.push({t:'div',x:i=>d[i],ex:i=>gL[i]>=.6*LWs[i]&&gR[i]>=.6*LWs[i]});
-    for(let j=1;j<mR;j++)defs.push({t:'dash',x:i=>d[i]+j*LWs[i],ex:i=>gR[i]-j*LWs[i]>=.6*LWs[i]});
-    for(let j=1;j<mL;j++)defs.push({t:'dash',x:i=>d[i]-j*LWs[i],ex:i=>gL[i]-j*LWs[i]>=.6*LWs[i]});
-  }else for(let j=1;j<mN;j++)defs.push({t:'dash',x:i=>d[i]-gL[i]+j*LWs[i],ex:i=>gL[i]+gR[i]-j*LWs[i]>=.6*LWs[i]});
+    defs.push({t:'div',x:i=>le(i)+(nA[i]+nC[i]/2)*LWs[i],ex:i=>nA[i]>=.6&&nB[i]>=.6&&LWs[i]>=.8*pm});
+    for(let j=1;j<mA;j++)defs.push({t:'dash',x:i=>le(i)+j*LWs[i],ex:i=>nA[i]-j>=.3&&LWs[i]>=pm});
+    for(let j=1;j<mB;j++)defs.push({t:'dash',x:i=>le(i)+(nA[i]+nC[i]+j)*LWs[i],ex:i=>nB[i]-j>=.3&&LWs[i]>=pm});
+  }else for(let j=1;j<mN;j++)defs.push({t:'dash',x:i=>le(i)+j*LWs[i],ex:i=>NT[i]-j>=.3&&LWs[i]>=pm});
   defs.push({t:'edge',x:i=>d[i]-gL[i]+ins,ex:()=>true},{t:'edge',x:i=>d[i]+gR[i]-ins,ex:()=>true});
-  const P=[0,1].map(()=>({dash:new Path2D(),div:new Path2D(),edge:new Path2D()})),lwd=B.LWk[LN_K[ch.kc]]||B.LWk.tr,per=1.35*lwd,dl=.55*lwd;
+  let lav=0;for(let i=i0;i<=i1;i++)lav+=LWs[i];lav/=Math.max(1,i1-i0+1);
+  const P=[0,1].map(()=>({dash:new Path2D(),div:new Path2D(),edge:new Path2D()})),lwd=Math.max(lav,.6*(B.TWk[LN_K[ch.kc]]||B.TWk.tr)),per=1.35*lwd,dl=.55*lwd;
   let nseg=0,nvis=0;if(window.__jzFull)zone.fill(1);   // (test: sprawdzanie każdej próbki)
   const raw=window.__jzRaw?{dash:[],div:[],pl:[]}:null;   // (test: punkty linii, łamane)
   for(const df of defs){
@@ -8252,7 +8277,6 @@ function jzBody(c,F,pal,s,dm,night,under,z,cwz){
   c.lineCap='round';
   if(wait&&!jzBody.t)jzBody.t=setTimeout(()=>{jzBody.t=0;try{vd=null}catch(e){}},30);   // reszta linii w następnym malowaniu mapy
 }
-
 // ---- plan pasa dla trasy ----
 // strona, po której trzeba jechać przed manewrem: 'L' / 'R' albo null (bez zmiany pasa)
 function lnSide(st){
