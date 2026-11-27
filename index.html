@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 206</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 207</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -7797,6 +7797,7 @@ setInterval(()=>{try{lnTick()}catch(e){}},2500);
 // 5) zmiana liczby pasów poza skrzyżowaniem: linie rozchodzą się albo schodzą łagodnie na ok. 30 m (nowy pas przy osi; pas do skrętu w prawo – przy krawężniku),
 // 6) geometria jest w metrach i nie zależy od przybliżenia: liczymy ją raz, w tle (po kilka ms), więc przesuwanie i zbliżanie mapy niczego nie przelicza.
 var llOn=LSget('llOn',true)!==false;
+var llArr=true;   // Wersja 207: strzałki kierunków na jezdni (razem z liniami pasów)
 const LL_RK={sv:0,rs:1,tr:2,sc:3,pr:4,mwl:5,mw:5},LL_KI={sv:0,rs:1,tr:2,sc:3,pr:4,mwl:5,mw:6},LL_DASH=[5,6],LL_DS=2,LL_W=40075016.686;
 const LLP=LL_DASH[0]+LL_DASH[1];   // okres linii przerywanej [m]
 const LL={nearIds:new Set(),dirty:false,ph:new Map(),res:new Map(),Q:[],inQ:new Set(),T:0,ver:0,P:null,ixD:null,ix:null,rpAt:0,ends:null,endsV:-1,scanKey:'',scanCam:null,col:new Map(),Hmax:0,n:0,ms:0};
@@ -7914,6 +7915,39 @@ function llCtx(l,atStart){
   for(const i of idx){L+=dist(g[2*pa],g[2*pa+1],g[2*i],g[2*i+1]);out.push(g[2*i],g[2*i+1]);pa=i;if(L>=8)break}
   return out;
 }
+// ---- Wersja 207: strzałki kierunków na jezdni (OSM turn:lanes) ----
+// kierunki pasa od lewej: L – w lewo, l – lekko w lewo, S – prosto, r – lekko w prawo, R – w prawo; null – pas bez opisu (bez strzałki). Zawracanie i „zjedź na pas obok” pomijamy.
+function llTurns(tag){
+  if(!tag)return null;
+  return String(tag).split('|').map(l=>{const s=new Set();for(let t of l.split(';')){t=t.trim();
+    if(t==='left'||t==='sharp_left')s.add('L');else if(t==='slight_left')s.add('l');else if(t==='through')s.add('S');else if(t==='right'||t==='sharp_right')s.add('R');else if(t==='slight_right')s.add('r')}
+    return s.size?s:null});
+}
+// strzałka jednego pasa: środek (cx,cy), kierunek jazdy (fx,fy), w lewo (lx,ly), długość A i szerokość pasa lw [m]; trzon – łamana (rysowana kreską szerokości ws), grot – trójkąt
+// kształt jak w panelu u góry: prosto – trzon i grot; skręt – trzon do ok. 40% długości i łuk w bok z grotem (w obrębie swojego pasa); kilka kierunków – wspólny trzon
+function llArrow(fr,A,lw,dirs,k,z){   // fr(u) – [x,y,fx,fy] środka pasa u metrów od ogona (strzałka wygina się razem z drogą); w lewo = (-fy,fx)
+  const sh=[],hd=[],P=(u,v)=>{const q=fr(u);return [q[0]-q[3]*v,q[1]+q[2]*v]},D=u=>{const q=fr(u);return [q[2],q[3]]};   // u – wzdłuż od ogona [m], v – w lewo od środka pasa [m]
+  const head=(e,ux,uy,hl,hw)=>{hd.push(e[0]+ux*hl,e[1]+uy*hl,e[0]-uy*hw/2,e[1]+ux*hw/2,e[0]+uy*hw/2,e[1]-ux*hw/2,NaN,NaN)};
+  for(const d of dirs){
+    if(d==='S'){const hl=Math.min(.3*A,1.1*lw);for(let i=0;i<=6;i++){const q=P((A-hl)*i/6,0);sh.push(q[0],q[1])}sh.push(NaN,NaN);const e=P(A-hl,0),f=D(A-hl);head(e,f[0],f[1],hl,.74*lw);continue}
+    const sg=d==='L'||d==='l'?1:-1,sl=d==='l'||d==='r',th=sl?.52:1.05,rr=(sl?.62:.33)*lw,u0=(sl?.5:.42)*A;   // łuk: kąt skrętu, promień, początek
+    const pts=[];for(let i=0;i<=4;i++)pts.push(P(u0*i/4,0));for(let i=1;i<=6;i++){const t=th*i/6;pts.push(P(u0+rr*Math.sin(t),sg*rr*(1-Math.cos(t))))}
+    for(const q of pts)sh.push(q[0],q[1]);sh.push(NaN,NaN);
+    const ue=u0+rr*Math.sin(th),f=D(ue),lx=-f[1],ly=f[0],ux=f[0]*Math.cos(th)+lx*sg*Math.sin(th),uy=f[1]*Math.cos(th)+ly*sg*Math.sin(th);head(pts[pts.length-1],ux,uy,(sl?.5:.38)*lw,.56*lw);
+  }
+  return {k,z,w:lw,ws:Math.max(.7,Math.min(2,.22*lw)),sh:Float32Array.from(sh),hd:Float32Array.from(hd)};
+}
+const llZv=()=>typeof signs!=='undefined'&&signs?signs.v||1:0;   // wersja danych o przejściach dla pieszych
+function llZG(){   // liczba przejść dla pieszych w komórkach ok. 110 × 140 m (do sprawdzenia, czy przy drodze doszły nowe)
+  const v=llZv();if(LL.zg&&LL.zgv===v)return LL.zg;const G=new Map();
+  if(v)for(const sg of (signs.zeb||signs.haz||[])){if(sg.kind!=='crossing'||sg.cr==='unmarked')continue;const k=Math.floor(sg.lat*1000)*100000+Math.floor(sg.lon*700);G.set(k,(G.get(k)||0)+1)}
+  LL.zg=G;LL.zgv=v;return G;
+}
+function llZk(w){   // przejścia dla pieszych przy drodze (z zapasem) – zmiana liczby = trzeba od nowa ułożyć strzałki
+  const G=llZG();if(!G.size)return 0;let b=w.llb;if(!b){const g=w.g;let a0=90,a1=-90,o0=180,o1=-180;for(let i=0;i<g.length;i+=2){if(g[i]<a0)a0=g[i];if(g[i]>a1)a1=g[i];if(g[i+1]<o0)o0=g[i+1];if(g[i+1]>o1)o1=g[i+1]}b=w.llb=[a0,o0,a1,o1]}
+  let n=0;for(let u=Math.floor((b[0]-.0004)*1000);u<=Math.floor((b[2]+.0004)*1000);u++)for(let v=Math.floor((b[1]-.0006)*700);v<=Math.floor((b[3]+.0006)*700);v++)n+=G.get(u*100000+v)||0;
+  return n+1;
+}
 const llRT=tag=>{if(!tag)return 0;let n=0;for(const l of lnParse(tag))if(l.has('R')&&!l.has('S')&&!l.has('L'))n++;return n};   // pasy tylko do skrętu w prawo
 const llSm=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
 // linie pasów jednej drogi z danymi OSM w układzie mapy D: [{t:0 przerywana / 1 ciągła, k: klasa drogi pod linią, z: poziom, w: najwęższy pas [m], p: punkty}]
@@ -8026,19 +8060,54 @@ function llWay(D,w){
     }
     flush();
   }
+  const AR=[],ds=len/(m-1),ZB=[],zk=(w.tf||w.tb)?llZk(w):0;
+  if(typeof signs!=='undefined'&&signs&&(w.tf||w.tb)){const Z=signs.zeb||signs.haz||[];let la0=90,la1=-90,lo0=180,lo1=-180;for(let i=0;i<g.length;i+=2){if(g[i]<la0)la0=g[i];if(g[i]>la1)la1=g[i];if(g[i+1]<lo0)lo0=g[i+1];if(g[i+1]>lo1)lo1=g[i+1]}
+    for(const sg of Z){if(sg.kind!=='crossing'||sg.cr==='unmarked'||sg.lat<la0-.0004||sg.lat>la1+.0004||sg.lon<lo0-.0006||sg.lon>lo1+.0006)continue;const q=llXY(F,sg.lat,sg.lon);
+      let bj=-1,bd=1e9;for(let j=0;j<m;j++){const d=Math.hypot(X[j]-q[0],Y[j]-q[1]);if(d<bd){bd=d;bj=j}}
+      if(bj>=0){const ax=(q[0]-X[bj])*TX[bj]+(q[1]-Y[bj])*TY[bj],lt=Math.abs(-(q[0]-X[bj])*TY[bj]+(q[1]-Y[bj])*TX[bj]);if(lt<(HH[bj]||10)+3&&Math.abs(ax)<6)ZB.push(SS[bj]+ax)}}}
+  const bad=(j,o)=>{   // miejsce strzałki: skrzyżowanie, narożnik, łuk, poza pasem drogi
+    if(!OK[j]||o<-RR[j]+.2||o>LL_[j]-.2||Math.abs(TU[j])>.15)return true;
+    if(CO.length){const sj=s0+SS[j];for(let q=0;q<CO.length;q+=2)if(Math.abs(sj-CO[q])<CO[q+1])return true}
+    if(MK[j]){const a=MK[j];for(let i=0;i<a.length;i+=2)if(o>=a[i]-1.2&&o<=a[i+1]+1.2)return true}
+    return false};
+  const arrows=(tag,fwd)=>{
+    const Pz=llTurns(tag),NG=fwd?NF:NB,G=fwd?GF:GB;if(!Pz||Pz.length!==NG||!G)return;
+    if(!Pz.some(x=>x&&(x.has('L')||x.has('R')||x.has('l')||x.has('r'))))return;   // same „prosto” – bez strzałek (nic nie mówią, a zaśmiecają mapę)
+    const band=j=>fwd?[-RR[j],two?OC[j]:LL_[j]]:[OC[j],LL_[j]],cen=(j,k)=>{const b=band(j),l=(b[1]-b[0])/NG;return fwd?b[1]-(k+.5)*l:b[0]+(k+.5)*l};   // pas k od lewej (w kierunku jazdy)
+    const clean=j=>{if(Math.abs(G.A[j]-NG)>1e-6)return false;const b=band(j),l=(b[1]-b[0])/NG;if(!(l>=Math.max(2.4,.6*nat(j))))return false;
+      for(let k=0;k<NG;k++){const o=cen(j,k);if(bad(j,o-.3*l)||bad(j,o+.3*l))return false}return true};
+    let jE=fwd?m-1:0,sk=0;while(jE>=0&&jE<m&&!clean(jE)){jE+=fwd?-1:1;sk++}   // od końca jazdy: pierwsze czyste miejsce (brzeg skrzyżowania)
+    if(jE<0||jE>=m||sk*ds>45)return;
+    const b=band(jE),lw=(b[1]-b[0])/NG,A=Math.max(10,Math.min(22,2.8*lw)),sE=SS[jE];
+    // grot 3 m przed skrzyżowaniem; jeśli tam jest przejście dla pieszych (pasy na jezdni) albo coś przeszkadza – przesuwamy strzałkę dalej od skrzyżowania (do 40 m);
+    // na długim dojeździe drugi rząd strzałek ok. 25 m wcześniej (jak na prawdziwej jezdni – łatwiej je zauważyć z daleka)
+    const place=(from,maxBk)=>{for(let bk=0;bk<=maxBk;bk++){const sT=fwd?from-bk:from+bk,sB=fwd?sT-A:sT+A,lo=Math.min(sT,sB),hi=Math.max(sT,sB);if(lo<0||hi>len)return null;
+      if(ZB.some(z=>z>lo-3.5&&z<hi+3.5))continue;
+      let ok=true,lm=99;for(let j=Math.floor(lo/ds);j<=Math.ceil(hi/ds);j++){if(j<0||j>=m||!clean(j)){ok=false;break}const bb=band(j);lm=Math.min(lm,(bb[1]-bb[0])/NG)}
+      if(ok)return [sT,sB,lm]}return null};   // lm – najwęższy pas pod strzałką (kształt mieści się w pasie na całej długości)
+    const put=(sT,sB,lm)=>{const jm=Math.round((sT+sB)/2/ds),sg=fwd?1:-1,lwa=Math.min(lw,lm);
+      for(let k=0;k<NG;k++){const dirs=Pz[k];if(!dirs)continue;
+        const fr=u=>{const s=sB+sg*u,jf=Math.max(0,Math.min(m-1,s/ds)),j0=Math.min(m-2,Math.floor(jf)),f=jf-j0,o=cen(j0,k)*(1-f)+cen(j0+1,k)*f;   // środek pasa k w miejscu s drogi
+          const tx=TX[j0]*(1-f)+TX[j0+1]*f,ty=TY[j0]*(1-f)+TY[j0+1]*f,tl=Math.hypot(tx,ty)||1,x=X[j0]+(X[j0+1]-X[j0])*f,y=Y[j0]+(Y[j0+1]-Y[j0])*f;
+          return [x-ty/tl*o,y+tx/tl*o,sg*tx/tl,sg*ty/tl]};
+        AR.push(llArrow(fr,A,lwa*.94,[...dirs].sort((a,b)=>'SLlRr'.indexOf(a)-'SLlRr'.indexOf(b)),KK[jm],ZV[jm]))}};
+    const p1=place(fwd?sE-3:sE+3,40);if(!p1)return;put(p1[0],p1[1],p1[2]);
+    const p2=place(fwd?p1[1]-25:p1[1]+25,20);if(p2)put(p2[0],p2[1],p2[2]);
+  };
+  arrows(T.tf,true);if(two)arrows(T.tb,false);
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(let i=0;i<n;i++){if(PX[i]<x0)x0=PX[i];if(PX[i]>x1)x1=PX[i];if(PY[i]<y0)y0=PY[i];if(PY[i]>y1)y1=PY[i]}
   const bb=D.bb,full=!!bb&&x0-60>bb[0]&&y0-60>bb[1]&&x1+60<bb[2]&&y1+60<bb[3];   // całe otoczenie drogi było w danych mapy – wynik zostaje po przeładowaniu mapy
-  return {id:w.id,D,lat0:D.lat,lon0:D.lon,full,L:out,near:LL.nearIds.has(w.id)};
+  return {id:w.id,D,lat0:D.lat,lon0:D.lon,full,L:out,A:AR,zk,near:LL.nearIds.has(w.id)};
 }
 // kolejka w tle: drogi w promieniu ok. 1,1 km od kamery (najbliższe najpierw), po 6 ms; po skończeniu (albo co 0,5 s) – jedno przemalowanie mapy
 function llWant(D,cam){
   if(!llOn||!LANEW.size||!D||!D.RS)return;
-  const key=laneVer+'|'+D.lat+','+D.lon;
+  const key=laneVer+'|'+D.lat+','+D.lon+'|'+llZv();
   if(LL.scanKey===key&&LL.scanCam&&dist(LL.scanCam.lat,LL.scanCam.lon,cam.lat,cam.lon)<150)return;
   LL.scanKey=key;LL.scanCam={lat:cam.lat,lon:cam.lon};
   const F=llFrame(D),c=llXY(F,cam.lat,cam.lon),bb=D.bb,list=[];
   for(const w of LANEW.values()){
-    const r=LL.res.get(w.id);if(r&&(r.D===D||r.full))continue;if(LL.inQ.has(w.id))continue;
+    const r=LL.res.get(w.id);if(r&&(r.D===D||r.full)&&!((w.tf||w.tb)&&r.zk!==llZk(w)))continue;if(LL.inQ.has(w.id))continue;   // drogi ze strzałkami: od nowa, gdy obok doszły przejścia dla pieszych
     let b=w.llb;if(!b){const g=w.g;let a0=90,a1=-90,o0=180,o1=-180;for(let i=0;i<g.length;i+=2){if(g[i]<a0)a0=g[i];if(g[i]>a1)a1=g[i];if(g[i+1]<o0)o0=g[i+1];if(g[i+1]>o1)o1=g[i+1]}b=w.llb=[a0,o0,a1,o1]}
     const p=llXY(F,b[0],b[1]),q=llXY(F,b[2],b[3]);
     if(bb&&(q[0]<bb[0]||p[0]>bb[2]||q[1]<bb[1]||p[1]>bb[3]))continue;   // poza danymi mapy
@@ -8066,17 +8135,20 @@ const LL_WB=[8,6,4.5,3.4,2.4],LL_PR=1300;
 function llPaths(D,cam){
   const F=llFrame(D),c=cam?llXY(F,cam.lat,cam.lon):[0,0];let P=LL.P;
   if(P&&P.D===D&&P.ver===LL.ver&&P.ln===LANEW.size&&Math.hypot(c[0]-P.cx,c[1]-P.cy)<450)return P;
-  if(!P||P.D!==D||P.ln>LANEW.size||Math.hypot(c[0]-P.cx,c[1]-P.cy)>=450)P=LL.P={D,cx:c[0],cy:c[1],G:new Map(),in:new Map(),list:[],ver:-1,ln:0};   // od nowa: inna mapa, przycięte dane, kamera daleko
+  if(!P||P.D!==D||P.ln>LANEW.size||Math.hypot(c[0]-P.cx,c[1]-P.cy)>=450)P=LL.P={D,cx:c[0],cy:c[1],G:new Map(),AG:new Map(),in:new Map(),list:[],alist:[],ver:-1,ln:0};   // od nowa: inna mapa, przycięte dane, kamera daleko
   P.ver=LL.ver;P.ln=LANEW.size;let add=false;
   for(const r of LL.res.values()){if(!r||!r.L||!r.L.length||P.in.get(r.id)===r||!LANEW.has(r.id))continue;
     if(P.in.has(r.id)){LL.P=null;return llPaths(D,cam)}   // linie tej drogi policzone od nowa – ścieżki budujemy od nowa
     const dx=(r.lon0-D.lon)/360*LL_W*F.cl,dy=(llMy(r.lat0)-F.cy)*F.cl;   // linie liczone dla poprzednich danych mapy: przesunięcie układu
     const p0=r.L[0].p;if(Math.hypot(p0[0]+dx-P.cx,p0[1]+dy-P.cy)>LL_PR)continue;   // daleko od miejsca budowy ścieżek
     P.in.set(r.id,r);add=true;
+    if(r.A)for(const a of r.A){const gk=a.z*100000+Math.round(a.ws*5)*1000+Math.min(9,Math.floor(a.w))*10+(LL_KI[a.k]||0);   // grupy strzałek: poziom | grubość trzonu | szerokość pasa | klasa
+      let ga=P.AG.get(gk);if(!ga)P.AG.set(gk,ga={z:a.z,k:a.k,ws:Math.round(a.ws*5)/5,w:Math.min(9,Math.floor(a.w)),sh:new Path2D(),hd:new Path2D()});
+      for(const [src,dst] of [[a.sh,ga.sh],[a.hd,ga.hd]]){let mv=true;for(let i=0;i<src.length;i+=2){const x=src[i];if(x!==x){mv=true;continue}if(mv){dst.moveTo(x+dx,src[i+1]+dy);mv=false}else dst.lineTo(x+dx,src[i+1]+dy)}}}
     for(const l of r.L){const bk=l.t?0:l.w>=8?0:l.w>=6?1:l.w>=4.5?2:l.w>=3.4?3:4,gk=l.z*1000+l.t*100+bk*10+(LL_KI[l.k]||0);
       let gr=P.G.get(gk);if(!gr)P.G.set(gk,gr={z:l.z,t:l.t,k:l.k,mw:l.t?0:LL_WB[bk],p:new Path2D()});
       const p=l.d||l.p;let mv=true;for(let i=0;i<p.length;i+=2){const x=p[i];if(x!==x){mv=true;continue}if(mv){gr.p.moveTo(x+dx,p[i+1]+dy);mv=false}else gr.p.lineTo(x+dx,p[i+1]+dy)}}}
-  if(add||!P.list.length)P.list=[...P.G.values()].sort((a,b)=>a.t-b.t);
+  if(add||!P.list.length){P.list=[...P.G.values()].sort((a,b)=>a.t-b.t);P.alist=[...P.AG.values()]}
   return P;
 }
 function llRGB(s){if(typeof s!=='string')return null;let q=/^#([0-9a-f]{6})$/i.exec(s);if(q){const v=parseInt(q[1],16);return [v>>16&255,v>>8&255,v&255]}
@@ -8086,6 +8158,11 @@ function llColor(k,pal,night,dm){   // kolor osi jezdni z mapy (półprzezroczys
   const ax=dm?(night?[225,232,255,.8]:[120,108,85,.78]):(night?[215,225,255,.55]:[105,95,75,.55]),f=llRGB(roadFill(k,pal,night));
   v=f?'rgb('+[0,1,2].map(i=>Math.round(f[i]+(ax[i]-f[i])*ax[3])).join(',')+')':'rgba('+ax.join(',')+')';LL.col.set(key,v);return v;
 }
+function llColorA(k,pal,night){   // strzałki: ciemniejsze (w nocy jaśniejsze) niż linie – wyraźniej widać kształt
+  const key='A|'+k+'|'+(night?1:0)+'|'+pal.bg+'|'+pal[k==='mwl'?'mw':k];let v=LL.col.get(key);if(v)return v;
+  const ax=night?[235,240,255,.85]:[72,64,50,.8],f=llRGB(roadFill(k,pal,night));
+  v=f?'rgb('+[0,1,2].map(i=>Math.round(f[i]+(ax[i]-f[i])*ax[3])).join(',')+')':'rgba('+ax.join(',')+')';LL.col.set(key,v);return v;
+}
 function llDraw(c,D,s,pal,night,dm,z,cam){   // z: 0 – drogi na ziemi (przed mostami), 1 – na mostach i wiaduktach (po nich)
   if(!llOn||s<.75||!LL.res.size)return;
   const P=llPaths(D,cam);if(!P.list.length)return;
@@ -8093,6 +8170,7 @@ function llDraw(c,D,s,pal,night,dm,z,cam){   // z: 0 – drogi na ziemi (przed m
   c.save();c.lineCap='butt';c.lineJoin='round';
   for(const gr of P.list){if(gr.z!==z||(gr.t===0&&gr.mw*s<6.5))continue;
     c.strokeStyle=llColor(gr.k,pal,night,dm);c.lineWidth=gr.t?lw*1.2:lw;c.stroke(gr.p)}   // kreski są już w geometrii (wzór ciągły wzdłuż całej drogi)
+  if(llArr&&s>=1)for(const ga of P.alist){if(ga.z!==z||ga.w*s<11)continue;const col=llColorA(ga.k,pal,night);c.strokeStyle=col;c.fillStyle=col;c.lineWidth=ga.ws;c.stroke(ga.sh);c.fill(ga.hd)}
   c.restore();
 }
 {const e=$('laneCb');if(e){e.checked=llOn;e.onchange=()=>{llOn=e.checked;LSput('llOn',llOn);LL.scanKey='';vd=null;if(llOn)lnTick()}}}   // Wersja 206: przełącznik linii pasów na jezdni (stary moduł pasów zostaje wyłączony)
