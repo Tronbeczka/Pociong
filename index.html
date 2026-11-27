@@ -1429,7 +1429,7 @@ body.night #ownDlg #ownOk{background:#6aa9ff;color:#0b1220}
   </div>
   <div class="row" id="goRow"><button id="go" type="button">Jedź</button></div>
   <div id="ttstat"></div>
-  <p class="pkFoot"><span id="ver">wersja 201</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
+  <p class="pkFoot"><span id="ver">wersja 202</span> · Adresy: Photon · © OpenStreetMap · trasy: TomTom / OSRM</p>
 </div></div>
 <div id="sig"><span id="sigi"></span><span id="sigt"></span></div>
 <div id="tcard"><div id="tarr"><svg viewBox="0 0 24 24"><path d="M12 3l7 15-7-4-7 4z" fill="#fff"/></svg></div><div class="tx"><b id="tname"></b><span id="tdist"></span><small id="tmeta"></small><small id="tmeta2"></small></div></div>
@@ -5678,7 +5678,13 @@ const VC={sv:{w:5,m:4},rs:{w:10,m:7},tr:{w:12,m:8},sc:{w:14,m:9},pr:{w:17,m:11},
 // (np. pl. Powstańców Warszawy przy moście Grunwaldzkim – przejścia, torowiska i wysepki „w środku jezdni”). Teraz mnożnik maleje łagodnie
 // ze zbliżeniem: do 1,2 px/m bez zmian (2,4), przy jeździe po mieście (2 px/m) ok. 1,9, na postoju (2,8 px/m) ok. 1,55, z bliska (≥ 4,6 px/m) 1,05.
 // Szerokość w pikselach i tak rośnie przy zbliżaniu (mnożnik maleje wolniej, niż rośnie skala).
-const rwF=s=>s<=1.2?2.4:Math.max(1.05,2.4-Math.log(s/1.2));
+// Wersja 202: mnożnik ma 8 poziomów (co ok. 12 %) i zmienia się dopiero wtedy, gdy zbliżanie się zatrzyma (palce zdjęte, kamera doszła do docelowej skali).
+// W wersji 201 zmieniał się płynnie razem ze skalą: każde przemalowanie w trakcie zbliżania miało inną szerokość dróg niż powiększany obraz (drogi „telepały się”),
+// a jezdnie z pasami liczyły się od nowa kilkadziesiąt razy na jeden gest – malowanie trwało po ~100 ms, więc aplikacja obniżała rozdzielczość mapy (wszystko się zlewało).
+const RWL=[0,1,2,3,4,5,6,7].map(k=>2.4/Math.pow(1.12,k));
+let rwLv=-1,rwRest=0,rwZt=0,rwSt=0,rwMov=false;   // rwLv: bieżący poziom (−1: jeszcze nieustalony); rwZt: kiedy ostatnio zmieniła się docelowa skala; rwMov: trwa zbliżanie/oddalanie albo palec na mapie
+const rwLvFor=s=>{if(s<=1.2)return 0;const f=Math.max(1.05,2.4-Math.log(s/1.2));return Math.max(0,Math.min(7,Math.round(Math.log(2.4/f)/Math.log(1.12))))};
+const rwF=s=>s<=.6?2.4:RWL[Math.max(0,rwLv)];
 const rw=(k,s)=>Math.max(VC[k].w,VC[k].m*s*rwF(s))*dmK;
 const PAL={
  day:{tun:'#b9b3a2',bg:'#ebe8df',water:'#a9d4f0',waterEdge:'#8dbde0',park:'#cfe7b9',parkEdge:'#bcd9a4',farm:'#eeebd6',grass:'#d6eac2',wood:'#bcdaa8',wet:'#cfe4d6',sand:'#efe4c2',resi:'#e6e2d7',ind:'#dfdfe4',inst:'#ebe2d2',sport:'#d4e8c4',cem:'#cfe0c6',rland:'#dedcdc',bld:'#dcd7cb',bldEdge:'#c6bfaf',bldSh:'#00000016',casing:'#b4af9f',csSc:'#cda84f',csMw:'#d9722f',csPr:'#d1a038',sv:'#fbfaf8',rs:'#ffffff',tr:'#ffffff',sc:'#fff1c2',pr:'#ffe08a',mw:'#ffb066',mwIn:'#f58f3a',rail:'#aaa59b',railDash:'#f7f5f0',lbl:'#3c4043',lblMw:'#7a4a14',halo:'#fffffff0',plbl:'#4b5058',wnl:'#3f7fb3',route:'#4285f4',routeEdge:'#f5a623',rcase:'#173f8f',rhalo:'#ffffff',rcaseD:'#0a1226'},
@@ -7199,6 +7205,12 @@ function drawVec(){
    if(fl?fl.s1<.3:scaleCur<.3)loadWide(fl?fl.W:cam,fl?fl.s1:scaleCur)}
   if(!vctx||$('vmap').width!==Math.round(S*vq))sizeV();
   if(!vctx)return;
+  {const kd=rwLvFor(scaleCur);if(scaleTgt!==rwSt){rwSt=scaleTgt;rwZt=now}   // poziom szerokości dróg: zmiana tylko w spoczynku (Wersja 202)
+   const rest=Math.abs(scaleCur/scaleTgt-1)<.01&&now-rwZt>300&&!(window.__ptrs&&window.__ptrs()>0)&&!panGlide;rwMov=!rest;
+   if(rwLv<0)rwLv=kd;
+   else if(kd!==rwLv){if(!rest)rwRest=0;else if(!rwRest)rwRest=now;else if(now-rwRest>250){rwLv=kd;rwRest=0;vd=null}}
+   else rwRest=0;
+   if(rest&&typeof JZN!=='undefined'&&JZN&&JZN.stale){JZN.stale=false;vd=null}}   // jezdnie z pasami: po zatrzymaniu geometria dla właściwej skali
   const sh=vShift(S,scaleCur,cam);   // idealne położenie środka płótna względem kamery [px ekranu: wschód, północ]
   // Oddalanie (lot do widoku całej trasy, ściskanie palcami): płótno malujemy z wyprzedzeniem – dla mniejszej skali, jaką mapa będzie miała za kilka klatek – żeby jego brzegi
   // nie wchodziły na ekran (dawniej przy szybkim oddaleniu połowa ekranu zostawała pusta, aż do następnego przemalowania)
@@ -7931,8 +7943,9 @@ function jzAt(a,cum,t){
 function jzKey(s){return ['rs','tr','sc','pr','mwl','mw'].map(k=>Math.round(Math.log(rw(k,s)/s)/Math.log(1.05))).join(',')}
 function jzBucket(N,s){
   const key=jzKey(s);let B=N.bk.get(key);
-  // przy płynnej zmianie skali nowa geometria najwyżej co 250 ms (w międzyczasie poprzednia – różnica szerokości kilka %); potem dorysowanie
-  if(!B&&N.lastB&&performance.now()-N.lastT<250){if(!jzBucket.t)jzBucket.t=setTimeout(()=>{jzBucket.t=0;try{vd=null}catch(e){}},260);return N.lastB}
+  // Wersja 202: w trakcie zbliżania / oddalania (palce na ekranie, kamera w drodze do docelowej skali) nie liczymy nowej geometrii – zostaje poprzednia;
+  // po zatrzymaniu mapa przemaluje się już z właściwą (drawVec sprawdza N.stale)
+  if(!B&&N.lastB&&(typeof rwMov!=='undefined'&&rwMov||performance.now()-N.lastT<250)){N.stale=true;if(!jzBucket.t)jzBucket.t=setTimeout(()=>{jzBucket.t=0;try{if(!(typeof rwMov!=='undefined'&&rwMov))vd=null}catch(e){}},300);return N.lastB}
   if(!B){if(N.bk.size>6){const L=N.lastB;N.bk.clear();if(L)N.bk.set(L.key,L)}const TWk={};for(const k of ['sv','rs','tr','sc','pr','mwl','mw'])TWk[k]=rw(k,s)/2/s;   // połowa szerokości zwykłej drogi z mapy (tyle ma jezdnia z pasami)
     B={key,s,LWk:TWk,TWk,bld:new Set(),geo:new Map(),grid:new Map(),gridOf:new Set(),sig:new Map(),from:N.lastB||null};if(B.from)B.from.from=null;N.bk.set(key,B);N.lastT=performance.now()}   /* (bez łańcucha starych skal w pamięci) */
   N.lastB=B;return B;
@@ -7993,7 +8006,8 @@ function jzProf(N,B,ch){
   // krótkie zmiany liczby pasów pomijamy (domknięcie i otwarcie), potem zmiany łagodne: pas przybywa / ubywa na ok. 3 szerokościach drogi
   let lwd=0;for(let i=0;i<n;i++)lwd+=W2[i];lwd/=n;
   const hw=Math.round((Math.max(40,8*lwd)+3.6*lwd)/2/h),ho=Math.round(Math.max(10,lwd)/2/h),mN=h/(3*lwd);
-  const cl=v=>{const c=jzSlide(jzSlide(v,hw,true),hw,false);return jzSlide(jzSlide(c,ho,false),ho,true)};
+  const cl=v=>{let c0=true;for(let i=1;i<v.length;i++)if(v[i]!==v[0]){c0=false;break}if(c0)return v;   /* stały przebieg (np. jezdnia jednokierunkowa: brak pasów „A”) */
+    const c=jzSlide(jzSlide(v,hw,true),hw,false);return jzSlide(jzSlide(c,ho,false),ho,true)};
   const fA=jzRamp(cl(nA),mN),fB=jzRamp(cl(nB),mN),fC=jzRamp(cl(nC),mN),NT=new Float64Array(n);for(let i=0;i<n;i++)NT[i]=Math.max(1,fA[i]+fB[i]+fC[i]);
   // szerokość: zmiana klasy drogi łagodnie; przy rozwidleniu – w węźle jak jezdnia sprzed rozwidlenia
   const wn=jzRamp(W2,JZ_SLOPE*h);
@@ -8007,9 +8021,8 @@ function jzProf(N,B,ch){
   G={ch,n,h,X,Y,T,UX,UY,wn,gL:Float64Array.from(wn),gR:Float64Array.from(wn),nA:fA,nB:fB,nC:fC,NT,LWs,PI,ZZ,A,cumA:cum,t0,d:new Float64Array(n),i0:0,i1:n-1,lines:null,ok:false,fp:[null,null],sq:new Uint8Array(n)};
   B.geo.set(ch.id,G);B.sig.set(ch.sig,G);
   {const PB=N.prev&&N.prev.bk.get(B.key),PG=PB&&PB.sig.get(ch.sig);   // ten sam ciąg w poprzednich danych: jego linie (przesunięte do nowego układu) do czasu policzenia nowych
-    if(PG&&(PG.lines||PG.old)&&PG.n===n){const pd=N.prev.D,kx=111195*Math.cos(rad(N.D.lat)),L=PG.lines||PG.old.L,o=PG.lines?[0,0]:PG.old.o;
-      G.old={L,o:[o[0]+(pd.lon-N.D.lon)*kx,o[1]+(pd.lat-N.D.lat)*111195]}}
-    else if(B.from){const QG=B.from.geo.get(ch.id);if(QG&&QG.lines)G.old={L:QG.lines,o:[0,0]}}}   // ta sama sieć, poprzednia skala
+    if(PG&&PG.n===n&&(PG.LB&&PG.LB.some(b=>b.lines)||PG.old)){const pd=N.prev.D,kx=111195*Math.cos(rad(N.D.lat)),own=PG.LB&&PG.LB.some(b=>b.lines),LB=own?PG.LB:PG.old.LB,o=own?[0,0]:PG.old.o;
+      G.old={LB,o:[o[0]+(pd.lon-N.D.lon)*kx,o[1]+(pd.lat-N.D.lat)*111195]}}}
   G.st=0;return G;
   }finally{B.bld.delete(ch.id)}
 }
@@ -8132,16 +8145,27 @@ function jzOutline(G){
   G.parts=parts;G.bb=[x0,y0,x1,y1];
 }
 // ---- linie: pasy (przerywane), linia dzieląca kierunki (ciągła), cienka krawędź przy brzegu; przerwy tam, gdzie leży inna droga ----
+const JZ_GK=(cx,cy)=>((cx&32767)<<15)|(cy&32767);
 function jzRegister(B,G){
   if(B.gridOf.has(G.ch.id))return;B.gridOf.add(G.ch.id);
-  const CS=16;for(let k=G.i0;k<=G.i1;k++)B.mx=Math.max(B.mx||0,Math.max(G.gL[k],G.gR[k])+Math.abs(G.d[k]));
-  for(let k=G.i0;k<=G.i1;k++){const key=Math.floor(G.X[k]/CS)+'|'+Math.floor(G.Y[k]/CS);let l=B.grid.get(key);if(!l)B.grid.set(key,l=[]);l.push(G,k)}
+  const CS=16,mg=2,{X,Y,UX,UY,gL,gR,d,h}=G;   // próbka trafia do komórek, przez które przechodzi jej przekrój (od lewego do prawego brzegu, z zapasem) – punkt sprawdzamy w jednej komórce
+  for(let k=G.i0;k<=G.i1;k++){const nx=UY[k],ny=-UX[k],l=d[k]-gL[k]-mg,r=d[k]+gR[k]+mg,ax=X[k]+nx*l,ay=Y[k]+ny*l,bx=X[k]+nx*r,by=Y[k]+ny*r,e=h+mg;
+    const c0=Math.floor((Math.min(ax,bx)-e)/CS),c1=Math.floor((Math.max(ax,bx)+e)/CS),r0=Math.floor((Math.min(ay,by)-e)/CS),r1=Math.floor((Math.max(ay,by)+e)/CS);
+    for(let cx=c0;cx<=c1;cx++)for(let cy=r0;cy<=r1;cy++){const key=JZ_GK(cx,cy);let L=B.grid.get(key);if(!L)B.grid.set(key,L=[]);L.push(G,k)}}
 }
-function jzLines(N,B,G){
+function jzLines(N,B,G){   // cały ciąg naraz (testy)
   if(G.lines)return G.lines;
-  const ch=G.ch,D=N.D,TT=jzTiles(D),mg=1.0,CS=16,{X,Y,UX,UY,gL,gR,d,LWs,T,ZZ,i0,i1,nA,nB,nC,NT}=G,ins=2/B.s,m=i1-i0+1;
+  return G.lines=jzLinesR(N,B,G,G.i0,G.i1,true);
+}
+// Wersja 202: linie dla fragmentu ciągu [a,b] (ok. 300 m) – liczone tylko dla fragmentów w widoku; obliczenia z zapasem ±80 próbek, żeby przerwy
+// i rytm kresek na granicy fragmentów wyszły tak samo jak przy liczeniu całego ciągu
+function jzLinesR(N,B,G,a,bE,full){
+  const ch=G.ch,D=N.D,TT=jzTiles(D),mg=1.0,CS=16,{X,Y,UX,UY,gL,gR,d,LWs,T,ZZ,nA,nB,nC,NT}=G,ins=2/B.s,MZ=80;
+  const i0=Math.max(G.i0,a-MZ),i1=Math.min(G.i1,bE+MZ),m=i1-i0+1;
+  if(G.lwd===undefined){let lav=0;for(let i=G.i0;i<=G.i1;i++)lav+=LWs[i];lav/=Math.max(1,G.i1-G.i0+1);G.lwd=Math.max(lav,.6*(B.TWk[LN_K[ch.kc]]||B.TWk.tr))}   // rytm kresek wspólny dla całego ciągu
+  let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9;for(let i=i0;i<=i1;i++){const w=Math.max(gL[i],gR[i])+Math.abs(d[i]);if(X[i]-w<bx0)bx0=X[i]-w;if(X[i]+w>bx1)bx1=X[i]+w;if(Y[i]-w<by0)by0=Y[i]-w;if(Y[i]+w>by1)by1=Y[i]+w}
   // geometria sąsiednich ciągów (do przerw na skrzyżowaniach)
-  const b=G.bb,R=80;
+  const b=[bx0,by0,bx1,by1],R=80;
   for(const q of N.C){if(!q.show&&!q.fk&&!q.ft)continue;const c=q.bb;if(c[2]<b[0]-R||c[0]>b[2]+R||c[3]<b[1]-R||c[1]>b[3]+R)continue;
     const Q=jzGeo(N,B,q);if(Q&&Q.ok)jzRegister(B,Q)}
   jzRegister(B,G);
@@ -8152,17 +8176,24 @@ function jzLines(N,B,G){
     if(o(ax,ay,bx,by,cx,cy)*o(ax,ay,bx,by,dx,dy)<0&&o(cx,cy,dx,dy,ax,ay)*o(cx,cy,dx,dy,bx,by)<0)return 0;
     return Math.min(ps(ax,ay,cx,cy,dx,dy),ps(bx,by,cx,cy,dx,dy),ps(cx,cy,ax,ay,bx,by),ps(dx,dy,ax,ay,bx,by))};
   const GA=G.A,GC=G.cumA,na=GC.length;let emax=0;
-  const GB=new Float64Array(4*na);for(let j=0;j<na-1;j++){const x1=GA[2*j],y1=GA[2*j+1],x2=GA[2*j+2],y2=GA[2*j+3];GB[4*j]=Math.min(x1,x2);GB[4*j+1]=Math.min(y1,y2);GB[4*j+2]=Math.max(x1,x2);GB[4*j+3]=Math.max(y1,y2)}
+  const ja=(()=>{const t=i0*G.h-5;let j=0;while(j<na-2&&GC[j+1]<t)j++;return j})(),jb=(()=>{const t=i1*G.h+5;let j=na-2;while(j>0&&GC[j]>t)j--;return j})();   // odcinki osi w zakresie
+  const GB=new Float64Array(4*na);for(let j=ja;j<=jb;j++){const x1=GA[2*j],y1=GA[2*j+1],x2=GA[2*j+2],y2=GA[2*j+3];GB[4*j]=Math.min(x1,x2);GB[4*j+1]=Math.min(y1,y2);GB[4*j+2]=Math.max(x1,x2);GB[4*j+3]=Math.max(y1,y2)}
   const bbx=(j,x0,y0,x1,y1,r)=>GB[4*j]<=x1+r&&GB[4*j+2]>=x0-r&&GB[4*j+1]<=y1+r&&GB[4*j+3]>=y0-r;   // szybkie odrzucenie par odcinków
   for(let i=i0;i<=i1;i++)emax=Math.max(emax,Math.max(gL[i],gR[i])+Math.abs(d[i]));
-  const zone=new Uint8Array(m),markT=(ta,tb)=>{const a=Math.max(i0,Math.floor((ta-G.t0-T[0]+ 0)/G.h)-3),z=Math.min(i1,Math.ceil((tb-G.t0-T[0])/G.h)+3);for(let k=a;k<=z;k++)zone[k-i0]=1};
+  const AG=new Map(),ACS=32;for(let j=ja;j<=jb;j++){const c0=Math.floor(GB[4*j]/ACS),c1=Math.floor(GB[4*j+2]/ACS),r0=Math.floor(GB[4*j+1]/ACS),r1=Math.floor(GB[4*j+3]/ACS);
+    for(let cx=c0;cx<=c1;cx++)for(let cy=r0;cy<=r1;cy++){const key=JZ_GK(cx,cy);let L=AG.get(key);if(!L)AG.set(key,L=[]);L.push(j)}}
+  const zone=new Uint8Array(m),markT=(ta,tb)=>{const a=Math.max(i0,Math.floor(ta/G.h)-3),z=Math.min(i1,Math.ceil(tb/G.h)+3);for(let k=a;k<=z;k++)zone[k-i0]=1};   // (współrzędna osi próbki i = i·h)
   const relT=[],relC=new Map(),isRel=Q=>{let r=relC.get(Q);if(r===undefined){r=jzRelK(G,Q);relC.set(Q,r)}return r};
-  for(const o of jzTileNear(TT,(b[0]+b[2])/2,(b[1]+b[3])/2,Math.hypot(b[2]-b[0],b[3]-b[1])/2+20)){
+  const cand=new Set();{const rr=emax+mg+1+Math.max(...Object.values(B.TWk));
+    for(let j=ja;j<=jb;j++){const x1=GA[2*j],y1=GA[2*j+1],x2=GA[2*j+2],y2=GA[2*j+3],L=Math.hypot(x2-x1,y2-y1),st=Math.max(1,Math.ceil(L/40));   // co ≤ 40 m wzdłuż osi
+      for(let q=0;q<st;q++){const f=(q+.5)/st;for(const o of jzTileNear(TT,x1+(x2-x1)*f,y1+(y2-y1)*f,L/st/2+rr+1))cand.add(o)}}}
+  for(const o of cand){
     const hw=B.TWk[o.k]||B.TWk.tr,r=hw+emax+mg+1;
     if(Math.max(o.x1,o.x2)<b[0]-r||Math.min(o.x1,o.x2)>b[2]+r||Math.max(o.y1,o.y2)<b[1]-r||Math.min(o.y1,o.y2)>b[3]+r)continue;
     let own=false,near=[],best=1e9,bj=-1;
-    const ox0=Math.min(o.x1,o.x2),oy0=Math.min(o.y1,o.y2),ox1=Math.max(o.x1,o.x2),oy1=Math.max(o.y1,o.y2);
-    for(let j=0;j<na-1;j++){if(!bbx(j,ox0,oy0,ox1,oy1,r))continue;const x1=GA[2*j],y1=GA[2*j+1],x2=GA[2*j+2],y2=GA[2*j+3];
+    const ox0=Math.min(o.x1,o.x2),oy0=Math.min(o.y1,o.y2),ox1=Math.max(o.x1,o.x2),oy1=Math.max(o.y1,o.y2),js=new Set();
+    for(let gx=Math.floor((ox0-r)/ACS);gx<=Math.floor((ox1+r)/ACS);gx++)for(let gy=Math.floor((oy0-r)/ACS);gy<=Math.floor((oy1+r)/ACS);gy++){const L=AG.get(JZ_GK(gx,gy));if(L)for(const j of L)js.add(j)}
+    for(const j of js){if(!bbx(j,ox0,oy0,ox1,oy1,r))continue;const x1=GA[2*j],y1=GA[2*j+1],x2=GA[2*j+2],y2=GA[2*j+3];
       const dd=segD(x1,y1,x2,y2,o.x1,o.y1,o.x2,o.y2);if(dd>r)continue;near.push(j);
       const mx=(o.x1+o.x2)/2,my=(o.y1+o.y2)/2,vx=x2-x1,vy=y2-y1,l2=vx*vx+vy*vy;let t=l2?((mx-x1)*vx+(my-y1)*vy)/l2:0;t=t<0?0:t>1?1:t;
       const dm=Math.hypot(mx-x1-vx*t,my-y1-vy*t);if(dm<best){best=dm;bj=j}}
@@ -8172,33 +8203,34 @@ function jzLines(N,B,G){
     if(own)continue;
     if(ch.fk||ch.ft){   // droga z mapy pod drugą odnogą / jezdnią sprzed rozwidlenia – to nie skrzyżowanie
       const mx=(o.x1+o.x2)/2,my=(o.y1+o.y2)/2,gx=Math.floor(mx/CS),gy=Math.floor(my/CS);let cov=false;
-      for(let a=gx-1;a<=gx+1&&!cov;a++)for(let bq=gy-1;bq<=gy+1&&!cov;bq++){const l=B.grid.get(a+'|'+bq);if(!l)continue;
+      {const l=B.grid.get(JZ_GK(gx,gy));if(l)
         for(let j=0;j<l.length;j+=2){const Q=l[j],q=l[j+1];if(Q===G||!isRel(Q))continue;const dx=mx-Q.X[q],dy=my-Q.Y[q];
           if(Math.abs(dx*Q.UX[q]+dy*Q.UY[q])>Q.h*.75)continue;if(Math.abs(dx*Q.UY[q]-dy*Q.UX[q])<=2.5&&Math.abs(o.ux*Q.UX[q]+o.uy*Q.UY[q])>=.8){cov=true;break}}}
       if(cov)continue}
     relT.push(o);for(const j of near)markT(GC[j],GC[j+1]);
   }
-  {const x0=b[0]-R,x1=b[2]+R,y0=b[1]-R,y1=b[3]+R;   // inne ciągi z pasami: odcinki ich osi blisko osi tego ciągu
+  const RG=new Map();for(const o of relT){const e=(B.TWk[o.k]||B.TWk.tr)+mg+.5,c0=Math.floor((Math.min(o.x1,o.x2)-e)/CS),c1=Math.floor((Math.max(o.x1,o.x2)+e)/CS),r0=Math.floor((Math.min(o.y1,o.y2)-e)/CS),r1=Math.floor((Math.max(o.y1,o.y2)+e)/CS);
+    for(let cx=c0;cx<=c1;cx++)for(let cy=r0;cy<=r1;cy++){const key=JZ_GK(cx,cy);let L=RG.get(key);if(!L)RG.set(key,L=[]);L.push(o)}}
+  {const x0=b[0]-R,x1=b[2]+R,y0=b[1]-R,y1=b[3]+R,seen=new Uint32Array(na);let stamp=0;   // inne ciągi z pasami: odcinki ich osi blisko osi tego ciągu
     for(const q of N.C){if(q===ch)continue;const c=q.bb;if(c[2]<x0||c[0]>x1||c[3]<y0||c[1]>y1)continue;const Q=B.geo.get(q.id);if(!Q||!Q.ok)continue;
       let qe=0;for(let i=Q.i0;i<=Q.i1;i++)qe=Math.max(qe,Math.max(Q.gL[i],Q.gR[i])+Math.abs(Q.d[i]));const r=qe+emax+mg+1,QA=Q.A,QC=Q.cumA;
       for(let k=0;k<QC.length-1;k++){const cx=QA[2*k],cy=QA[2*k+1],dx=QA[2*k+2],dy=QA[2*k+3];
         if(Math.max(cx,dx)<b[0]-r||Math.min(cx,dx)>b[2]+r||Math.max(cy,dy)<b[1]-r||Math.min(cy,dy)>b[3]+r)continue;
-        const qx0=Math.min(cx,dx),qy0=Math.min(cy,dy),qx1=Math.max(cx,dx),qy1=Math.max(cy,dy);
-        for(let j=0;j<na-1;j++)if(bbx(j,qx0,qy0,qx1,qy1,r)&&segD(GA[2*j],GA[2*j+1],GA[2*j+2],GA[2*j+3],cx,cy,dx,dy)<=r)markT(GC[j],GC[j+1])}}}
+        const qx0=Math.min(cx,dx),qy0=Math.min(cy,dy),qx1=Math.max(cx,dx),qy1=Math.max(cy,dy);stamp++;
+        for(let gx=Math.floor((qx0-r)/ACS);gx<=Math.floor((qx1+r)/ACS);gx++)for(let gy=Math.floor((qy0-r)/ACS);gy<=Math.floor((qy1+r)/ACS);gy++){const L=AG.get(JZ_GK(gx,gy));if(!L)continue;
+          for(const j of L){if(seen[j]===stamp)continue;seen[j]=stamp;if(bbx(j,qx0,qy0,qx1,qy1,r)&&segD(GA[2*j],GA[2*j+1],GA[2*j+2],GA[2*j+3],cx,cy,dx,dy)<=r)markT(GC[j],GC[j+1])}}}}}
   const hid=(x,y,ux,uy,k,tp)=>{
-    const lv=ZZ[k];
-    for(const o of relT){
+    const lv=ZZ[k],cx=Math.floor(x/CS),cy=Math.floor(y/CS),key=JZ_GK(cx,cy),RL=RG.get(key);
+    if(RL)for(const o of RL){
       if(o.lv!==lv||Math.abs(o.ux*ux+o.uy*uy)>=.906)continue;   // (relT: odcinki zwykłych dróg przecinających ten ciąg)
       const tp=(x-o.x1)*o.ux+(y-o.y1)*o.uy;if(tp<-mg||tp>o.L+mg)continue;
       const dl=Math.abs((x-o.x1)*o.uy-(y-o.y1)*o.ux),hw=B.TWk[o.k]||B.TWk.tr;if(dl>hw+mg)continue;
       return true}
-    const cx=Math.floor(x/CS),cy=Math.floor(y/CS),rc=Math.ceil(((B.mx||0)+mg+1)/CS);   // tyle komórek, by sięgnąć osi najszerszej jezdni
-    for(let a=cx-rc;a<=cx+rc;a++)for(let bq=cy-rc;bq<=cy+rc;bq++){const l=B.grid.get(a+'|'+bq);if(!l)continue;
+    {const l=B.grid.get(key);if(l)
       for(let j=0;j<l.length;j+=2){const Q=l[j],q=l[j+1];if(Q===G||Q.ZZ[q]!==lv)continue;
         const dx=x-Q.X[q],dy=y-Q.Y[q],al=dx*Q.UX[q]+dy*Q.UY[q];if(Math.abs(al)>Q.h*.75)continue;
-        const lat=dx*Q.UY[q]-dy*Q.UX[q]-Q.d[q];
+        const lat=dx*Q.UY[q]-dy*Q.UX[q]-Q.d[q];if(lat<-Q.gL[q]-mg||lat>Q.gR[q]+mg)continue;
         const rk=isRel(Q);if(rk){const e=.3*Q.LWs[q];if(lat<-Q.gL[q]+e||lat>Q.gR[q]-e)continue;if(tp==='edge'||rk===3)return true;continue}   // ten sam układ pasów: linie biegną dalej
-        if(lat<-Q.gL[q]-mg||lat>Q.gR[q]+mg)continue;
         return true}}   // każda inna jezdnia z pasami (także równoległa – np. dwie jezdnie drogi dwujezdniowej, które przy pogrubieniu na siebie nachodzą): tam bez linii
     return false};
   const defs=[],pm=5/B.s;   // linie tylko na pasach szerszych niż ok. 5 px (inaczej zlewają się w kreskowanie)
@@ -8210,8 +8242,7 @@ function jzLines(N,B,G){
     for(let j=1;j<mB;j++)defs.push({t:'dash',x:i=>le(i)+(nA[i]+nC[i]+j)*LWs[i],ex:i=>nB[i]-j>=.3&&LWs[i]>=pm});
   }else for(let j=1;j<mN;j++)defs.push({t:'dash',x:i=>le(i)+j*LWs[i],ex:i=>NT[i]-j>=.3&&LWs[i]>=pm});
   defs.push({t:'edge',x:i=>d[i]-gL[i]+ins,ex:()=>true},{t:'edge',x:i=>d[i]+gR[i]-ins,ex:()=>true});
-  let lav=0;for(let i=i0;i<=i1;i++)lav+=LWs[i];lav/=Math.max(1,i1-i0+1);
-  const P=[0,1].map(()=>({dash:new Path2D(),div:new Path2D(),edge:new Path2D()})),lwd=Math.max(lav,.6*(B.TWk[LN_K[ch.kc]]||B.TWk.tr)),per=1.35*lwd,dl=.55*lwd;
+  const P=[0,1].map(()=>({dash:new Path2D(),div:new Path2D(),edge:new Path2D()})),lwd=G.lwd,per=1.35*lwd,dl=.55*lwd,ka=a-i0,kb=bE-i0,tA=T[a],tB=T[bE],last=bE>=G.i1;
   let nseg=0,nvis=0;if(window.__jzFull)zone.fill(1);   // (test: sprawdzanie każdej próbki)
   const raw=window.__jzRaw?{dash:[],div:[],pl:[]}:null;   // (test: punkty linii, łamane)
   for(const df of defs){
@@ -8223,16 +8254,27 @@ function jzLines(N,B,G){
       if(T[i0+e]-T[i0+k]>=(df.t==='div'?Math.max(2,1.5*lwd):df.t==='dash'?1.2*per:Math.max(2,.8*lwd))){nseg++;   /* krótkie kawałki między przerwami (pojedyncza kreska na skrzyżowaniu) wyglądają jak przypadkowe ślady */
         if(df.t==='dash'){   // kreski w stałym rytmie wzdłuż całego ciągu
           const ta=T[i0+k],tb=T[i0+e];for(let u=Math.floor(ta/per)*per;u<tb;u+=per){const u0=Math.max(ta,u),u1=Math.min(tb,u+dl);if(u1-u0<Math.max(.3,dl*.4))continue;   // bez okruchów kresek przy przerwach
+            if(u0<tA-1e-9||(u0>=tB&&!last))continue;   // kreska należy do fragmentu, w którym się zaczyna
             const pa=jzInterp(T,px,i0,k,e,u0),pb=jzInterp(T,px,i0,k,e,u1),zq=ZZ[i0+Math.min(e,Math.max(k,Math.round(((u0+u1)/2-T[i0])/G.h)))]|0,pd=P[zq].dash;pd.moveTo(pa[0],pa[1]);const pl=raw?[pa[0],pa[1]]:null;
             for(let q=k;q<=e;q++){const tq=T[i0+q];if(tq>u0&&tq<u1){pd.lineTo(px[2*q],px[2*q+1]);if(raw){raw.dash.push(px[2*q],px[2*q+1],zq);pl.push(px[2*q],px[2*q+1])}}}pd.lineTo(pb[0],pb[1]);if(raw){raw.dash.push(pa[0],pa[1],zq,pb[0],pb[1],zq);pl.push(pb[0],pb[1]);raw.pl.push({t:'dash',z:zq,p:pl})}}
-        }else{let q=k;while(q<=e){const z=ZZ[i0+q];let r=q;while(r<e&&ZZ[i0+r+1]===z)r++;const re=Math.min(e,r+1),p=P[z][df.t];   // osobno na ziemi i na moście
+        }else{const qe=Math.min(e,kb);let q=Math.max(k,ka);while(q<qe){const z=ZZ[i0+q];let r=q;while(r<qe&&ZZ[i0+r+1]===z)r++;const re=Math.min(qe,r+1),p=P[z][df.t];   // osobno na ziemi i na moście; tylko część w tym fragmencie
             p.moveTo(px[2*q],px[2*q+1]);for(let w=q+1;w<=re;w++)p.lineTo(px[2*w],px[2*w+1]);if(raw&&df.t==='div')for(let w=q;w<=re;w++)raw.div.push(px[2*w],px[2*w+1],z);
             if(raw){const pl=[];for(let w=q;w<=re;w++)pl.push(px[2*w],px[2*w+1]);raw.pl.push({t:df.t,z,p:pl})}q=r+1}}
       }
       k=e+1}
   }
-  return G.lines={P,nseg,nvis,zone,raw};
+  return {P,nseg,nvis,zone,raw};
 }
+// fragmenty ciągu do linii (ok. 300 m) z ich prostokątami
+function jzBlocks(G){
+  if(G.LB)return G.LB;const BS=300,LB=[];
+  for(let a=G.i0;a<G.i1;a+=BS){const b=Math.min(G.i1,a+BS);let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    for(let i=a;i<=b;i++){const w=Math.max(G.gL[i],G.gR[i])+Math.abs(G.d[i])+2;if(G.X[i]-w<x0)x0=G.X[i]-w;if(G.X[i]+w>x1)x1=G.X[i]+w;if(G.Y[i]-w<y0)y0=G.Y[i]-w;if(G.Y[i]+w>y1)y1=G.Y[i]+w}
+    LB.push({a,b,bb:[x0,y0,x1,y1],lines:null,qd:0})}
+  return G.LB=LB;
+}
+function jzPending(F){let n=0;if(F)for(const G of F.G)for(const bl of jzBlocks(G))if(!bl.lines&&jzVis(bl.bb,F.vb))n++;return n}   // (test)
+const jzVis=(b,v)=>!(b[2]<v[0]||b[0]>v[2]||b[3]<v[1]||b[1]>v[3]);
 function jzInterp(T,px,i0,k,e,u){   // punkt linii w miejscu u (t ciągu) między próbkami k..e
   let lo=k,hi=e;while(hi-lo>1){const m=(lo+hi)>>1;if(T[i0+m]<=u)lo=m;else hi=m}
   const ta=T[i0+lo],tb=T[i0+hi],f=tb>ta?Math.max(0,Math.min(1,(u-ta)/(tb-ta))):0;
@@ -8244,7 +8286,7 @@ function jzFrame(D,s,ox,oy,S){
   const N=jzNet(D),B=jzBucket(N,s),r=S/2/s*1.25+90,out=[];
   for(const ch of N.sorted){if(!ch.show)continue;const b=ch.bb;if(b[2]<ox-r-80||b[0]>ox+r+80||b[3]<oy-r-80||b[1]>oy+r+80)continue;
     const G=jzGeo(N,B,ch);if(G&&G.ok&&G.i1>G.i0)out.push(G)}
-  return out.length?{N,B,G:out,dl:performance.now()+7}:null;   // dl: w tej klatce linie liczymy najwyżej ok. 7 ms (reszta w następnych)
+  return jzFrame.last=out.length?{N,B,G:out,vb:[ox-r,oy-r,ox+r,oy+r]}:null;   // vb: prostokąt malowanego obszaru (linie liczymy tylko dla fragmentów w nim); last: ostatnia klatka (testy)
 }
 function jzHalo(c,F,col,add,s,pick){   // poświata / chodnik / cień wokół jezdni: wielokąt i jego brzegi grubszą kreską
   c.lineJoin='round';c.lineCap='butt';
@@ -8268,20 +8310,29 @@ function jzBody(c,F,pal,s,dm,night,under,z,cwz){
   for(const G of GZ){c.fillStyle=roadFill(LN_K[G.ch.kc],pal,night);for(const p of G.parts)if(p.z===z)c.fill(p.P)}
   if(under)try{under()}catch(e){}
   c.lineCap='butt';c.lineJoin='round';c.setLineDash([]);
-  let wait=false;
-  for(const G of GZ){let L=G.lines,o=null;
-    if(!L){if(performance.now()<F.dl){try{L=jzLines(F.N,F.B,G)}catch(e){lnFail(e);continue}}else{wait=true;if(G.old){L=G.old.L;o=G.old.o}else continue}}
+  for(const G of GZ){const LBs=jzBlocks(G),k=LN_K[G.ch.kc],light=!night&&(k==='tr'||k==='rs'||k==='sv'),lpx=G.LWs[(G.i0+G.i1)>>1]*s,lw=Math.max(1.7,Math.min(4.6,lpx*.1));
+   for(let bi=0;bi<LBs.length;bi++){const bl=LBs[bi];if(!jzVis(bl.bb,F.vb))continue;let L=bl.lines,o=null;
+    if(!L){jzQueue(F.N,F.B,G,bl);const OB=G.old&&G.old.LB&&G.old.LB[bi];if(OB&&OB.lines){L=OB.lines;o=G.old.o}else continue}   // linie liczą się w tle (Wersja 202); do tego czasu poprzednie albo żadne
     if(o){c.save();c.translate(o[0],o[1])}
-    const k=LN_K[G.ch.kc],light=!night&&(k==='tr'||k==='rs'||k==='sv'),lpx=G.LWs[(G.i0+G.i1)>>1]*s,lw=Math.max(1.7,Math.min(4.6,lpx*.1));
     const LP=L.P[z];
     c.strokeStyle=night?'rgba(10,14,24,.55)':'rgba(105,95,75,.30)';c.lineWidth=1.2/s;c.stroke(LP.edge);   // cienka krawędź jak na zwykłych drogach
     if(light){c.strokeStyle='rgba(118,112,100,.62)';c.lineWidth=lw*.8/s;c.stroke(LP.dash);c.strokeStyle='rgba(118,112,100,.78)';c.lineWidth=lw*.9/s;c.stroke(LP.div)}
     else{if(STL.dashOut){c.strokeStyle=STL.dashOut;c.lineWidth=(lw+1.8)/s;c.stroke(LP.dash);c.lineWidth=(lw*1.1+1.8)/s;c.stroke(LP.div)}
       c.strokeStyle=STL.dash;c.lineWidth=lw/s;c.stroke(LP.dash);c.strokeStyle=STL.solid;c.lineWidth=lw*1.1/s;c.stroke(LP.div)}
     if(o)c.restore();
-  }
+  }}
   c.lineCap='round';
-  if(wait&&!jzBody.t)jzBody.t=setTimeout(()=>{jzBody.t=0;try{vd=null}catch(e){}},30);   // reszta linii w następnym malowaniu mapy
+}
+// Wersja 202: linie pasów liczone w tle, porcjami po ok. 6 ms, i jedno przemalowanie mapy, gdy są gotowe (dawniej mapa przemalowywała się co klatkę,
+// dopóki wszystkie linie nie były policzone – na telefonie przez sekundę po każdym wczytaniu danych albo zmianie zbliżenia)
+let JZQ=[],JZQT=0;
+function jzQueue(N,B,G,bl){if(bl.qd)return;bl.qd=1;JZQ.push({N,B,G,bl});if(!JZQT)JZQT=setTimeout(jzWork,0)}
+function jzWork(){
+  JZQT=0;const t0=performance.now();let done=0;
+  while(JZQ.length&&performance.now()-t0<6){const it=JZQ.shift();if(it.N!==JZN||it.bl.lines)continue;   // (dane zmieniły się w międzyczasie)
+    try{it.bl.lines=jzLinesR(it.N,it.B,it.G,it.bl.a,it.bl.b)}catch(e){lnFail(e);it.bl.qd=0;continue}done++}
+  if(JZQ.length)JZQT=setTimeout(jzWork,20);
+  if(done&&(!JZQ.length||performance.now()-(jzWork.lr||0)>400)){jzWork.lr=performance.now();try{vd=null}catch(e){}}   // gotowe (albo co 0,4 s przy długiej kolejce) – jedno przemalowanie
 }
 // ---- plan pasa dla trasy ----
 // strona, po której trzeba jechać przed manewrem: 'L' / 'R' albo null (bez zmiany pasa)
