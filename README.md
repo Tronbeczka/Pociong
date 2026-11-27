@@ -66,3 +66,16 @@ Moduł jezdni z pasami (199–203) i poziomy szerokości dróg zostają w histor
   „Prowadź tutaj” po 3 i 35 s oglądania, podgląd śledzonego kierowcy, panel przy skręcie w prawo (Traugutta) i w lewo (Podwale) – też gdy zapytanie o manewr się nie udaje,
   brak rysowania na jezdni (linie pasów, strzałki przed manewrem, auto i trasa na pasie)
 - `pwt/t_v204.py`, `pwt/t_v204b.py` – zmienne VER (numer wersji), REF i REF_SH (porównanie z wersją 204 bez cieni): `VER="wersja 205" REF=204 REF_SH=0 python3 t_v204b.py v204.html v205.html`
+
+## Wersja 206 – linie pasów na jezdni od nowa (tylko linie na drogach z mapy)
+
+- `ll/ll.js` – moduł linii pasów (wklejany do aplikacji przez `jz/patch206.py wersja205.html wynik.html`)
+- `ll/test.js` – `node ll/test.js`: 30 testów na sztucznych drogach (jednokierunkowa, dwukierunkowa 2+2 i 2+1, dwujezdniowa, skrzyżowania z ważniejszą/mniej ważną drogą, wlot z boku,
+  przybywający pas, pas kończący się na skrzyżowaniu, rozwidlenie 4 → 2+2, oneway=-1, brak drogi na mapie, wiadukt, ważniejsza droga obok, ciągłość kresek i kierunku na stykach,
+  narożnik 84°, łuk 60 m, wydajność)
+- `pwt/t_v206.py` – `APP=v206.html REF=v205.html python3 t_v206.py`: dane i linie bez trasy, przełącznik, kontrola jakości w 3 miejscach, brak przeliczeń przy zbliżaniu/przesuwaniu,
+  wyłączone linie = mapa jak w 205
+- `pwt/llqa.py` – kontrola w 8 miejscach Wrocławia: przecięcia linii różnych dróg, punkty poza jezdnią, zdublowane linie
+- `pwt/t_lldrive.py` – jazda 3,4 km przy spowolnionym procesorze: malowanie i praca w tle (porównanie wersji)
+- `pwt/t_v205.py` – z `LINES=1 VER="wersja 206"` dla wersji z liniami (dane o pasach pobierane też bez trasy)
+- `pwt/look6.py`, `llspot.py`, `lldbg.py`, `llsamp.py` – zrzuty i diagnostyka linii w wybranym miejscu
